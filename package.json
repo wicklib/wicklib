@@ -1,0 +1,44 @@
+{
+  "name": "wicklib-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Wicklib — open-source charting engine",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.18.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "api": "turbo run api",
+    "lint": "eslint packages",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "depcruise": "depcruise packages --config dependency-cruiser.cjs",
+    "checks": "pnpm lint && pnpm typecheck && pnpm build && pnpm depcruise && pnpm test && pnpm api",
+    "pack:core": "pnpm --filter @wicklib/core pack --pack-destination .artifacts",
+    "changeset": "changeset",
+    "release": "changeset publish"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@changesets/cli": "^3.0.3",
+    "@microsoft/api-extractor": "^7.59.4",
+    "@size-limit/file": "^14.3.0",
+    "@types/node": "^26.6.5",
+    "dependency-cruiser": "^18.7.0",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
+    "publint": "^0.3.25",
+    "size-limit": "^14.3.0",
+    "tsup": "^9.0.0",
+    "turbo": "^2.11.10",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

@@ -1,0 +1,7 @@
+[
+  {
+    "name": "@wicklib/core",
+    "path": "packages/core/dist/index.js",
+    "limit": "8 kB"
+  }
+]

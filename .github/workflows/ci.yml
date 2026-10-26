@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm depcruise
+      - run: pnpm test
+      - run: pnpm api
+
+      - run: pnpm exec publint packages/core
+      - run: pnpm exec attw --pack packages/core
+      - run: pnpm exec size-limit
+
+      - name: Pack and verify contents
+        run: |
+          mkdir -p .artifacts
+          pnpm --filter @wicklib/core pack --pack-destination "$PWD/.artifacts"
+          TARBALL=$(ls .artifacts/*.tgz)
+          tar -tzf "$TARBALL" | sort
+          test -n "$(tar -tzf "$TARBALL" | grep 'package/dist/index.js')"
+          test -n "$(tar -tzf "$TARBALL" | grep 'package/dist/index.d.ts')"
+          test -n "$(tar -tzf "$TARBALL" | grep 'package/LICENSE')"

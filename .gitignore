@@ -1,0 +1,24 @@
+node_modules/
+dist/
+coverage/
+.artifacts/
+*.tsbuildinfo
+next-env.d.ts
+
+# site build output
+.next/
+.source/
+out/
+
+# env
+.env
+.env.*
+!.env.example
+
+# misc
+.DS_Store
+*.tgz
+
+# generated
+.turbo/
+temp/

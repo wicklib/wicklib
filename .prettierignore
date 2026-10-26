@@ -1,0 +1,11 @@
+dist
+coverage
+.artifacts
+.turbo
+node_modules
+temp
+etc
+.next
+.source
+pnpm-lock.yaml
+LICENSE
