@@ -1,4 +1,13 @@
-import { CandlestickSeries, createChart, type OhlcData } from "@wicklib/core";
+import {
+  CandlestickSeries,
+  createChart,
+  FibRetracement,
+  HorizontalLine,
+  Rectangle,
+  TrendLine,
+  type DrawingToolDefinition,
+  type OhlcData,
+} from "@wicklib/core";
 import { ATR, BollingerBands, EMA, MACD, RSI, SMA, VWAP } from "@wicklib/indicators";
 
 import { generateOhlc } from "./data";
@@ -45,6 +54,12 @@ app.innerHTML = `
       <label class="toggle"><input id="sma" type="checkbox" /> SMA</label>
       <label class="toggle"><input id="rsi" type="checkbox" /> RSI</label>
       <label class="toggle"><input id="macd" type="checkbox" /> MACD</label>
+      <span class="divider" aria-hidden="true"></span>
+      <button type="button" data-drawing="trend-line" title="Trend line">Trend</button>
+      <button type="button" data-drawing="horizontal-line" title="Horizontal line">H-Line</button>
+      <button type="button" data-drawing="rectangle" title="Rectangle">Rect</button>
+      <button type="button" data-drawing="fib-retracement" title="Fibonacci retracement">Fib</button>
+      <button id="clear-drawings" type="button">Clear</button>
       <button id="theme" type="button">Light</button>
     </div>
     <div class="metrics"><span id="fps">— fps</span></div>
@@ -82,6 +97,21 @@ const smaToggle = byId<HTMLInputElement>("sma");
 const rsiToggle = byId<HTMLInputElement>("rsi");
 const macdToggle = byId<HTMLInputElement>("macd");
 const themeButton = byId<HTMLButtonElement>("theme");
+const clearDrawingsButton = byId<HTMLButtonElement>("clear-drawings");
+
+const drawingTools: Record<string, DrawingToolDefinition> = {
+  "trend-line": TrendLine,
+  "horizontal-line": HorizontalLine,
+  rectangle: Rectangle,
+  "fib-retracement": FibRetracement,
+};
+const drawingButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-drawing]"));
+
+function setActiveDrawingButton(toolId: string | null): void {
+  for (const button of drawingButtons) {
+    button.classList.toggle("active", button.dataset.drawing === toolId);
+  }
+}
 
 const chart = createChart(chartElement, {
   autoSize: true,
@@ -399,6 +429,30 @@ fitButton.addEventListener("click", () => {
   chart.timeScale().fitContent();
 });
 
+for (const button of drawingButtons) {
+  button.addEventListener("click", () => {
+    const tool = drawingTools[button.dataset.drawing ?? ""];
+    if (!tool) {
+      return;
+    }
+    chart.startDrawing(tool);
+    setActiveDrawingButton(tool.id);
+  });
+}
+
+clearDrawingsButton.addEventListener("click", () => {
+  chart.loadDrawings({ version: 1, drawings: [] });
+  setActiveDrawingButton(null);
+});
+
+chart.on("drawing-created", () => {
+  setActiveDrawingButton(null);
+});
+
+chart.on("drawing-cancelled", () => {
+  setActiveDrawingButton(null);
+});
+
 let dark = true;
 
 themeButton.addEventListener("click", () => {
@@ -444,6 +498,52 @@ if (!testMode && !benchMode) {
   requestAnimationFrame(tick);
 }
 
+function addDemoDrawings(): void {
+  if (data.length === 0) {
+    return;
+  }
+
+  const barAt = (fraction: number): OhlcData => {
+    const index = Math.min(data.length - 1, Math.floor(data.length * fraction));
+    return data[index]!;
+  };
+
+  const trendStart = barAt(0.24);
+  const trendEnd = barAt(0.42);
+  const rectangleStart = barAt(0.5);
+  const rectangleEnd = barAt(0.62);
+  const fibStart = barAt(0.68);
+  const fibEnd = barAt(0.76);
+  const horizontal = barAt(0.56);
+
+  chart.addDrawing(TrendLine, {
+    anchors: [
+      { time: trendStart.time, price: trendStart.low },
+      { time: trendEnd.time, price: trendEnd.high },
+    ],
+    options: { color: "#f0b90b", lineWidth: 2 },
+  });
+  const rectangle = chart.addDrawing(Rectangle, {
+    anchors: [
+      { time: rectangleStart.time, price: rectangleEnd.high },
+      { time: rectangleEnd.time, price: rectangleStart.low },
+    ],
+    options: { color: "#2962ff", fillColor: "#2962ff", fillOpacity: 0.14 },
+  });
+  chart.addDrawing(HorizontalLine, {
+    anchors: [{ time: horizontal.time, price: horizontal.close }],
+    options: { color: "#26a69a", lineStyle: "dashed" },
+  });
+  chart.addDrawing(FibRetracement, {
+    anchors: [
+      { time: fibStart.time, price: fibStart.low },
+      { time: fibEnd.time, price: fibEnd.high },
+    ],
+    options: { color: "#787b86" },
+  });
+  chart.selectDrawing(rectangle.id);
+}
+
 document.body.dataset.theme = "dark";
 load();
 
@@ -455,6 +555,10 @@ if (params.has("feed")) {
 
 if (params.has("indicators")) {
   enableDemoIndicators();
+}
+
+if (params.has("drawings")) {
+  addDemoDrawings();
 }
 
 if (testMode) {

@@ -17,6 +17,7 @@ Never published. Not part of the Changesets group.
 - Regenerate: new deterministic dataset (seed increments).
 - Use feed: simulated async feed with latency, live bars, loading state, and range loads.
 - SMA / RSI / MACD toggles: overlays and separate indicator panes.
+- Trend, H-Line, Rect, Fib, and Clear: interactive drawing tools.
 - Fit: reset the time scale.
 - Theme: dark/light chart options.
 - FPS meter and crosshair OHLC readout.
@@ -27,6 +28,7 @@ Never published. Not part of the Changesets group.
 
 - `?feed` — start in datafeed mode.
 - `?indicators` — enable SMA, RSI, and MACD.
+- `?drawings` — add a deterministic set of demo drawings.
 - `?test` — deterministic static chart, animation/FPS loop disabled, sets
   `window.__wicklibReady` for Playwright.
 - `?bench` — runs a 180-frame 100k-bar pan benchmark and exposes `window.__wicklibBench`.
@@ -38,7 +40,8 @@ pnpm --filter @wicklib/playground exec playwright install chromium   # once
 pnpm test:visual
 ```
 
-The suite captures text-free plot crops for the static chart and indicator panes, and
+The suite captures text-free plot crops for the static chart, indicator panes, and drawing
+tools, and
 asserts the 100k-bar pan benchmark, with all seven built-in indicators loaded, stays under
 the CI threshold. The recorded baseline is in
 [BENCHMARK.md](./BENCHMARK.md).

@@ -126,3 +126,16 @@ input[type="checkbox"] {
   accent-color: var(--muted);
   margin: 0;
 }
+
+.divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+button.active {
+  border-color: var(--text);
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
