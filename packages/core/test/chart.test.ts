@@ -613,6 +613,28 @@ describe("createChart", () => {
     expect(restored.selectedDrawing()).toBeNull();
   });
 
+  it("places drawing anchors at the pointer even with crosshair magnet enabled", () => {
+    const element = mount();
+    const chart = track(createChart(element, { crosshair: { mode: "magnet" } }));
+    chart.addSeries(CandlestickSeries).setData(bars(200));
+    chart.timeScale().fitContent();
+
+    const clicks: Array<{ price: number | null; time: number | null }> = [];
+    chart.on("click", (event) => clicks.push({ price: event.price, time: event.time }));
+
+    const root = element.firstElementChild as HTMLElement;
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 100, 100));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 100, 100));
+
+    chart.startDrawing(HorizontalLine);
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 100, 100));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 100, 100));
+
+    const anchor = chart.serializeDrawings().drawings[0]?.anchors[0];
+    expect(anchor?.price).toBeCloseTo(clicks[0]!.price!, 8);
+    expect(anchor?.time).toBe(clicks[0]!.time);
+  });
+
   it("creates drawings with pointer anchors and cancels with Escape", () => {
     const element = mount();
     const chart = track(createChart(element));

@@ -611,7 +611,7 @@ class Chart implements ChartApi, SeriesHost {
     return result;
   }
 
-  private drawingAnchor(pane: Pane, point: Point, altKey: boolean): DrawingAnchor | null {
+  private drawingAnchor(pane: Pane, point: Point): DrawingAnchor | null {
     if (!pane.plot) {
       return null;
     }
@@ -621,22 +621,11 @@ class Chart implements ChartApi, SeriesHost {
       return null;
     }
 
-    let price = pane.priceScale.yToPrice(point.y, pane.plot.top, pane.plot.height);
-
-    if (!altKey && this.options.crosshair.mode === "magnet") {
-      const store = pane.series[0]?.getStore();
-      if (store && store.length > 0) {
-        const index = Math.round(this.timeScaleModel.xToIndex(point.x));
-        if (index >= 0 && index < store.length) {
-          price = store.closeAt(index);
-        }
-      }
-    }
-
+    const price = pane.priceScale.yToPrice(point.y, pane.plot.top, pane.plot.height);
     return { time, price };
   }
 
-  private placeAnchor(pane: Pane, point: Point, altKey: boolean): void {
+  private placeAnchor(pane: Pane, point: Point): void {
     if (!this.activeTool) {
       return;
     }
@@ -645,7 +634,7 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
-    const anchor = this.drawingAnchor(pane, point, altKey);
+    const anchor = this.drawingAnchor(pane, point);
     if (!anchor) {
       return;
     }
@@ -741,7 +730,7 @@ class Chart implements ChartApi, SeriesHost {
     this.requestRender();
   }
 
-  private updateDrawingDrag(point: Point, altKey: boolean): void {
+  private updateDrawingDrag(point: Point): void {
     const drawing = this.draggingDrawing;
     const anchors = this.drawingDragAnchors;
     const start = this.drawingDragStart;
@@ -757,7 +746,7 @@ class Chart implements ChartApi, SeriesHost {
     const next = anchors.map((anchor) => ({ ...anchor }));
 
     if (this.draggingAnchorIndex >= 0) {
-      const anchor = this.drawingAnchor(pane, point, altKey);
+      const anchor = this.drawingAnchor(pane, point);
       if (!anchor) {
         return;
       }
@@ -1187,7 +1176,7 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     if (this.activeTool) {
-      this.placeAnchor(pane, point, event.altKey);
+      this.placeAnchor(pane, point);
       return;
     }
 
@@ -1261,7 +1250,7 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     if (this.draggingDrawing && event.pointerId === this.drawingDragPointerId) {
-      this.updateDrawingDrag(point, event.altKey);
+      this.updateDrawingDrag(point);
       return;
     }
 

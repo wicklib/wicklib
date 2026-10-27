@@ -221,6 +221,8 @@ Default `bar`:
   nearest close in the drawing's pane.
 - Alt disables snapping.
 - Snapping works on touch with the same rules.
+- Amendment: ADR-0001 removes price snapping from drawing creation and anchor editing.
+  Crosshair magnet continues to affect only the crosshair readout.
 
 ## 9. Rendering
 
