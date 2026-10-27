@@ -1,8 +1,10 @@
 import {
   CandlestickSeries,
   createChart,
+  DarkTheme,
   FibRetracement,
   HorizontalLine,
+  LightTheme,
   Rectangle,
   TrendLine,
   type DrawingToolDefinition,
@@ -169,14 +171,10 @@ function setActiveDrawingButton(toolId: string | null): void {
 
 const chart = createChart(chartElement, {
   autoSize: true,
-  layout: { background: "#0b0e14", textColor: "#d1d4dc" },
-  grid: {
-    vertLines: { color: "#161b24" },
-    horzLines: { color: "#161b24" },
-  },
+  ...DarkTheme,
   crosshair: {
+    ...DarkTheme.crosshair,
     mode: "magnet",
-    labelBackground: "#2a2e39",
   },
   timeScale: {
     rightOffset: 4,
@@ -801,27 +799,16 @@ let dark = true;
 themeButton.addEventListener("click", () => {
   dark = !dark;
 
-  if (dark) {
-    chart.setOptions({
-      layout: { background: "#0b0e14", textColor: "#d1d4dc" },
-      grid: {
-        vertLines: { color: "#161b24" },
-        horzLines: { color: "#161b24" },
-      },
-    });
-    document.body.dataset.theme = "dark";
-    themeButton.textContent = "Light";
-  } else {
-    chart.setOptions({
-      layout: { background: "#ffffff", textColor: "#131722" },
-      grid: {
-        vertLines: { color: "#eef0f3" },
-        horzLines: { color: "#eef0f3" },
-      },
-    });
-    document.body.dataset.theme = "light";
-    themeButton.textContent = "Dark";
-  }
+  const theme = dark ? DarkTheme : LightTheme;
+  chart.setOptions({
+    ...theme,
+    crosshair: {
+      ...theme.crosshair,
+      mode: "magnet",
+    },
+  });
+  document.body.dataset.theme = dark ? "dark" : "light";
+  themeButton.textContent = dark ? "Light" : "Dark";
 });
 
 let frames = 0;

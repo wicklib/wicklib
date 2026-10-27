@@ -10,6 +10,8 @@ export type { WickErrorCode } from "./errors";
 export { assertFeature } from "./license";
 export { FibRetracement, HorizontalLine, Measure, Rectangle, TrendLine } from "./drawings";
 export { CandlestickSeries } from "./series";
+export { ChartThemes, DarkTheme, LightTheme } from "./themes";
+export type { ChartTheme } from "./themes";
 export { VERSION } from "./version";
 export type {
   CandlestickSeriesOptions,

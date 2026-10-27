@@ -184,6 +184,35 @@ export interface ChartOverlayApi {
 }
 
 // @public
+export interface ChartTheme {
+    // (undocumented)
+    readonly crosshair: {
+        readonly color: string;
+        readonly labelBackground: string;
+    };
+    // (undocumented)
+    readonly grid: {
+        readonly vertLines: {
+            readonly color: string;
+        };
+        readonly horzLines: {
+            readonly color: string;
+        };
+    };
+    // (undocumented)
+    readonly layout: {
+        readonly background: string;
+        readonly textColor: string;
+    };
+}
+
+// @public
+export const ChartThemes: Readonly<{
+    light: ChartTheme;
+    dark: ChartTheme;
+}>;
+
+// @public
 export function createChart(container: HTMLElement, options?: ChartOptions): ChartApi;
 
 // @public
@@ -222,6 +251,9 @@ export interface CrosshairOptions {
     // (undocumented)
     vertLine?: CrosshairLineOptions;
 }
+
+// @public
+export const DarkTheme: ChartTheme;
 
 // @public
 export interface Datafeed<TData extends SeriesData = SeriesData> {
@@ -509,6 +541,9 @@ export interface LicenseContext {
 
 // @public
 export type LicenseTier = "free" | "pro";
+
+// @public
+export const LightTheme: ChartTheme;
 
 // @public
 export interface LightweightChartOptions {
