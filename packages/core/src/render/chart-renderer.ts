@@ -3,7 +3,7 @@ import { anchorPoints, clipLineToRect, FIB_LEVELS, type ResolvedDrawingOptions }
 import type { IndicatorRenderData, IndicatorPlotRenderData } from "../indicator";
 import type { PriceScale } from "../scale/price-scale";
 import type { TimeScale } from "../scale/time-scale";
-import { formatCrosshairTime, formatTimeLabel, generateTimeTicks } from "../scale/ticks";
+import { formatCrosshairTime, formatTimeLabel } from "../scale/ticks";
 import type { DrawingAnchor, Point } from "../types";
 import type { CanvasStack } from "./canvas-stack";
 
@@ -136,8 +136,9 @@ export class ChartRenderer {
     if (!bottomPane) {
       return;
     }
-    const timeTicks = generateTimeTicks(visible.from, visible.to, bottomPane.plot.width);
+    const timeTicks = this.timeScale.getTimeTicks(bottomPane.plot.width);
     const span = Math.max(0, visible.to - visible.from);
+    const labelTimezone = this.timeScale.getCalendarTimezone() ?? model.timezone;
 
     context.font = this.font(model);
 
@@ -242,7 +243,7 @@ export class ChartRenderer {
           time,
           span,
           model.locale,
-          model.timezone,
+          labelTimezone,
           model.timeVisible,
           model.secondsVisible,
         ),
@@ -944,7 +945,12 @@ export class ChartRenderer {
 
     const time = this.timeScale.timeAtX(x);
     if (time !== null) {
-      const label = formatCrosshairTime(time, model.locale, model.timezone, model.secondsVisible);
+      const label = formatCrosshairTime(
+        time,
+        model.locale,
+        this.timeScale.getCalendarTimezone() ?? model.timezone,
+        model.secondsVisible,
+      );
       const width = context.measureText(label).width + 16;
       const left = Math.max(
         bottomPane.plot.left,

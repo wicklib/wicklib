@@ -636,6 +636,14 @@ export interface SeriesType<TData extends SeriesData = SeriesData, TOptions exte
 }
 
 // @public
+export interface SessionWindow {
+    closeDay: number;
+    closeTime: string;
+    openDay: number;
+    openTime: string;
+}
+
+// @public
 export type SourceValue = "open" | "high" | "low" | "close" | "hl2" | "hlc3" | "ohlc4";
 
 // @public
@@ -666,12 +674,20 @@ export interface TimeScaleApi {
 // @public
 export interface TimeScaleOptions {
     barSpacing?: number;
+    calendar?: TradingCalendar;
     maxBarSpacing?: number;
     maxVisibleBars?: number;
     minBarSpacing?: number;
     rightOffset?: number;
     secondsVisible?: boolean;
     timeVisible?: boolean;
+}
+
+// @public
+export interface TradingCalendar {
+    holidays?: readonly string[];
+    sessions: readonly SessionWindow[];
+    timezone: string;
 }
 
 // @public (undocumented)

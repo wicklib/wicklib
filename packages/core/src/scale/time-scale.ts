@@ -1,5 +1,7 @@
 import { fail } from "../errors";
 import type { Time, TimeScaleOptions, VisibleRange } from "../types";
+import { SessionCalendar } from "./session-calendar";
+import { generateTimeTicks } from "./ticks";
 
 export interface TimeScaleSource {
   /** Number of bars available. */
@@ -10,7 +12,7 @@ export interface TimeScaleSource {
   nearestIndex(time: Time): number;
 }
 
-const DEFAULT_OPTIONS: Required<TimeScaleOptions> = {
+const DEFAULT_OPTIONS: Required<Omit<TimeScaleOptions, "calendar">> = {
   barSpacing: 8,
   rightOffset: 2,
   minBarSpacing: 0.001,
@@ -39,6 +41,7 @@ export class TimeScale {
   private minBarSpacing = DEFAULT_OPTIONS.minBarSpacing;
   private maxBarSpacing = DEFAULT_OPTIONS.maxBarSpacing;
   private maxVisibleBars = DEFAULT_OPTIONS.maxVisibleBars;
+  private calendar: SessionCalendar | null = null;
   private timeVisible = DEFAULT_OPTIONS.timeVisible;
   private secondsVisible = DEFAULT_OPTIONS.secondsVisible;
   private explicitRange = false;
@@ -69,7 +72,7 @@ export class TimeScale {
     return this.rightOffset;
   }
 
-  getOptions(): Required<TimeScaleOptions> {
+  getOptions(): Required<Omit<TimeScaleOptions, "calendar">> {
     return {
       barSpacing: this.barSpacing,
       rightOffset: this.rightOffset,
@@ -88,6 +91,46 @@ export class TimeScale {
 
   onDataChanged(): void {
     this.clamp();
+  }
+
+  getCalendarTimezone(): string | null {
+    return this.calendar?.timezone ?? null;
+  }
+
+  getTimeTicks(width: number): number[] {
+    const visible = this.getVisibleTimeRange();
+    const span = visible.to - visible.from;
+    const ticks = generateTimeTicks(visible.from, visible.to, width);
+    if (!this.calendar || span <= 0 || span > 2 * 86_400_000) {
+      return ticks;
+    }
+
+    const minimumGap = (span * 80) / Math.max(1, width);
+    const intervals = this.calendar.sessionsBetween(visible.from, visible.to);
+    const selected: number[] = [];
+
+    for (const interval of intervals) {
+      for (const time of [interval.start, interval.end]) {
+        if (
+          time >= visible.from &&
+          time <= visible.to &&
+          !selected.some((candidate) => Math.abs(candidate - time) < 1)
+        ) {
+          selected.push(time);
+        }
+      }
+    }
+
+    for (const tick of ticks) {
+      if (!this.calendar.isOpen(tick)) {
+        continue;
+      }
+      if (selected.every((candidate) => Math.abs(candidate - tick) >= minimumGap)) {
+        selected.push(tick);
+      }
+    }
+
+    return selected.sort((first, second) => first - second);
   }
 
   indexToX(index: number): number {
@@ -300,6 +343,9 @@ export class TimeScale {
         fail("INVALID_ARGUMENT", "maxVisibleBars must be a positive integer");
       }
       this.maxVisibleBars = options.maxVisibleBars;
+    }
+    if (options.calendar !== undefined) {
+      this.calendar = new SessionCalendar(options.calendar);
     }
     if (this.maxBarSpacing < this.minBarSpacing) {
       fail("INVALID_ARGUMENT", "maxBarSpacing must be greater than or equal to minBarSpacing");

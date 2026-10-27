@@ -239,6 +239,8 @@ export interface TimeScaleOptions {
   maxBarSpacing?: number;
   /** Maximum number of bars visible when zoomed out. Defaults to unlimited. */
   maxVisibleBars?: number;
+  /** Optional trading calendar for session-aware labels. */
+  calendar?: TradingCalendar;
   /** Show time labels in the time axis. */
   timeVisible?: boolean;
   /** Show seconds in time labels. */
@@ -614,6 +616,32 @@ export interface ChartEventMap {
  * Returned by {@link ChartApi.on}. Idempotent and safe after `destroy()`.
  */
 export type Unsubscribe = () => void;
+
+/**
+ * A recurring weekly trading session. Times are local to the calendar timezone.
+ */
+export interface SessionWindow {
+  /** ISO weekday: 1 = Monday, 7 = Sunday. */
+  openDay: number;
+  /** Local open time in HH:mm form. */
+  openTime: string;
+  /** ISO weekday of the close. May be later than `openDay`. */
+  closeDay: number;
+  /** Local close time in HH:mm form. */
+  closeTime: string;
+}
+
+/**
+ * Host-supplied trading calendar.
+ */
+export interface TradingCalendar {
+  /** IANA time zone, for example America/New_York. */
+  timezone: string;
+  /** Recurring weekly session windows. */
+  sessions: readonly SessionWindow[];
+  /** Closed local dates in YYYY-MM-DD form. */
+  holidays?: readonly string[];
+}
 
 /**
  * Time scale controls.

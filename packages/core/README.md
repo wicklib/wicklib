@@ -22,7 +22,18 @@ declare const feed: Datafeed<OhlcData>;
 
 const chart = createChart(document.getElementById("chart")!, {
   autoSize: true,
-  timeScale: { maxVisibleBars: 720 },
+  timeScale: {
+    maxVisibleBars: 720,
+    calendar: {
+      timezone: "America/New_York",
+      sessions: [1, 2, 3, 4, 5].map((day) => ({
+        openDay: day,
+        openTime: "09:30",
+        closeDay: day,
+        closeTime: "16:00",
+      })),
+    },
+  },
 });
 const series = chart.addSeries(CandlestickSeries, { title: "BTC/USD" });
 
@@ -59,6 +70,8 @@ chart.loadDrawings(document);
   panning. Double-click the axis to restore auto-scale, or call `chart.resetView()`.
 - Time-axis labels and drawings can extend into empty space after the last bar, using the last
   observed interval.
+- Host-supplied trading calendars with IANA time zones, DST-correct session boundaries,
+  holidays, and session-aware intraday labels.
 - Keyboard pan/zoom/fit, and two-pointer pinch zoom on touch devices.
 - Series datafeed: initial count load, debounced range loads with prefetch, abort on stale
   requests, prepend anchoring, realtime revision, loading and error events.
