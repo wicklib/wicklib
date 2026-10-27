@@ -1,6 +1,6 @@
 # RFC-0005: Session-aware time scale
 
-- Status: **Proposed** — decision required before implementation
+- Status: **Accepted** — compressed session labels implemented; explicit gaps pending
 - Date: 2026-10-27
 - Depends on: RFC-0001 (accepted), RFC-0003 (accepted)
 
@@ -132,7 +132,18 @@ rendered as supplied; validation does not reinterpret them.
 5. **Should session gaps count toward `maxVisibleBars`?** No. That option caps price bars,
    not virtual closed-period segments.
 
-## 11. Acceptance criteria
+## 11. Implementation notes
+
+The first compressed-mode slice is implemented:
+
+- `TradingCalendar` and `SessionWindow` are public.
+- Calendar times resolve through IANA time zones, including DST transitions.
+- Intraday views up to two days skip closed-period ticks and add session open/close ticks.
+- Labels and crosshair times use the calendar timezone.
+- Wider views keep date-level ticks; explicit closed-period gaps are still pending.
+- Visual gap rendering, holidays UI, and bundled exchange calendars remain out of scope.
+
+## 12. Acceptance criteria
 
 - Continuous charts are byte-for-byte unaffected when no calendar is supplied.
 - A New York equity calendar produces correct session opens and closes across the spring and

@@ -9,7 +9,7 @@ changing its decisions requires a new RFC or an ADR.
 | 0002 | Datafeed contract           | Accepted |
 | 0003 | Indicators and panes        | Accepted |
 | 0004 | Drawings                    | Accepted |
-| 0005 | Session-aware time scale    | Proposed |
+| 0005 | Session-aware time scale    | Accepted |
 
 Rules:
 

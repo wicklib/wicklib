@@ -6,7 +6,8 @@ designed for a clean separation between the free engine and the commercial add-o
 **Status: Phase 3 complete — core chart, indicators, panes, drawings, and React.**
 A candlestick chart renders real data with axes, crosshair, pan, zoom, keyboard and pinch
 interactions, an async series-level datafeed, multiple panes, seven built-in indicators, five
-drawing tools, and a React wrapper. Sessions/DST and WickTS come next.
+drawing tools, and a React wrapper. Session-aware labels are in place; explicit session gaps
+and WickTS come next.
 
 ## Try it
 
