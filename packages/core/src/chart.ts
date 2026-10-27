@@ -66,7 +66,9 @@ import type {
 } from "./types";
 import { cancelFrame, mergeDefined, scheduleFrame } from "./util";
 
-const AXIS_WIDTH = 64;
+const DEFAULT_AXIS_WIDTH = 64;
+const MIN_AXIS_WIDTH = 40;
+const MAX_AXIS_WIDTH = 160;
 
 interface ResolvedOptions {
   autoSize: boolean;
@@ -119,6 +121,7 @@ class Chart implements ChartApi, SeriesHost {
 
   private rawOptions: ChartOptions;
   private options: ResolvedOptions;
+  private axisWidth = DEFAULT_AXIS_WIDTH;
   private observer: ResizeObserver | null = null;
   private frame: number | null = null;
   private disposed = false;
@@ -155,6 +158,13 @@ class Chart implements ChartApi, SeriesHost {
     pointerId: number;
     startY: number;
     startRange: PriceRange;
+    moved: boolean;
+  } | null = null;
+  private timeAxisDrag: {
+    pointerId: number;
+    startX: number;
+    lastX: number;
+    anchorX: number;
     moved: boolean;
   } | null = null;
 
@@ -942,7 +952,7 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
-    const plotWidth = Math.max(1, width - AXIS_WIDTH);
+    const plotWidth = Math.max(1, width - this.axisWidth);
     const availableHeight = Math.max(1, height - TIME_AXIS_HEIGHT);
     const heights = computePaneHeights(this.panes, availableHeight);
 
@@ -1000,6 +1010,7 @@ class Chart implements ChartApi, SeriesHost {
     this.resetDrawingDrag();
     this.activePointers.clear();
     this.pinchDistance = null;
+    this.timeAxisDrag = null;
     this.bus.dispose();
     this.panes.length = 0;
     this.stack.destroy();
@@ -1233,6 +1244,7 @@ class Chart implements ChartApi, SeriesHost {
       this.resetDrawingDrag();
       this.dragging = false;
       this.pointerId = null;
+      this.timeAxisDrag = null;
       this.priceAxisDrag = {
         pane: axisPane,
         pointerId: event.pointerId,
@@ -1247,6 +1259,37 @@ class Chart implements ChartApi, SeriesHost {
         // Pointer capture is best-effort.
       }
       this.requestRender();
+      return;
+    }
+
+    if (this.timeAxisPaneAtPoint(point)) {
+      if (!this.options.interaction.axisDrag) {
+        return;
+      }
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+      if (this.activeTool) {
+        this.cancelDrawing();
+      }
+      this.clearCrosshair();
+      this.resetDrawingDrag();
+      this.dragging = false;
+      this.pointerId = null;
+      this.priceAxisDrag = null;
+      this.timeAxisDrag = {
+        pointerId: event.pointerId,
+        startX: point.x,
+        lastX: point.x,
+        anchorX: point.x,
+        moved: false,
+      };
+      this.stack.root.style.cursor = "ew-resize";
+      try {
+        this.stack.root.setPointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture is best-effort.
+      }
       return;
     }
 
@@ -1305,6 +1348,11 @@ class Chart implements ChartApi, SeriesHost {
 
   private readonly onPointerMove = (event: PointerEvent): void => {
     const point = this.localPoint(event);
+
+    if (this.timeAxisDrag && event.pointerId === this.timeAxisDrag.pointerId) {
+      this.updateTimeAxisDrag(point);
+      return;
+    }
 
     if (this.priceAxisDrag && event.pointerId === this.priceAxisDrag.pointerId) {
       this.updatePriceAxisDrag(point);
@@ -1379,6 +1427,18 @@ class Chart implements ChartApi, SeriesHost {
 
   private readonly onPointerUp = (event: PointerEvent): void => {
     this.activePointers.delete(event.pointerId);
+
+    if (this.timeAxisDrag && event.pointerId === this.timeAxisDrag.pointerId) {
+      const point = this.localPoint(event);
+      try {
+        this.stack.root.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture is best-effort.
+      }
+      this.timeAxisDrag = null;
+      this.updatePointerCursor(point);
+      return;
+    }
 
     if (this.priceAxisDrag && event.pointerId === this.priceAxisDrag.pointerId) {
       const point = this.localPoint(event);
@@ -1455,6 +1515,7 @@ class Chart implements ChartApi, SeriesHost {
     this.pointerId = null;
     this.dragPane = null;
     this.priceAxisDrag = null;
+    this.timeAxisDrag = null;
     this.resetDrawingDrag();
     this.stack.root.style.cursor = "crosshair";
     this.clearCrosshair();
@@ -1473,7 +1534,8 @@ class Chart implements ChartApi, SeriesHost {
       !this.dragging &&
       this.pinchDistance === null &&
       !this.draggingDrawing &&
-      !this.priceAxisDrag
+      !this.priceAxisDrag &&
+      !this.timeAxisDrag
     ) {
       this.clearCrosshair();
     }
@@ -1618,7 +1680,7 @@ class Chart implements ChartApi, SeriesHost {
       }
     }
 
-    const model = this.buildModel();
+    let model = this.buildModel();
     if (!model) {
       return;
     }
@@ -1630,6 +1692,16 @@ class Chart implements ChartApi, SeriesHost {
       const range = this.visiblePanePriceRange(pane);
       if (range) {
         pane.priceScale.setAutoRange(range.min, range.max);
+      }
+    }
+
+    const axisWidth = this.computeAxisWidth();
+    if (axisWidth !== this.axisWidth) {
+      this.axisWidth = axisWidth;
+      this.relayout();
+      model = this.buildModel();
+      if (!model) {
+        return;
       }
     }
 
@@ -1682,9 +1754,53 @@ class Chart implements ChartApi, SeriesHost {
       timezone: this.options.timezone,
       timeVisible: timeOptions.timeVisible,
       secondsVisible: timeOptions.secondsVisible,
-      axisWidth: AXIS_WIDTH,
+      axisWidth: this.axisWidth,
       axisHeight: TIME_AXIS_HEIGHT,
     };
+  }
+
+  private computeAxisWidth(): number {
+    const context = this.stack.context("grid");
+    context.font = `${this.options.layout.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    let widest = 0;
+
+    for (const pane of this.panes) {
+      if (!pane.plot || pane.plot.height <= 0) {
+        continue;
+      }
+
+      for (const tick of pane.priceScale.ticks(pane.plot.height)) {
+        widest = Math.max(
+          widest,
+          context.measureText(pane.priceScale.formatValue(tick.value, this.options.locale)).width,
+        );
+      }
+
+      for (const series of pane.series) {
+        if (!series.isVisible()) {
+          continue;
+        }
+        const data = series.toRenderData();
+        const last = data.bars.lastBar();
+        if (last && data.lastValueVisible) {
+          widest = Math.max(
+            widest,
+            context.measureText(pane.priceScale.formatValue(last.close, this.options.locale)).width,
+          );
+        }
+        for (const line of data.priceLines) {
+          if (!line.axisLabelVisible) {
+            continue;
+          }
+          const value = pane.priceScale.formatValue(line.price, this.options.locale);
+          const label =
+            line.title && line.titlePosition === "axis" ? `${line.title} ${value}` : value;
+          widest = Math.max(widest, context.measureText(label).width);
+        }
+      }
+    }
+
+    return Math.min(MAX_AXIS_WIDTH, Math.max(MIN_AXIS_WIDTH, Math.ceil(widest + 16)));
   }
 
   private visiblePanePriceRange(pane: Pane): { min: number; max: number } | null {
@@ -1869,10 +1985,46 @@ class Chart implements ChartApi, SeriesHost {
     if (!pane || !pane.plot) {
       return null;
     }
-    if (point.x < pane.plot.right || point.x > pane.plot.right + AXIS_WIDTH) {
+    if (point.x < pane.plot.right || point.x > pane.plot.right + this.axisWidth) {
       return null;
     }
     return pane;
+  }
+
+  private timeAxisPaneAtPoint(point: Point): Pane | null {
+    const pane = this.panes[this.panes.length - 1];
+    if (!pane || !pane.plot) {
+      return null;
+    }
+    if (
+      point.y < pane.plot.bottom ||
+      point.y > pane.plot.bottom + TIME_AXIS_HEIGHT ||
+      point.x < pane.plot.left ||
+      point.x > pane.plot.right
+    ) {
+      return null;
+    }
+    return pane;
+  }
+
+  private updateTimeAxisDrag(point: Point): void {
+    const drag = this.timeAxisDrag;
+    if (!drag) {
+      return;
+    }
+    const deltaX = point.x - drag.lastX;
+    if (!drag.moved && Math.abs(point.x - drag.startX) < 2) {
+      return;
+    }
+    drag.moved = true;
+    drag.lastX = point.x;
+    if (deltaX === 0) {
+      return;
+    }
+    this.timeScaleModel.zoomAt(drag.anchorX, -deltaX * 2.5);
+    this.requestRender();
+    this.emitVisibleRange();
+    this.notifyViewChange();
   }
 
   private updatePriceAxisDrag(point: Point): void {
@@ -1908,7 +2060,11 @@ class Chart implements ChartApi, SeriesHost {
   }
 
   private updatePointerCursor(point: Point): void {
-    this.stack.root.style.cursor = this.priceAxisPaneAtPoint(point) ? "ns-resize" : "crosshair";
+    this.stack.root.style.cursor = this.priceAxisPaneAtPoint(point)
+      ? "ns-resize"
+      : this.timeAxisPaneAtPoint(point)
+        ? "ew-resize"
+        : "crosshair";
   }
 
   private setupObserver(): void {

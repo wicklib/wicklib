@@ -271,6 +271,24 @@ describe("createChart", () => {
     expect(backward.from).toBeLessThan(forward.from);
   });
 
+  it("zooms the timeline by dragging the time axis", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(1_000));
+    chart.timeScale().fitContent();
+
+    const before = chart.timeScale().getVisibleRange();
+    const root = element.firstElementChild as HTMLElement;
+
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 400, 390));
+    root.dispatchEvent(pointerEvent("pointermove", 1, 600, 390));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 600, 390));
+
+    const after = chart.timeScale().getVisibleRange();
+    expect(after.to - after.from).toBeLessThan(before.to - before.from);
+  });
+
   it("drags the price axis into manual mode and resets auto-scale on double click", () => {
     const element = mount();
     const chart = track(createChart(element));

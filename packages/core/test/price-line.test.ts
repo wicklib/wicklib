@@ -105,6 +105,37 @@ describe("price-line titles", () => {
     expect(title?.[1]).toBeGreaterThanOrEqual(736);
   });
 
+  it("widens the price axis for longer titles", async () => {
+    const narrowChart = createChart(mount());
+    charts.push(narrowChart);
+    const narrowSeries = narrowChart.addSeries(CandlestickSeries);
+    narrowSeries.setData(bars());
+    narrowChart.timeScale().fitContent();
+    narrowSeries.createPriceLine({ price: 105, title: "L" });
+    await settle();
+
+    const narrow = fillText.mock.calls.find(
+      ([text, x]) => typeof text === "string" && text.startsWith("L ") && x > 700,
+    );
+
+    fillText.mockClear();
+    const wideChart = createChart(mount());
+    charts.push(wideChart);
+    const wideSeries = wideChart.addSeries(CandlestickSeries);
+    wideSeries.setData(bars());
+    wideChart.timeScale().fitContent();
+    wideSeries.createPriceLine({ price: 105, title: "LONG ENTRY LABEL" });
+    await settle();
+
+    const wide = fillText.mock.calls.find(
+      ([text, x]) => typeof text === "string" && text.startsWith("LONG ENTRY LABEL ") && x > 600,
+    );
+
+    expect(narrow).toBeDefined();
+    expect(wide).toBeDefined();
+    expect(wide?.[1]).toBeLessThan(narrow?.[1] as number);
+  });
+
   it("rejects unknown title positions", () => {
     const chart = createChart(mount());
     charts.push(chart);
