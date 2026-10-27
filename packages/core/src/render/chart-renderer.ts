@@ -651,22 +651,34 @@ export class ChartRenderer {
         context.restore();
       }
 
-      if (!line.axisLabelVisible) {
-        continue;
-      }
-
       const boxHeight = model.layout.fontSize + 6;
       const top = Math.max(plot.top, Math.min(plot.bottom - boxHeight, y - boxHeight / 2));
       const value = pane.priceScale.formatValue(line.price, model.locale);
-      const label = line.title ? `${line.title} ${value}` : value;
-
-      context.fillStyle = line.color;
-      context.fillRect(plot.right, top, model.axisWidth, boxHeight);
-      context.fillStyle = "#ffffff";
       context.font = this.font(model);
-      context.textAlign = "left";
       context.textBaseline = "middle";
-      context.fillText(label, plot.right + 8, top + boxHeight / 2);
+
+      if (line.axisLabelVisible) {
+        const label =
+          line.title && line.titlePosition === "axis" ? `${line.title} ${value}` : value;
+        context.fillStyle = line.color;
+        context.fillRect(plot.right, top, model.axisWidth, boxHeight);
+        context.fillStyle = "#ffffff";
+        context.textAlign = "left";
+        context.fillText(label, plot.right + 8, top + boxHeight / 2);
+      }
+
+      if (!line.title || line.titlePosition !== "plot") {
+        continue;
+      }
+
+      const paddingX = 5;
+      const boxWidth = context.measureText(line.title).width + paddingX * 2;
+      const left = Math.max(plot.left + 2, plot.right - boxWidth - 2);
+      context.fillStyle = line.color;
+      context.fillRect(left, top, boxWidth, boxHeight);
+      context.fillStyle = "#ffffff";
+      context.textAlign = "left";
+      context.fillText(line.title, left + paddingX, top + boxHeight / 2);
     }
   }
 

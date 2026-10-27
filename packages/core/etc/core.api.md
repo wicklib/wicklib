@@ -695,10 +695,14 @@ export interface PriceLineOptions {
     // (undocumented)
     price: number;
     title?: string;
+    titlePosition?: PriceLineTitlePosition;
 }
 
 // @public
 export type PriceLineStyle = "solid" | "dotted" | "dashed";
+
+// @public
+export type PriceLineTitlePosition = "axis" | "plot";
 
 // @public
 export interface PriceRange {
@@ -940,8 +944,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:833:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:848:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:842:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:857:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -42,6 +42,7 @@ const PRICE_LINE_DEFAULTS: Omit<Required<PriceLineOptions>, "price"> = {
   lineVisible: true,
   axisLabelVisible: true,
   title: "",
+  titlePosition: "axis",
 };
 
 const MARKER_POSITIONS = new Set([
@@ -54,6 +55,7 @@ const MARKER_POSITIONS = new Set([
 ]);
 const MARKER_SHAPES = new Set(["circle", "square", "arrowUp", "arrowDown"]);
 const PRICE_LINE_STYLES = new Set(["solid", "dotted", "dashed"]);
+const PRICE_LINE_TITLE_POSITIONS = new Set(["axis", "plot"]);
 
 const DEFAULT_OPTIONS: Required<CandlestickSeriesOptions> = {
   title: "",
@@ -296,6 +298,7 @@ function resolvePriceLine(
     !options ||
     !Number.isFinite(options.price) ||
     !PRICE_LINE_STYLES.has(options.lineStyle ?? defaults.lineStyle) ||
+    !PRICE_LINE_TITLE_POSITIONS.has(options.titlePosition ?? defaults.titlePosition) ||
     !Number.isFinite(options.lineWidth ?? defaults.lineWidth) ||
     (options.lineWidth ?? defaults.lineWidth) <= 0
   ) {
@@ -309,6 +312,7 @@ function resolvePriceLine(
     lineVisible: options.lineVisible ?? defaults.lineVisible,
     axisLabelVisible: options.axisLabelVisible ?? defaults.axisLabelVisible,
     title: options.title ?? defaults.title,
+    titlePosition: options.titlePosition ?? defaults.titlePosition,
   };
 }
 

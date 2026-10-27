@@ -67,6 +67,7 @@ export type {
   PriceLineApi,
   PriceLineOptions,
   PriceLineStyle,
+  PriceLineTitlePosition,
   PriceRange,
   PriceScaleApi,
   PriceScaleOptions,

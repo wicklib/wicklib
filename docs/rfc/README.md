@@ -13,6 +13,7 @@ changing its decisions requires a new RFC or an ADR.
 | 0006 | Extension overlays                | Accepted |
 | 0007 | Series annotations and export     | Accepted |
 | 0008 | lightweight-charts option mapping | Accepted |
+| 0009 | Price-line title placement        | Accepted |
 
 Rules:
 

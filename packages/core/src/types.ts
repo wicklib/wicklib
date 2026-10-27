@@ -328,6 +328,14 @@ export interface ChartOptions {
 export type PriceLineStyle = "solid" | "dotted" | "dashed";
 
 /**
+ * Where a price line's title is rendered.
+ *
+ * `axis` keeps the title in the price-axis label. `plot` draws it inside the pane near
+ * the right edge of the line.
+ */
+export type PriceLineTitlePosition = "axis" | "plot";
+
+/**
  * Options for a series price line. The line is rendered across the series pane and can
  * optionally show a label on the price axis.
  */
@@ -342,6 +350,8 @@ export interface PriceLineOptions {
   axisLabelVisible?: boolean;
   /** Optional label prefix shown before the price. */
   title?: string;
+  /** Where the title is rendered. Defaults to `axis`. */
+  titlePosition?: PriceLineTitlePosition;
 }
 
 /**
