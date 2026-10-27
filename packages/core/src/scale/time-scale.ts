@@ -181,6 +181,19 @@ export class TimeScale {
     return gapUnits > 0 && local > 1 && local < 1 + gapUnits;
   }
 
+  hasGapBetween(first: number, last: number): boolean {
+    if (this.gapMode !== "show" || this.totalGaps === 0) {
+      return false;
+    }
+    const count = this.source.count();
+    const from = Math.max(0, Math.min(count - 1, Math.floor(first)));
+    const to = Math.max(0, Math.min(count - 1, Math.floor(last)));
+    if (to <= from) {
+      return false;
+    }
+    return (this.gapPrefix[to] ?? 0) - (this.gapPrefix[from] ?? 0) > 0;
+  }
+
   timeToX(time: Time): number | null {
     const count = this.source.count();
     if (count === 0) {

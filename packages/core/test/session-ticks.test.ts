@@ -92,6 +92,8 @@ describe("session-aware time ticks", () => {
     const second = scale.indexToX(390);
     expect(second - first).toBeGreaterThan(40);
     expect(scale.isGapX((first + second) / 2)).toBe(true);
+    expect(scale.hasGapBetween(389, 390)).toBe(true);
+    expect(scale.hasGapBetween(1, 2)).toBe(false);
 
     const compressed = new TimeScale(sessionSource(), {
       calendar: tradingCalendar,

@@ -409,7 +409,7 @@ export class ChartRenderer {
       }
       const start = Math.max(from, Math.floor(this.timeScale.xToIndex(column)));
       const end = Math.min(to, Math.floor(this.timeScale.xToIndex(column + 1)));
-      if (start > end) {
+      if (start > end || this.timeScale.hasGapBetween(start, end)) {
         continue;
       }
 
