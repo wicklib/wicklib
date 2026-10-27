@@ -9,3 +9,5 @@ etc
 .source
 pnpm-lock.yaml
 LICENSE
+
+packages/script-editor/src/types.generated.ts

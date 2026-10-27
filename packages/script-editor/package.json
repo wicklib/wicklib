@@ -38,18 +38,21 @@
   },
   "peerDependencies": {
     "@wicklib/core": "^0.1.0-next.18",
-    "@wicklib/script": "^0.1.0-next.18"
+    "@wicklib/script": "^0.1.0-next.18",
+    "monaco-editor": "^0.57.0"
   },
   "devDependencies": {
     "@wicklib/core": "workspace:*",
     "@wicklib/script": "workspace:*",
+    "monaco-editor": "^0.57.0",
     "tsup": "^9.0.0",
     "typescript": "^5.9.3",
     "vitest": "^5.0.5"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "pnpm generate:types && tsup",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "generate:types": "node scripts/generate-types.mjs"
   }
 }

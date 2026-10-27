@@ -120,7 +120,7 @@ functions. The script package never depends on pro. License tier travels in `met
    revisions; a future ADR can add a revision mode.
 5. [in progress] Free `ta.*` set: SMA, EMA, RSI, ATR, highest, lowest, stdev, change, roc,
    cum, crossover, and crossunder are implemented; broader coverage remains.
-6. Editor + `.d.ts` generation.
+6. [done] Monaco editor + generated authoring type declarations.
 7. [done] Golden fixtures, deterministic fuzz tests, and resource-limit tests.
 8. Pro premium functions and strategy engine.
 
