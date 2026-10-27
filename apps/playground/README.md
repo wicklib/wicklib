@@ -13,13 +13,13 @@ Never published. Not part of the Changesets group.
 
 ## Controls
 
-- Dataset size: 5k, 25k, 100k synthetic 1m bars.
+- Dataset size: 5k, 25k, 100k synthetic 1m bars. Zooming out is capped at 12 hours.
 - Regenerate: new deterministic dataset (seed increments).
 - Use feed: simulated async feed with latency, live bars, loading state, and range loads.
 - Binance 2025: load the local one-year BTCUSDT 1m snapshot (525,600 bars).
 - SMA / RSI / MACD toggles: overlays and separate indicator panes.
 - Trend, H-Line, Rect, Fib, and Clear: interactive drawing tools.
-- Fit: reset the time scale.
+- Fit: reset the time scale, capped at 720 bars (12 hours of 1m data).
 - Theme: dark/light chart options.
 - FPS meter and crosshair OHLC readout.
 - Keyboard: arrows pan, `+`/`-` zoom, `Home` fits, `Escape` clears the crosshair.

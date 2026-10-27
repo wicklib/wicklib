@@ -139,6 +139,7 @@ const chart = createChart(chartElement, {
   timeScale: {
     rightOffset: 4,
     barSpacing: 6,
+    maxVisibleBars: 720,
   },
   priceScale: {
     scaleMargins: { top: 0.12, bottom: 0.12 },
@@ -209,8 +210,9 @@ function findBar(time: number): OhlcData | null {
 
 function updateSummary(): void {
   const range = chart.timeScale().getVisibleRange();
-  const from = range.from > 0 ? dayFormatter.format(range.from) : "—";
-  const to = range.to > 0 ? dayFormatter.format(range.to) : "—";
+  const formatter = range.to - range.from <= 2 * 86_400_000 ? timeFormatter : dayFormatter;
+  const from = range.from > 0 ? formatter.format(range.from) : "—";
+  const to = range.to > 0 ? formatter.format(range.to) : "—";
 
   const label = feedActive
     ? "live feed"
@@ -603,18 +605,18 @@ function addDemoDrawings(): void {
     return;
   }
 
-  const barAt = (fraction: number): OhlcData => {
-    const index = Math.min(data.length - 1, Math.floor(data.length * fraction));
+  const barBefore = (bars: number): OhlcData => {
+    const index = Math.max(0, data.length - 1 - bars);
     return data[index]!;
   };
 
-  const trendStart = barAt(0.24);
-  const trendEnd = barAt(0.42);
-  const rectangleStart = barAt(0.5);
-  const rectangleEnd = barAt(0.62);
-  const fibStart = barAt(0.68);
-  const fibEnd = barAt(0.76);
-  const horizontal = barAt(0.56);
+  const trendStart = barBefore(680);
+  const trendEnd = barBefore(500);
+  const rectangleStart = barBefore(420);
+  const rectangleEnd = barBefore(260);
+  const fibStart = barBefore(220);
+  const fibEnd = barBefore(80);
+  const horizontal = barBefore(340);
 
   chart.addDrawing(TrendLine, {
     anchors: [
