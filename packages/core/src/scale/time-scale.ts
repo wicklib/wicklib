@@ -39,6 +39,7 @@ export class TimeScale {
   private maxBarSpacing = DEFAULT_OPTIONS.maxBarSpacing;
   private timeVisible = DEFAULT_OPTIONS.timeVisible;
   private secondsVisible = DEFAULT_OPTIONS.secondsVisible;
+  private explicitRange = false;
 
   constructor(source: TimeScaleSource, options: TimeScaleOptions = {}) {
     this.source = source;
@@ -139,10 +140,24 @@ export class TimeScale {
     return range.to - range.from;
   }
 
+  /** True once the host or user has chosen a view explicitly. */
+  hasExplicitRange(): boolean {
+    return this.explicitRange;
+  }
+
+  /** True when the latest bar is at or near the right edge. */
+  isAtRightEdge(tolerancePixels = 24): boolean {
+    if (this.source.count() === 0) {
+      return true;
+    }
+    return this.rightOffset >= -0.5 && this.rightOffset * this.barSpacing <= tolerancePixels;
+  }
+
   pan(deltaX: number): void {
     if (!Number.isFinite(deltaX) || deltaX === 0) {
       return;
     }
+    this.explicitRange = true;
     this.rightOffset -= deltaX / this.barSpacing;
     this.clamp();
   }
@@ -151,6 +166,7 @@ export class TimeScale {
     if (!Number.isFinite(deltaY) || deltaY === 0) {
       return;
     }
+    this.explicitRange = true;
 
     const factor = Math.exp(-deltaY * 0.0015);
     const nextSpacing = clamp(this.barSpacing * factor, this.minBarSpacing, this.maxBarSpacing);
@@ -165,6 +181,7 @@ export class TimeScale {
   }
 
   fitContent(paddingPixels = 8): void {
+    this.explicitRange = true;
     const count = this.source.count();
     if (count === 0) {
       this.barSpacing = DEFAULT_OPTIONS.barSpacing;
@@ -186,6 +203,8 @@ export class TimeScale {
     if (!Number.isFinite(range.from) || !Number.isFinite(range.to) || range.to <= range.from) {
       fail("INVALID_ARGUMENT", "Visible range must have finite values with to > from");
     }
+
+    this.explicitRange = true;
 
     const count = this.source.count();
     if (count === 0) {
@@ -218,6 +237,7 @@ export class TimeScale {
   }
 
   scrollToTime(time: Time): void {
+    this.explicitRange = true;
     const index = this.source.nearestIndex(time);
     if (index < 0) {
       return;

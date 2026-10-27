@@ -1,5 +1,5 @@
 import type { OhlcStore } from "./data/ohlc-store";
-import { fail } from "./errors";
+import { fail, type WickError } from "./errors";
 import { EventBus } from "./events";
 import { CanvasStack } from "./render/canvas-stack";
 import {
@@ -34,6 +34,7 @@ import type {
   TimeScaleApi,
   TimeScaleOptions,
   Unsubscribe,
+  VisibleRange,
   WickExtension,
 } from "./types";
 import { cancelFrame, mergeDefined, scheduleFrame } from "./util";
@@ -129,18 +130,21 @@ class Chart implements ChartApi, SeriesHost {
         this.timeScaleModel.setVisibleRange(range);
         this.requestRender();
         this.emitVisibleRange();
+        this.notifyViewChange();
       },
       fitContent: () => {
         this.assertAlive();
         this.timeScaleModel.fitContent();
         this.requestRender();
         this.emitVisibleRange();
+        this.notifyViewChange();
       },
       scrollToTime: (time) => {
         this.assertAlive();
         this.timeScaleModel.scrollToTime(time);
         this.requestRender();
         this.emitVisibleRange();
+        this.notifyViewChange();
       },
       setOptions: (options) => {
         this.assertAlive();
@@ -149,6 +153,7 @@ class Chart implements ChartApi, SeriesHost {
         this.options.timeScale = this.rawOptions.timeScale;
         this.requestRender();
         this.emitVisibleRange();
+        this.notifyViewChange();
       },
     };
 
@@ -293,6 +298,11 @@ class Chart implements ChartApi, SeriesHost {
 
     this.teardownObserver();
     this.detachEvents();
+
+    for (const series of this.series) {
+      series.destroyInternal();
+    }
+
     this.bus.dispose();
     this.series.length = 0;
     this.stack.destroy();
@@ -317,11 +327,55 @@ class Chart implements ChartApi, SeriesHost {
     });
   }
 
+  getVisibleRange(): VisibleRange {
+    this.assertAlive();
+    return this.timeScaleModel.getVisibleRange();
+  }
+
+  restoreVisibleRange(range: VisibleRange): void {
+    try {
+      this.timeScaleModel.setVisibleRange(range);
+    } catch {
+      // The stored data may no longer cover the previous range; keep the current one.
+    }
+    this.requestRender();
+  }
+
+  isAtRightEdge(): boolean {
+    return this.timeScaleModel.isAtRightEdge();
+  }
+
+  fitContentIfDefault(): void {
+    if (this.timeScaleModel.hasExplicitRange()) {
+      return;
+    }
+    this.timeScaleModel.fitContent();
+    this.requestRender();
+    this.emitVisibleRange();
+  }
+
+  emitDataLoading(seriesId: string, loading: boolean): void {
+    this.bus.emit("data-loading", { seriesId, loading });
+  }
+
+  emitDatafeedError(seriesId: string, error: WickError): void {
+    this.bus.emit("error", { error, source: "datafeed", seriesId });
+  }
+
   onSeriesDataChanged(_series: Series): void {
     this.assertAlive();
     this.timeScaleModel.onDataChanged();
     this.requestRender();
     this.emitVisibleRange();
+  }
+
+  private notifyViewChange(): void {
+    if (this.disposed) {
+      return;
+    }
+    for (const series of this.series) {
+      series.onViewChanged();
+    }
   }
 
   priceScaleApi(): PriceScaleApi {
@@ -380,6 +434,7 @@ class Chart implements ChartApi, SeriesHost {
         this.timeScaleModel.pan(delta);
         this.requestRender();
         this.emitVisibleRange();
+        this.notifyViewChange();
       }
       this.updateCrosshair(point.x, point.y);
       return;
@@ -432,6 +487,7 @@ class Chart implements ChartApi, SeriesHost {
     this.timeScaleModel.zoomAt(point.x, event.deltaY);
     this.requestRender();
     this.emitVisibleRange();
+    this.notifyViewChange();
     this.updateCrosshair(point.x, point.y);
   };
 

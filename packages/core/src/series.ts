@@ -1,12 +1,16 @@
+import { DatafeedController, type DatafeedControllerHost } from "./data/datafeed-controller";
 import { OhlcStore } from "./data/ohlc-store";
-import { fail } from "./errors";
+import { fail, type WickError } from "./errors";
 import type { SeriesRenderData } from "./render/chart-renderer";
 import type {
   CandlestickSeriesOptions,
+  Datafeed,
   OhlcData,
   PriceScaleApi,
   SeriesApi,
+  SeriesDatafeedOptions,
   SeriesType,
+  VisibleRange,
 } from "./types";
 import { mergeDefined } from "./util";
 import { VERSION } from "./version";
@@ -44,6 +48,12 @@ export interface SeriesHost {
   requestRender(): void;
   priceScaleApi(): PriceScaleApi;
   removeSeries(series: Series): void;
+  getVisibleRange(): VisibleRange;
+  restoreVisibleRange(range: VisibleRange): void;
+  isAtRightEdge(): boolean;
+  fitContentIfDefault(): void;
+  emitDataLoading(seriesId: string, loading: boolean): void;
+  emitDatafeedError(seriesId: string, error: WickError): void;
 }
 
 /**
@@ -57,6 +67,7 @@ export class Series implements SeriesApi<OhlcData, CandlestickSeriesOptions> {
   private readonly store = new OhlcStore();
   private options: Required<CandlestickSeriesOptions>;
   private removed = false;
+  private datafeedController: DatafeedController<OhlcData> | null = null;
 
   constructor(
     host: SeriesHost,
@@ -79,12 +90,14 @@ export class Series implements SeriesApi<OhlcData, CandlestickSeriesOptions> {
 
   setData(data: readonly OhlcData[]): void {
     this.assertAlive();
+    this.assertNoDatafeed("setData");
     this.store.setData(data);
     this.host.onSeriesDataChanged(this);
   }
 
   update(data: OhlcData): void {
     this.assertAlive();
+    this.assertNoDatafeed("update");
     this.store.update(data);
     this.host.onSeriesDataChanged(this);
   }
@@ -103,6 +116,50 @@ export class Series implements SeriesApi<OhlcData, CandlestickSeriesOptions> {
     this.host.requestRender();
   }
 
+  setDatafeed(feed: Datafeed<OhlcData>, options: SeriesDatafeedOptions): void {
+    this.assertAlive();
+
+    this.datafeedController?.stop();
+    this.store.clear();
+
+    const host: DatafeedControllerHost<OhlcData> = {
+      getVisibleRange: () => this.host.getVisibleRange(),
+      restoreVisibleRange: (range) => this.host.restoreVisibleRange(range),
+      isAtRightEdge: () => this.host.isAtRightEdge(),
+      fitContentIfDefault: () => this.host.fitContentIfDefault(),
+      getDataBounds: () => {
+        const first = this.store.firstTime();
+        const last = this.store.lastTime();
+        return first === null || last === null ? null : { first, last };
+      },
+      mergeData: (data) => {
+        this.store.merge(data);
+      },
+      updateData: (data) => {
+        this.store.update(data);
+      },
+      onSeriesDataChanged: () => this.host.onSeriesDataChanged(this),
+      emitLoading: (loading) => this.host.emitDataLoading(this.id, loading),
+      emitError: (error) => this.host.emitDatafeedError(this.id, error),
+    };
+
+    this.datafeedController = new DatafeedController(host, feed, options);
+    this.datafeedController.start();
+    this.host.onSeriesDataChanged(this);
+  }
+
+  clearDatafeed(): void {
+    this.assertAlive();
+    this.datafeedController?.stop();
+    this.datafeedController = null;
+    this.host.requestRender();
+  }
+
+  isLoading(): boolean {
+    this.assertAlive();
+    return this.datafeedController?.isLoading() ?? false;
+  }
+
   priceScale(): PriceScaleApi {
     this.assertAlive();
     return this.host.priceScaleApi();
@@ -110,8 +167,22 @@ export class Series implements SeriesApi<OhlcData, CandlestickSeriesOptions> {
 
   remove(): void {
     this.assertAlive();
+    this.datafeedController?.stop();
+    this.datafeedController = null;
     this.removed = true;
     this.host.removeSeries(this);
+  }
+
+  /** Called by the chart when the visible range changes. */
+  onViewChanged(): void {
+    this.datafeedController?.onViewChange();
+  }
+
+  /** Called by the chart during destroy. */
+  destroyInternal(): void {
+    this.datafeedController?.stop();
+    this.datafeedController = null;
+    this.removed = true;
   }
 
   isVisible(): boolean {
@@ -141,6 +212,12 @@ export class Series implements SeriesApi<OhlcData, CandlestickSeriesOptions> {
     this.host.assertAlive();
     if (this.removed) {
       fail("DISPOSED", "Series is removed");
+    }
+  }
+
+  private assertNoDatafeed(method: string): void {
+    if (this.datafeedController) {
+      fail("INVALID_ARGUMENT", `Series is driven by a datafeed; ${method} is not allowed`);
     }
   }
 }

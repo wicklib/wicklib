@@ -1,6 +1,7 @@
 import { CandlestickSeries, createChart, type OhlcData } from "@wicklib/core";
 
 import { generateOhlc } from "./data";
+import { createMockFeed } from "./mock-feed";
 import "./style.css";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -20,6 +21,7 @@ app.innerHTML = `
         </select>
       </label>
       <button id="regenerate" type="button">Regenerate</button>
+      <button id="feed" type="button">Use feed</button>
       <button id="fit" type="button">Fit</button>
       <button id="theme" type="button">Light</button>
     </div>
@@ -27,6 +29,7 @@ app.innerHTML = `
   </header>
   <div class="status">
     <span id="summary"></span>
+    <span id="feed-status"></span>
     <span id="readout"></span>
   </div>
   <div id="chart"></div>
@@ -46,6 +49,8 @@ const readout = byId<HTMLSpanElement>("readout");
 const fps = byId<HTMLSpanElement>("fps");
 const countSelect = byId<HTMLSelectElement>("count");
 const regenerateButton = byId<HTMLButtonElement>("regenerate");
+const feedButton = byId<HTMLButtonElement>("feed");
+const feedStatus = byId<HTMLSpanElement>("feed-status");
 const fitButton = byId<HTMLButtonElement>("fit");
 const themeButton = byId<HTMLButtonElement>("theme");
 
@@ -95,6 +100,8 @@ const timeFormatter = new Intl.DateTimeFormat("en-US", {
 let count = 100_000;
 let seed = 7;
 let data: OhlcData[] = [];
+let feedActive = false;
+let fitAfterFeedLoad = false;
 
 function format(value: number): string {
   return value.toFixed(2);
@@ -125,18 +132,73 @@ function updateSummary(): void {
   const from = range.from > 0 ? dayFormatter.format(range.from) : "—";
   const to = range.to > 0 ? dayFormatter.format(range.to) : "—";
 
-  summary.textContent = `BTC/USD · 1m · ${data.length.toLocaleString("en-US")} bars · ${from} → ${to}`;
+  const label = feedActive ? "live feed" : `${data.length.toLocaleString("en-US")} bars`;
+  summary.textContent = `BTC/USD · 1m · ${label} · ${from} → ${to}`;
+}
+
+function stopFeed(): void {
+  if (!feedActive) {
+    return;
+  }
+  feedActive = false;
+  series.clearDatafeed();
+  feedStatus.textContent = "";
+}
+
+function startFeed(): void {
+  feedActive = true;
+  fitAfterFeedLoad = true;
+  feedStatus.textContent = "loading…";
+  series.setDatafeed(
+    createMockFeed(() => data),
+    {
+      symbol: "BTC/USD",
+      interval: "1m",
+      initialBars: 2000,
+    },
+  );
 }
 
 function load(): void {
+  const wasFeed = feedActive;
+  if (wasFeed) {
+    stopFeed();
+  }
+
   data = generateOhlc(count, seed);
-  series.setData(data);
-  chart.timeScale().fitContent();
+
+  if (wasFeed) {
+    startFeed();
+  } else {
+    series.setData(data);
+    chart.timeScale().fitContent();
+  }
+
   updateSummary();
 }
 
 chart.on("visible-range", () => {
   updateSummary();
+});
+
+chart.on("data-loading", (event) => {
+  if (event.loading) {
+    feedStatus.textContent = "loading…";
+    return;
+  }
+
+  feedStatus.textContent = feedActive ? "live" : "";
+
+  if (fitAfterFeedLoad) {
+    fitAfterFeedLoad = false;
+    chart.timeScale().fitContent();
+  }
+});
+
+chart.on("error", (event) => {
+  if (event.source === "datafeed") {
+    feedStatus.textContent = "feed error";
+  }
 });
 
 chart.on("crosshair", (event) => {
@@ -163,6 +225,19 @@ countSelect.addEventListener("change", () => {
 regenerateButton.addEventListener("click", () => {
   seed += 1;
   load();
+});
+
+feedButton.addEventListener("click", () => {
+  if (feedActive) {
+    stopFeed();
+    series.setData(data);
+    chart.timeScale().fitContent();
+    feedButton.textContent = "Use feed";
+  } else {
+    startFeed();
+    feedButton.textContent = "Use static";
+  }
+  updateSummary();
 });
 
 fitButton.addEventListener("click", () => {
@@ -214,3 +289,9 @@ requestAnimationFrame(tick);
 
 document.body.dataset.theme = "dark";
 load();
+
+if (new URLSearchParams(window.location.search).has("feed")) {
+  startFeed();
+  feedButton.textContent = "Use static";
+  updateSummary();
+}

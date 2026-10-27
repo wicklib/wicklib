@@ -59,12 +59,15 @@ export interface ChartClickEvent {
 export interface ChartErrorEvent {
     // (undocumented)
     error: WickError;
+    seriesId?: string;
     // (undocumented)
     source: "chart" | "series" | "extension" | "datafeed";
 }
 
 // @public
 export interface ChartEventMap {
+    // (undocumented)
+    "data-loading": DataLoadingEvent;
     // (undocumented)
     "visible-range": VisibleRangeEvent;
     // (undocumented)
@@ -135,6 +138,47 @@ export interface CrosshairOptions {
     mode?: "normal" | "magnet" | "hidden";
     // (undocumented)
     vertLine?: CrosshairLineOptions;
+}
+
+// @public
+export interface Datafeed<TData extends SeriesData = SeriesData> {
+    // (undocumented)
+    getData(request: DataRequest, context: DatafeedContext): Promise<DataResponse<TData>>;
+    // (undocumented)
+    subscribe?(request: SubscriptionRequest, listener: (data: TData) => void, onError: (error: unknown) => void): Unsubscribe;
+}
+
+// @public
+export interface DatafeedContext {
+    // (undocumented)
+    signal: AbortSignal;
+}
+
+// @public
+export interface DataLoadingEvent {
+    // (undocumented)
+    loading: boolean;
+    // (undocumented)
+    seriesId: string;
+}
+
+// @public
+export interface DataRequest {
+    count?: number;
+    from?: Time;
+    // (undocumented)
+    interval: Interval;
+    // (undocumented)
+    symbol: string;
+    to?: Time;
+}
+
+// @public
+export interface DataResponse<TData extends SeriesData = SeriesData> {
+    // (undocumented)
+    data: readonly TData[];
+    noDataAfter?: boolean;
+    noDataBefore?: boolean;
 }
 
 // @public
@@ -274,8 +318,10 @@ export type ReadyEvent = void;
 
 // @public
 export interface SeriesApi<TData extends SeriesData = SeriesData, TOptions extends SeriesOptions = SeriesOptions> {
+    clearDatafeed(): void;
     // (undocumented)
     readonly id: string;
+    isLoading(): boolean;
     // (undocumented)
     readonly paneId: string;
     // (undocumented)
@@ -284,6 +330,7 @@ export interface SeriesApi<TData extends SeriesData = SeriesData, TOptions exten
     remove(): void;
     // (undocumented)
     setData(data: readonly TData[]): void;
+    setDatafeed(feed: Datafeed<TData>, options: SeriesDatafeedOptions): void;
     // (undocumented)
     setOptions(options: Partial<TOptions>): void;
     // (undocumented)
@@ -294,6 +341,15 @@ export interface SeriesApi<TData extends SeriesData = SeriesData, TOptions exten
 export interface SeriesData {
     // (undocumented)
     time: Time;
+}
+
+// @public
+export interface SeriesDatafeedOptions {
+    initialBars?: number;
+    // (undocumented)
+    interval: Interval;
+    // (undocumented)
+    symbol: string;
 }
 
 // @public
@@ -312,6 +368,14 @@ export interface SeriesType<TData extends SeriesData = SeriesData, TOptions exte
     readonly id: string;
     // (undocumented)
     readonly meta: ExtensionMeta;
+}
+
+// @public
+export interface SubscriptionRequest {
+    // (undocumented)
+    interval: Interval;
+    // (undocumented)
+    symbol: string;
 }
 
 // @public

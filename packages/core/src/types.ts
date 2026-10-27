@@ -35,6 +35,74 @@ export interface LineData extends SeriesData {
 }
 
 /**
+ * Context passed to a datafeed request. The signal aborts when the request is no longer
+ * needed.
+ */
+export interface DatafeedContext {
+  signal: AbortSignal;
+}
+
+/**
+ * A request for series data.
+ *
+ * Provide either `count` for the initial load, or `from`/`to` for a range load. The core
+ * never sends both.
+ */
+export interface DataRequest {
+  symbol: string;
+  interval: Interval;
+  /** Inclusive lower bound. */
+  from?: Time;
+  /** Inclusive upper bound. */
+  to?: Time;
+  /** Number of latest points to return. */
+  count?: number;
+}
+
+/**
+ * A datafeed response. `data` must be ascending and unique by time.
+ */
+export interface DataResponse<TData extends SeriesData = SeriesData> {
+  data: readonly TData[];
+  /** True when no data exists earlier than the requested range. */
+  noDataBefore?: boolean;
+  /** True when no data exists later than the requested range. */
+  noDataAfter?: boolean;
+}
+
+/**
+ * Realtime subscription request.
+ */
+export interface SubscriptionRequest {
+  symbol: string;
+  interval: Interval;
+}
+
+/**
+ * Turns symbol and interval into data. The feed owns transport, authentication, caching,
+ * retries, and reconnection.
+ */
+export interface Datafeed<TData extends SeriesData = SeriesData> {
+  getData(request: DataRequest, context: DatafeedContext): Promise<DataResponse<TData>>;
+
+  subscribe?(
+    request: SubscriptionRequest,
+    listener: (data: TData) => void,
+    onError: (error: unknown) => void,
+  ): Unsubscribe;
+}
+
+/**
+ * Options for attaching a datafeed to a series.
+ */
+export interface SeriesDatafeedOptions {
+  symbol: string;
+  interval: Interval;
+  /** Points requested on the initial load. Defaults to 500. */
+  initialBars?: number;
+}
+
+/**
  * A point in CSS pixels relative to the chart container.
  */
 export interface Point {
@@ -302,6 +370,16 @@ export interface ChartClickEvent {
 export interface ChartErrorEvent {
   error: WickError;
   source: "chart" | "series" | "extension" | "datafeed";
+  /** Present when the error came from a series datafeed. */
+  seriesId?: string;
+}
+
+/**
+ * Payload for the `data-loading` event.
+ */
+export interface DataLoadingEvent {
+  seriesId: string;
+  loading: boolean;
 }
 
 /**
@@ -311,6 +389,7 @@ export interface ChartEventMap {
   ready: ReadyEvent;
   crosshair: CrosshairEvent;
   "visible-range": VisibleRangeEvent;
+  "data-loading": DataLoadingEvent;
   click: ChartClickEvent;
   error: ChartErrorEvent;
 }
@@ -361,6 +440,12 @@ export interface SeriesApi<
   setData(data: readonly TData[]): void;
   update(data: TData): void;
   setOptions(options: Partial<TOptions>): void;
+  /** Replaces manual data with a datafeed and starts loading. */
+  setDatafeed(feed: Datafeed<TData>, options: SeriesDatafeedOptions): void;
+  /** Stops requests and subscriptions. Keeps loaded data. */
+  clearDatafeed(): void;
+  /** True while initial or range loads are in flight. */
+  isLoading(): boolean;
   priceScale(): PriceScaleApi;
   remove(): void;
 }

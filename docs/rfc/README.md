@@ -6,7 +6,7 @@ changing its decisions requires a new RFC or an ADR.
 | RFC  | Title                       | Status      |
 | ---- | --------------------------- | ----------- |
 | 0001 | Public chart and series API | Accepted    |
-| 0002 | Datafeed contract           | Not written |
+| 0002 | Datafeed contract           | Proposed    |
 | 0003 | Indicators, drawings, panes | Not written |
 
 Rules:

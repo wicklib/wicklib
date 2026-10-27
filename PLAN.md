@@ -1,15 +1,15 @@
 # Wicklib — Implementation Plan
 
-Status: Phase 1 complete. Phase 2 in progress: RFC-0001 accepted; playground and candlestick
-vertical slice implemented.
+Status: Phase 1 complete. Phase 2 in progress: RFC-0001 and RFC-0002 accepted; playground,
+candlestick vertical slice, and series datafeed implemented.
 
 Phase 1 froze the contract: packages, toolchain, CI, release pipeline, API report, extension
 seams, and the normative WickScript plan. No rendering exists yet.
 
 ## Phase 2 — rendering vertical slice
 
-Status: in progress. Steps 0–5 are implemented; datafeed (Step 6) and visual regression
-(Step 7) are pending.
+Status: in progress. Steps 0–6 are implemented; visual regression and the performance
+baseline (Step 7) are pending.
 
 Decisions:
 
@@ -70,13 +70,15 @@ RFC-0001 is accepted. The types and API report were updated from it.
 - Wheel zoom anchored at the pointer; drag pan; keyboard; touch.
 - Range clamping and inertia decisions documented.
 
-### Step 6 — datafeed (pending)
+### Step 6 — datafeed (done)
 
-Requires RFC-0002 before implementation.
+RFC-0002 accepted and implemented.
 
-- Static array adapter, then async range loader with abort support.
-- Realtime subscription with revision semantics.
-- Errors surfaced to the host, never swallowed.
+- Series-level `setDatafeed`, `clearDatafeed`, `isLoading`.
+- Initial count load, debounced range loads, 50% prefetch, abort on stale requests.
+- Merge with prepend anchoring and realtime revision semantics.
+- `data-loading` events; datafeed errors on the `error` event with `seriesId`.
+- Mock async feed in the playground.
 
 ### Step 7 — performance and regression (partial)
 
@@ -91,14 +93,15 @@ Exit criteria:
 - [x] Playground renders 100k synthetic bars with crosshair, zoom, pan, and clean teardown.
 - [ ] 60fps interaction baseline recorded.
 - [x] API report diff reviewed and documented.
-- [x] Unit tests for scales and data lifecycle.
+- [x] Unit tests for scales, store merging, datafeed, and lifecycle.
 - [ ] Visual tests for rendering.
 - [x] No sessions/DST, no WebGL, no indicators, no script, no pro in this phase.
 
 Implemented in this phase: continuous time scale, linear price scale, layered Canvas2D
 renderer, candlestick series, price/time axes, grid, legend, last-value line, crosshair
 (normal and magnet), click events, drag pan, wheel zoom, resize, dispose, strict validation,
-typed errors, per-chart extension validation, and the private playground.
+typed errors, per-chart extension validation, the series datafeed, and the private
+playground.
 
 ## Phase 3 — indicators and structure
 

@@ -6,6 +6,7 @@ import {
   type ChartApi,
   type ChartErrorEvent,
   type CrosshairEvent,
+  type Datafeed,
   type OhlcData,
 } from "../src/index";
 
@@ -235,6 +236,44 @@ describe("createChart", () => {
     expect(() => createChart(mount(), { extensions: [extension, extension] })).toThrow(
       /Duplicate extension/,
     );
+  });
+
+  it("loads a series from a datafeed", async () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    const series = chart.addSeries(CandlestickSeries);
+    const loading: boolean[] = [];
+    let subscribed = false;
+    let unsubscribed = false;
+
+    chart.on("data-loading", (event) => loading.push(event.loading));
+
+    const feed: Datafeed<OhlcData> = {
+      async getData() {
+        return { data: bars(30) };
+      },
+      subscribe() {
+        subscribed = true;
+        return () => {
+          unsubscribed = true;
+        };
+      },
+    };
+
+    series.setDatafeed(feed, { symbol: "BTC", interval: "1m", initialBars: 10 });
+    await settle();
+
+    expect(series.isLoading()).toBe(false);
+    expect(loading).toEqual([true, false]);
+    expect(subscribed).toBe(true);
+    expect(() => series.setData(bars(1))).toThrow(/datafeed/i);
+
+    const range = chart.timeScale().getVisibleRange();
+    expect(range.to).toBeGreaterThan(range.from);
+
+    series.clearDatafeed();
+    expect(unsubscribed).toBe(true);
+    expect(() => series.setData(bars(2))).not.toThrow();
   });
 
   it("exposes price scale controls", () => {

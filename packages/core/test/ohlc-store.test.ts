@@ -82,3 +82,65 @@ describe("OhlcStore", () => {
     expect(store.minMax(2, 1)).toBeNull();
   });
 });
+
+describe("OhlcStore.merge", () => {
+  const BASE = 1_000_000;
+  const MINUTE = 60_000;
+
+  it("appends bars after the last", () => {
+    const store = new OhlcStore();
+    store.setData([bar(BASE), bar(BASE + MINUTE)]);
+
+    const result = store.merge([bar(BASE + 2 * MINUTE), bar(BASE + 3 * MINUTE)]);
+
+    expect(result).toEqual({ prepended: 0, appended: 2, replaced: 0 });
+    expect(store.length).toBe(4);
+    expect(store.lastTime()).toBe(BASE + 3 * MINUTE);
+  });
+
+  it("prepends bars before the first", () => {
+    const store = new OhlcStore();
+    store.setData([bar(BASE + 2 * MINUTE), bar(BASE + 3 * MINUTE)]);
+
+    const result = store.merge([bar(BASE), bar(BASE + MINUTE)]);
+
+    expect(result).toEqual({ prepended: 2, appended: 0, replaced: 0 });
+    expect(store.length).toBe(4);
+    expect(store.firstTime()).toBe(BASE);
+    expect(store.timeAt(0)).toBe(BASE);
+    expect(store.timeAt(2)).toBe(BASE + 2 * MINUTE);
+  });
+
+  it("replaces overlaps and inserts gaps", () => {
+    const store = new OhlcStore();
+    store.setData([bar(BASE), bar(BASE + 2 * MINUTE)]);
+
+    const result = store.merge([
+      bar(BASE + MINUTE),
+      bar(BASE + 2 * MINUTE, { close: 210, high: 215 }),
+      bar(BASE + 3 * MINUTE),
+    ]);
+
+    expect(result).toEqual({ prepended: 0, appended: 1, replaced: 1 });
+    expect(store.length).toBe(4);
+    expect(store.timeAt(1)).toBe(BASE + MINUTE);
+    expect(store.closeAt(2)).toBe(210);
+  });
+
+  it("rejects unsorted incoming data", () => {
+    const store = new OhlcStore();
+    store.setData([bar(BASE)]);
+
+    expect(() => store.merge([bar(BASE + MINUTE), bar(BASE)])).toThrow(/strictly ascending/);
+  });
+
+  it("reports first and last time", () => {
+    const store = new OhlcStore();
+    expect(store.firstTime()).toBeNull();
+    expect(store.lastTime()).toBeNull();
+
+    store.setData([bar(BASE), bar(BASE + MINUTE)]);
+    expect(store.firstTime()).toBe(BASE);
+    expect(store.lastTime()).toBe(BASE + MINUTE);
+  });
+});
