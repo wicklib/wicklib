@@ -49,7 +49,7 @@ Never published. Not part of the Changesets group.
 ## Session fixture
 
 `?sessions` generates two deterministic US equities regular-hours sessions. The chart uses
-`America/New_York`, Monday–Friday 09:30–16:00, an 80px closed-session gap, and session-aware
+`America/New_York`, Monday–Friday 09:30–16:00, a 24px closed-session gap, and session-aware
 labels without requiring external data. The fixture is synthetic and private to the
 playground.
 
@@ -67,8 +67,8 @@ are `--symbol`, `--interval`, `--range`, and `--output`.
 
 Output: `apps/playground/public/data/yahoo-gspc-5m-1mo.json`
 
-The chart uses `gapMode: "show"` and the US equities calendar. Use the wheel or Fit/Reset to
-move between a session-level view and the broader month. Yahoo data is delayed and rounded;
+The chart uses `gapMode: "show"` with an 8px closed-session gap and the US equities calendar.
+Use the wheel or Fit/Reset to move between a session-level view and the broader month. Yahoo data is delayed and rounded;
 use it for visual/layout validation, not backtesting.
 
 ## Binance snapshot

@@ -480,7 +480,7 @@ function loadSessions(): void {
   chart.timeScale().setOptions({
     calendar: US_EQUITIES_RTH,
     gapMode: "show",
-    gapWidth: 80,
+    gapWidth: 24,
     maxVisibleBars: SESSION_VISIBLE_BARS,
   });
   baseData = generateSessionOhlc(2, 390, seed);
@@ -558,7 +558,7 @@ async function loadSpx(): Promise<void> {
     chart.timeScale().setOptions({
       calendar: US_EQUITIES_RTH,
       gapMode: "show",
-      gapWidth: 40,
+      gapWidth: 8,
       maxVisibleBars: SPX_VISIBLE_BARS,
     });
     applyTimeframe();
