@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.6
+
+### Minor Changes
+
+- b8b05d5: Add horizontal trackpad panning, price-axis scaling with manual vertical panning, double-click auto-scale reset, `PriceScaleApi.isAutoScale()`, and `ChartApi.resetView()`.
+
 ## 0.1.0-next.5
 
 ### Minor Changes
