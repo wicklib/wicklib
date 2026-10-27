@@ -30,3 +30,4 @@ blob-report/
 
 # generated market-data snapshots
 apps/playground/public/data/binance-*.json
+apps/playground/public/data/yahoo-*.json

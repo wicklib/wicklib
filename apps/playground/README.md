@@ -18,6 +18,7 @@ Never published. Not part of the Changesets group.
 - Regenerate: new deterministic dataset (seed increments).
 - Use feed: simulated async feed with latency, live bars, loading state, and range loads.
 - Binance 2025: load the local one-year BTCUSDT 1m snapshot (525,600 bars).
+- SPX 5m: load a local one-month Yahoo ^GSPC snapshot.
 - Sessions: a deterministic US equities regular-hours fixture with a DST-aware calendar.
 - SMA / RSI / MACD toggles: overlays and separate indicator panes.
 - Trend, H-Line, Rect, Fib, and Clear: interactive drawing tools.
@@ -36,6 +37,7 @@ Never published. Not part of the Changesets group.
 
 - `?feed` — start in datafeed mode.
 - `?binance` — load the local Binance 2025 BTCUSDT 1m snapshot.
+- `?spx` — load the local Yahoo ^GSPC one-month 5m snapshot.
 - `?sessions` — load the US equities regular-hours fixture and session calendar.
 - `?timeframe=15m` — start on a derived timeframe; accepts `1m`, `5m`, `15m`, `1h`, `4h`, `1d`.
 - `?indicators` — enable SMA, RSI, and MACD.
@@ -50,6 +52,24 @@ Never published. Not part of the Changesets group.
 `America/New_York`, Monday–Friday 09:30–16:00, an 80px closed-session gap, and session-aware
 labels without requiring external data. The fixture is synthetic and private to the
 playground.
+
+## SPX snapshot
+
+The SPX mode downloads Yahoo Finance chart data into the same local, gitignored data folder:
+
+```sh
+pnpm --filter @wicklib/playground data:yahoo
+```
+
+The default is `^GSPC`, `5m`, `1mo`, with pre/post-market rows excluded. Yahoo only exposes
+about seven days of 1m index data, so the one-month sample uses 5m bars. Optional arguments
+are `--symbol`, `--interval`, `--range`, and `--output`.
+
+Output: `apps/playground/public/data/yahoo-gspc-5m-1mo.json`
+
+The chart uses `gapMode: "show"` and the US equities calendar. Use the wheel or Fit/Reset to
+move between a session-level view and the broader month. Yahoo data is delayed and rounded;
+use it for visual/layout validation, not backtesting.
 
 ## Binance snapshot
 

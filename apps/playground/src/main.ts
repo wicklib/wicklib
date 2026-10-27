@@ -35,15 +35,27 @@ const TIMEFRAME_MINUTES: Record<Timeframe, number> = {
 const RIGHT_MARGIN_BARS = 30;
 const MAX_VISIBLE_BARS = 720;
 const SESSION_VISIBLE_BARS = 900;
+const SPX_VISIBLE_BARS = 1_400;
 
-interface BinanceSnapshot {
+interface SnapshotBars {
   version: number;
+  bars: number[][];
+}
+
+interface BinanceSnapshot extends SnapshotBars {
   source: string;
   market: string;
   symbol: string;
   interval: string;
   year: string;
-  bars: number[][];
+}
+
+interface YahooSnapshot extends SnapshotBars {
+  source: string;
+  symbol: string;
+  interval: string;
+  range: string;
+  timezone: string;
 }
 
 declare global {
@@ -86,6 +98,7 @@ app.innerHTML = `
       <button id="regenerate" type="button">Regenerate</button>
       <button id="feed" type="button">Use feed</button>
       <button id="binance" type="button">Binance 2025</button>
+      <button id="spx" type="button">SPX 5m</button>
       <button id="fit" type="button">Fit</button>
       <button id="reset" type="button">Reset</button>
       <label class="toggle"><input id="sma" type="checkbox" /> SMA</label>
@@ -130,6 +143,7 @@ const timeframeSelect = byId<HTMLSelectElement>("timeframe");
 const regenerateButton = byId<HTMLButtonElement>("regenerate");
 const feedButton = byId<HTMLButtonElement>("feed");
 const binanceButton = byId<HTMLButtonElement>("binance");
+const spxButton = byId<HTMLButtonElement>("spx");
 const feedStatus = byId<HTMLSpanElement>("feed-status");
 const fitButton = byId<HTMLButtonElement>("fit");
 const resetButton = byId<HTMLButtonElement>("reset");
@@ -215,6 +229,7 @@ const newYorkTimeFormatter = new Intl.DateTimeFormat("en-US", {
 let count = 100_000;
 let seed = 7;
 let timeframe: Timeframe = "1m";
+let sourceMinutes = 1;
 let baseData: OhlcData[] = [];
 let data: OhlcData[] = [];
 let feedActive = false;
@@ -287,6 +302,13 @@ function stopFeed(): void {
 }
 
 function startFeed(): void {
+  if (sourceMinutes !== 1) {
+    sourceMinutes = 1;
+    timeframe = "1m";
+    timeframeSelect.value = "1m";
+    timeframeSelect.disabled = false;
+    baseData = generateOhlc(count, seed);
+  }
   instrumentLabel = "BTC/USDT";
   summaryTimezone = "UTC";
   series.setOptions({ title: "BTC/USD" });
@@ -375,8 +397,11 @@ function load(): void {
   binanceLabel = null;
   instrumentLabel = "BTC/USDT";
   summaryTimezone = "UTC";
+  sourceMinutes = 1;
+  timeframeSelect.disabled = false;
   series.setOptions({ title: "BTC/USD" });
   binanceButton.classList.remove("active");
+  spxButton.classList.remove("active");
   chart.timeScale().setOptions({
     calendar: null,
     gapMode: "compress",
@@ -392,7 +417,9 @@ function load(): void {
 }
 
 function applyTimeframe(): void {
-  data = aggregateOhlc(baseData, TIMEFRAME_MINUTES[timeframe]);
+  const targetMinutes = TIMEFRAME_MINUTES[timeframe];
+  const ratio = targetMinutes / sourceMinutes;
+  data = Number.isInteger(ratio) && ratio >= 1 ? aggregateOhlc(baseData, ratio) : [...baseData];
   series.setData(data);
   fitChart();
 }
@@ -443,8 +470,10 @@ function loadSessions(): void {
   binanceLabel = "US equities RTH";
   instrumentLabel = "SPX";
   summaryTimezone = "America/New_York";
+  sourceMinutes = 1;
   series.setOptions({ title: "SPX" });
   binanceButton.classList.remove("active");
+  spxButton.classList.remove("active");
   timeframe = "1m";
   timeframeSelect.value = "1m";
   timeframeSelect.disabled = false;
@@ -480,12 +509,15 @@ async function loadBinance(): Promise<void> {
       gapMode: "compress",
       maxVisibleBars: MAX_VISIBLE_BARS,
     });
-    baseData = parseBinanceSnapshot(snapshot);
+    baseData = parseSnapshot(snapshot);
+    sourceMinutes = 1;
+    timeframeSelect.disabled = false;
     instrumentLabel = "BTC/USDT";
     summaryTimezone = "UTC";
     series.setOptions({ title: "BTC/USD" });
     binanceLabel = `Binance ${snapshot.market} ${snapshot.symbol} ${snapshot.year}`;
     binanceButton.classList.add("active");
+    spxButton.classList.remove("active");
     applyTimeframe();
     feedStatus.textContent = `${data.length.toLocaleString("en-US")} ${timeframe} bars`;
   } catch (error) {
@@ -496,7 +528,50 @@ async function loadBinance(): Promise<void> {
   }
 }
 
-function parseBinanceSnapshot(snapshot: BinanceSnapshot): OhlcData[] {
+async function loadSpx(): Promise<void> {
+  if (feedActive) {
+    stopFeed();
+    feedButton.textContent = "Use feed";
+  }
+
+  spxButton.disabled = true;
+  feedStatus.textContent = "loading SPX…";
+
+  try {
+    const response = await fetch("/data/yahoo-gspc-5m-1mo.json");
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const snapshot = (await response.json()) as YahooSnapshot;
+    baseData = parseSnapshot(snapshot);
+    sourceMinutes = 5;
+    timeframe = "5m";
+    timeframeSelect.value = "5m";
+    timeframeSelect.disabled = true;
+    instrumentLabel = "SPX";
+    summaryTimezone = snapshot.timezone || "America/New_York";
+    binanceLabel = `Yahoo ${snapshot.symbol} ${snapshot.range}`;
+    series.setOptions({ title: "SPX" });
+    binanceButton.classList.remove("active");
+    spxButton.classList.add("active");
+    chart.timeScale().setOptions({
+      calendar: US_EQUITIES_RTH,
+      gapMode: "show",
+      gapWidth: 40,
+      maxVisibleBars: SPX_VISIBLE_BARS,
+    });
+    applyTimeframe();
+    feedStatus.textContent = `${data.length.toLocaleString("en-US")} 5m bars`;
+  } catch (error) {
+    console.error("Could not load the local SPX snapshot", error);
+    feedStatus.textContent = "SPX snapshot missing — run data:yahoo";
+  } finally {
+    spxButton.disabled = false;
+  }
+}
+
+function parseSnapshot(snapshot: SnapshotBars): OhlcData[] {
   if (snapshot.version !== 1 || !Array.isArray(snapshot.bars)) {
     throw new Error("Unsupported Binance snapshot");
   }
@@ -683,6 +758,10 @@ binanceButton.addEventListener("click", () => {
   void loadBinance();
 });
 
+spxButton.addEventListener("click", () => {
+  void loadSpx();
+});
+
 fitButton.addEventListener("click", () => {
   fitChart();
 });
@@ -837,6 +916,10 @@ if (params.has("drawings")) {
 
 if (params.has("binance")) {
   void loadBinance();
+}
+
+if (params.has("spx")) {
+  void loadSpx();
 }
 
 if (testMode) {

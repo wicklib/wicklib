@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test:visual": "playwright test",
     "test:visual:update": "playwright test --update-snapshots",
-    "data:binance": "node scripts/import-binance.mjs"
+    "data:binance": "node scripts/import-binance.mjs",
+    "data:yahoo": "node scripts/import-yahoo.mjs"
   },
   "dependencies": {
     "@wicklib/core": "workspace:*",
