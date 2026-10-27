@@ -540,6 +540,55 @@ function registerTaFunctions(context: QuickJSContext, host: SandboxHostState): v
     return number(stdev(host, series, period));
   });
 
+  register("__wickscript_ta_vwma", (sourceHandle, lengthHandle) => {
+    const series = source(sourceHandle);
+    const period = length(lengthHandle);
+    if (series === null || period === null) return context.null;
+    return number(vwma(host, series, period));
+  });
+
+  register("__wickscript_ta_linreg", (sourceHandle, lengthHandle) => {
+    const series = source(sourceHandle);
+    const period = length(lengthHandle);
+    if (series === null || period === null) return context.null;
+    return number(linreg(host, series, period));
+  });
+
+  const taTr = context.newFunction("__wickscript_ta_tr", () => {
+    return number(trueRange(host, host.currentBarIndex));
+  });
+  context.setProp(context.global, "__wickscript_ta_tr", taTr);
+  taTr.dispose();
+
+  const taObv = context.newFunction("__wickscript_ta_obv", () => {
+    return number(obv(host));
+  });
+  context.setProp(context.global, "__wickscript_ta_obv", taObv);
+  taObv.dispose();
+
+  const taBarssince = context.newFunction(
+    "__wickscript_ta_barssince",
+    (_contextHandle, conditionHandle, keyHandle) => {
+      if (!conditionHandle || !keyHandle) {
+        setTaError(host, "ta.barssince requires a condition and a state key");
+        return context.null;
+      }
+      const condition = context.dump(conditionHandle);
+      const key = context.getString(keyHandle);
+      if (typeof condition !== "boolean") {
+        setTaError(host, "ta.barssince condition must be boolean");
+        return context.null;
+      }
+      if (key.trim() === "") {
+        setTaError(host, "ta.barssince state key must not be empty");
+        return context.null;
+      }
+      return number(barssince(host, condition, key));
+    },
+  );
+  context.setProp(context.global, "__wickscript_ta_barssince", taBarssince);
+  taBarssince.dispose();
+
   const optionalPeriod = (handle: QuickJSHandle | undefined): number | null => {
     if (!handle) return 1;
     return length(handle);
@@ -641,6 +690,11 @@ function registerTaFunctions(context: QuickJSContext, host: SandboxHostState): v
           change: __wickscript_ta_change,
           roc: __wickscript_ta_roc,
           cum: __wickscript_ta_cum,
+          vwma: __wickscript_ta_vwma,
+          tr: __wickscript_ta_tr,
+          obv: __wickscript_ta_obv,
+          linreg: __wickscript_ta_linreg,
+          barssince: __wickscript_ta_barssince,
           crossover: __wickscript_ta_crossover,
           crossunder: __wickscript_ta_crossunder,
         });`,
@@ -864,5 +918,78 @@ function cum(host: SandboxHostState, series: PriceSource | number): number | nul
   if (current === null) return null;
   const value = (state?.value ?? 0) + current;
   host.taState.set(key, { index: host.currentBarIndex, value });
+  return value;
+}
+
+function vwma(host: SandboxHostState, series: PriceSource | number, period: number): number | null {
+  const start = host.currentBarIndex - period + 1;
+  if (start < 0) return null;
+  let weighted = 0;
+  let volume = 0;
+  for (let index = start; index <= host.currentBarIndex; index += 1) {
+    const value = valueAt(host, index, series);
+    const barVolume = host.history[index]?.volume;
+    if (value === null || !Number.isFinite(barVolume)) return null;
+    weighted += value * barVolume!;
+    volume += barVolume!;
+  }
+  return volume > 0 ? weighted / volume : null;
+}
+
+function obv(host: SandboxHostState): number | null {
+  const key = "obv";
+  const state = host.taState.get(key) as { index: number; value: number } | undefined;
+  if (state?.index === host.currentBarIndex) {
+    return state.value;
+  }
+  const current = host.history[host.currentBarIndex];
+  if (!current) return null;
+  const previous = host.history[host.currentBarIndex - 1];
+  const volume = current.volume ?? 0;
+  let value = state?.value ?? 0;
+  if (previous) {
+    if (current.close > previous.close) value += volume;
+    else if (current.close < previous.close) value -= volume;
+  }
+  host.taState.set(key, { index: host.currentBarIndex, value });
+  return value;
+}
+
+function linreg(
+  host: SandboxHostState,
+  series: PriceSource | number,
+  period: number,
+): number | null {
+  const start = host.currentBarIndex - period + 1;
+  if (start < 0 || period < 2) return null;
+  let sumX = 0;
+  let sumY = 0;
+  let sumXY = 0;
+  let sumXX = 0;
+  for (let index = 0; index < period; index += 1) {
+    const value = valueAt(host, start + index, series);
+    if (value === null) return null;
+    sumX += index;
+    sumY += value;
+    sumXY += index * value;
+    sumXX += index * index;
+  }
+  const denominator = period * sumXX - sumX * sumX;
+  if (denominator === 0) return null;
+  const slope = (period * sumXY - sumX * sumY) / denominator;
+  const intercept = (sumY - slope * sumX) / period;
+  return intercept + slope * (period - 1);
+}
+
+function barssince(host: SandboxHostState, condition: boolean, key: string): number | null {
+  const stateKey = `barssince:${key}`;
+  const state = host.taState.get(stateKey) as
+    { index: number; value: number | null; lastTrue: number | null } | undefined;
+  if (state?.index === host.currentBarIndex) {
+    return state.value;
+  }
+  const lastTrue = condition ? host.currentBarIndex : (state?.lastTrue ?? null);
+  const value = lastTrue === null ? null : host.currentBarIndex - lastTrue;
+  host.taState.set(stateKey, { index: host.currentBarIndex, value, lastTrue });
   return value;
 }

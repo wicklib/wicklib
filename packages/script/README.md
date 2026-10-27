@@ -44,7 +44,8 @@ runtime.dispose();
 ```
 
 Free `ta.*` functions: `sma`, `ema`, `rsi`, `atr`, `highest`, `lowest`, `stdev`, `change`,
-`roc`, `cum`, `crossover`, and `crossunder`. They maintain deterministic per-session state.
+`roc`, `cum`, `vwma`, `tr`, `obv`, `linreg`, `barssince`, `crossover`, and `crossunder`.
+They maintain deterministic per-session state. `barssince` requires an explicit stable key.
 
 `validateScript(source)` runs the same header/import/global/syntax validation as compilation
 without executing code. The editor uses it for inline diagnostics.

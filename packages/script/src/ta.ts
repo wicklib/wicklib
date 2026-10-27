@@ -22,6 +22,11 @@ export interface ScriptTa {
   change(context: ScriptContext, source: TaSeries, length?: number): number | null;
   roc(context: ScriptContext, source: TaSeries, length?: number): number | null;
   cum(context: ScriptContext, source: TaSeries): number | null;
+  vwma(context: ScriptContext, source: TaSeries, length: number): number | null;
+  tr(context: ScriptContext): number | null;
+  obv(context: ScriptContext): number | null;
+  linreg(context: ScriptContext, source: TaSeries, length: number): number | null;
+  barssince(context: ScriptContext, condition: boolean, key: string): number | null;
   crossover(context: ScriptContext, first: TaSeries, second: TaSeries): boolean;
   crossunder(context: ScriptContext, first: TaSeries, second: TaSeries): boolean;
 }
@@ -40,6 +45,11 @@ export const ta: ScriptTa = {
   change: notImplemented("ta.change"),
   roc: notImplemented("ta.roc"),
   cum: notImplemented("ta.cum"),
+  vwma: notImplemented("ta.vwma"),
+  tr: notImplemented("ta.tr"),
+  obv: notImplemented("ta.obv"),
+  linreg: notImplemented("ta.linreg"),
+  barssince: notImplemented("ta.barssince"),
   crossover: notImplemented("ta.crossover"),
   crossunder: notImplemented("ta.crossunder"),
 };
