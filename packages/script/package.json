@@ -1,6 +1,6 @@
 {
   "name": "@wicklib/script",
-  "version": "0.1.0-next.23",
+  "version": "0.1.0-next.24",
   "description": "WickScript runtime contract (TypeScript for charts)",
   "license": "Apache-2.0",
   "type": "module",
@@ -50,7 +50,7 @@
     "directory": "packages/script"
   },
   "peerDependencies": {
-    "@wicklib/core": "^0.1.0-next.23"
+    "@wicklib/core": "^0.1.0-next.24"
   },
   "devDependencies": {
     "@wicklib/core": "workspace:*",

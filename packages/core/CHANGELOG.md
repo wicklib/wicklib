@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.24
+
+### Minor Changes
+
+- 4f639a3: Add a lightweight-charts option mapper plus explicit wheel, drag, pinch, axis, and time-axis border controls.
+
 ## 0.1.0-next.23
 
 ### Minor Changes
