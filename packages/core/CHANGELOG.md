@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.8
+
+### Patch Changes
+
+- 4e01fc6: Allow time coordinates, time-axis labels, and drawings to extend beyond the last bar using the last observed interval.
+
 ## 0.1.0-next.7
 
 ### Patch Changes
