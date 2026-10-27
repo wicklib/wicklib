@@ -1,5 +1,11 @@
 # @wicklib/react
 
+## 0.1.0-next.18
+
+### Patch Changes
+
+- @wicklib/core@0.1.0-next.18
+
 ## 0.1.0-next.17
 
 ### Patch Changes

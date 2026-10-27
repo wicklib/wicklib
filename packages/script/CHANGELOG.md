@@ -1,5 +1,15 @@
 # @wicklib/script
 
+## 0.1.0-next.18
+
+### Minor Changes
+
+- 901b27a: Extend the free `ta.*` set with standard deviation, change, rate of change, and cumulative sum, plus golden fixtures and deterministic fuzz tests.
+
+### Patch Changes
+
+- @wicklib/core@0.1.0-next.18
+
 ## 0.1.0-next.17
 
 ### Minor Changes
