@@ -32,6 +32,8 @@ const TIMEFRAME_MINUTES: Record<Timeframe, number> = {
   "1d": 1_440,
 };
 
+const RIGHT_MARGIN_BARS = 30;
+
 interface BinanceSnapshot {
   version: number;
   source: string;
@@ -349,7 +351,12 @@ function load(): void {
 function applyTimeframe(): void {
   data = aggregateOhlc(baseData, TIMEFRAME_MINUTES[timeframe]);
   series.setData(data);
+  fitChart();
+}
+
+function fitChart(): void {
   chart.timeScale().fitContent();
+  chart.timeScale().setOptions({ rightOffset: RIGHT_MARGIN_BARS });
   updateSummary();
 }
 
@@ -528,7 +535,7 @@ chart.on("data-loading", (event) => {
 
   if (fitAfterFeedLoad) {
     fitAfterFeedLoad = false;
-    chart.timeScale().fitContent();
+    fitChart();
   }
 });
 
@@ -588,7 +595,7 @@ feedButton.addEventListener("click", () => {
   if (feedActive) {
     stopFeed();
     series.setData(data);
-    chart.timeScale().fitContent();
+    fitChart();
     feedButton.textContent = "Use feed";
     binanceButton.classList.toggle("active", binanceLabel !== null);
   } else {
@@ -603,11 +610,13 @@ binanceButton.addEventListener("click", () => {
 });
 
 fitButton.addEventListener("click", () => {
-  chart.timeScale().fitContent();
+  fitChart();
 });
 
 resetButton.addEventListener("click", () => {
   chart.resetView();
+  chart.timeScale().setOptions({ rightOffset: RIGHT_MARGIN_BARS });
+  updateSummary();
 });
 
 for (const button of drawingButtons) {

@@ -22,6 +22,7 @@ Never published. Not part of the Changesets group.
 - Trend, H-Line, Rect, Fib, and Clear: interactive drawing tools.
 - Fit: reset the time scale, capped at 720 bars.
 - Reset: fit the time scale and restore auto-scale on every pane.
+- Fit/reset leave a 30-bar future margin so drawings and dates can extend past the last bar.
 - Price axis: drag vertically to scale the price range and leave auto-scale; double-click to
   restore auto-scale. While manual, chart dragging pans both horizontally and vertically.
 - Trackpad: horizontal swipe pans time; vertical scroll or pinch zooms.
