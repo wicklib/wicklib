@@ -17,6 +17,7 @@ import {
   TIME_AXIS_HEIGHT,
   type ChartRenderModel,
   type CrosshairRenderPoint,
+  type OverlayRenderData,
   type PaneRenderModel,
   type ResolvedCrosshair,
   type DrawingRenderData,
@@ -32,6 +33,8 @@ import type {
   ChartApi,
   ChartEventMap,
   ChartOptions,
+  ChartOverlay,
+  ChartOverlayApi,
   CrosshairOptions,
   DrawingAnchor,
   DrawingApi,
@@ -78,6 +81,12 @@ interface ResolvedOptions {
   extensions: readonly WickExtension[];
 }
 
+interface OverlayEntry {
+  id: string;
+  paneId: string;
+  overlay: ChartOverlay;
+}
+
 /**
  * Creates a chart inside the given container.
  *
@@ -117,6 +126,7 @@ class Chart implements ChartApi, SeriesHost {
   private indicatorCounter = 0;
   private drawingCounter = 0;
   private readonly drawings: Drawing[] = [];
+  private readonly overlays: OverlayEntry[] = [];
   private selectedDrawingId: string | null = null;
   private activeTool: DrawingToolDefinition | null = null;
   private activeDrawingOptions: DrawingOptions | undefined;
@@ -350,6 +360,50 @@ class Chart implements ChartApi, SeriesHost {
     return drawing;
   }
 
+  addOverlay(overlay: ChartOverlay): ChartOverlayApi {
+    this.assertAlive();
+    if (
+      !overlay ||
+      typeof overlay.id !== "string" ||
+      overlay.id.trim() === "" ||
+      typeof overlay.draw !== "function"
+    ) {
+      fail("INVALID_ARGUMENT", "Overlay requires a non-empty id and draw function");
+    }
+    if (this.overlays.some((entry) => entry.id === overlay.id)) {
+      fail("DUPLICATE_OVERLAY", `Duplicate overlay id: ${overlay.id}`);
+    }
+    const pane = this.resolveDrawingPane(overlay.paneId);
+    const entry: OverlayEntry = { id: overlay.id, paneId: pane.id, overlay };
+    this.overlays.push(entry);
+    this.requestRender();
+    return {
+      id: entry.id,
+      paneId: entry.paneId,
+      requestRender: () => {
+        this.requestRender();
+      },
+      remove: () => this.removeOverlay(entry),
+    };
+  }
+
+  private removeOverlay(entry: OverlayEntry): void {
+    const index = this.overlays.indexOf(entry);
+    if (index < 0) {
+      return;
+    }
+    this.overlays.splice(index, 1);
+    this.requestRender();
+  }
+
+  private removeOverlaysForPane(paneId: string): void {
+    for (let index = this.overlays.length - 1; index >= 0; index -= 1) {
+      if (this.overlays[index]!.paneId === paneId) {
+        this.overlays.splice(index, 1);
+      }
+    }
+  }
+
   startDrawing(tool: DrawingToolDefinition, options?: Partial<AddDrawingOptions>): void {
     this.assertAlive();
     if (this.activeTool) {
@@ -427,6 +481,7 @@ class Chart implements ChartApi, SeriesHost {
       drawing.destroyInternal();
     }
     this.drawings.length = 0;
+    this.overlays.length = 0;
     this.selectedDrawingId = null;
     this.resetDrawingTool();
 
@@ -918,6 +973,7 @@ class Chart implements ChartApi, SeriesHost {
       drawing.destroyInternal();
     }
     this.drawings.length = 0;
+    this.overlays.length = 0;
     this.resetDrawingDrag();
     this.activePointers.clear();
     this.pinchDistance = null;
@@ -1060,7 +1116,8 @@ class Chart implements ChartApi, SeriesHost {
         pane.autoCreated &&
         pane.series.length === 0 &&
         pane.indicators.length === 0 &&
-        !this.drawings.some((drawing) => drawing.paneId === pane.id)
+        !this.drawings.some((drawing) => drawing.paneId === pane.id) &&
+        !this.overlays.some((overlay) => overlay.paneId === pane.id)
       ) {
         this.panes.splice(index, 1);
       }
@@ -1077,6 +1134,7 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     this.removeDrawingsForPane(pane.id);
+    this.removeOverlaysForPane(pane.id);
 
     for (const series of [...pane.series]) {
       series.destroyInternal();
@@ -1569,6 +1627,11 @@ class Chart implements ChartApi, SeriesHost {
       width: this.stack.getWidth(),
       height: this.stack.getHeight(),
       panes,
+      overlays: this.overlays.map((entry): OverlayRenderData => ({
+        id: entry.id,
+        paneId: entry.paneId,
+        overlay: entry.overlay,
+      })),
       drawings: this.buildDrawingRenderData(),
       timeScale: this.timeScaleModel,
       layout: this.options.layout,

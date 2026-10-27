@@ -74,6 +74,7 @@ chart.loadDrawings(document);
   observed interval.
 - Host-supplied trading calendars with IANA time zones, DST-correct session boundaries,
   holidays, session-aware intraday labels, and optional fixed-width session gaps.
+- Public per-pane Canvas2D extension overlays with pane-clipped time/price coordinate helpers.
 - Keyboard pan/zoom/fit, and two-pointer pinch zoom on touch devices.
 - Series datafeed: initial count load, debounced range loads with prefetch, abort on stale
   requests, prepend anchoring, realtime revision, loading and error events.

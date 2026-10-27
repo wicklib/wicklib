@@ -10,6 +10,7 @@ changing its decisions requires a new RFC or an ADR.
 | 0003 | Indicators and panes        | Accepted |
 | 0004 | Drawings                    | Accepted |
 | 0005 | Session-aware time scale    | Accepted |
+| 0006 | Extension overlays          | Accepted |
 
 Rules:
 

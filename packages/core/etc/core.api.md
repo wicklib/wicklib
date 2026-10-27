@@ -47,6 +47,8 @@ export interface ChartApi {
     // (undocumented)
     addIndicator<TInputs extends IndicatorInputs>(definition: IndicatorDefinition<TInputs>, options?: AddIndicatorOptions<TInputs>): IndicatorApi<TInputs>;
     // (undocumented)
+    addOverlay(overlay: ChartOverlay): ChartOverlayApi;
+    // (undocumented)
     addPane(options?: PaneOptions): PaneApi;
     // (undocumented)
     addSeries<TData extends SeriesData, TOptions extends SeriesOptions>(type: SeriesType<TData, TOptions>, options?: TOptions): SeriesApi<TData, TOptions>;
@@ -154,6 +156,27 @@ export interface ChartOptions {
     timeScale?: TimeScaleOptions;
     timezone?: string;
     width?: number;
+}
+
+// @public
+export interface ChartOverlay {
+    // (undocumented)
+    draw(context: CanvasRenderingContext2D, frame: OverlayRenderFrame): void;
+    // (undocumented)
+    readonly id: string;
+    readonly paneId?: string;
+}
+
+// @public
+export interface ChartOverlayApi {
+    // (undocumented)
+    readonly id: string;
+    // (undocumented)
+    readonly paneId: string;
+    // (undocumented)
+    remove(): void;
+    // (undocumented)
+    requestRender(): void;
 }
 
 // @public
@@ -507,6 +530,38 @@ export interface OhlcData extends SeriesData {
 }
 
 // @public
+export interface OverlayPlotRect {
+    // (undocumented)
+    bottom: number;
+    // (undocumented)
+    height: number;
+    // (undocumented)
+    left: number;
+    // (undocumented)
+    right: number;
+    // (undocumented)
+    top: number;
+    // (undocumented)
+    width: number;
+}
+
+// @public
+export interface OverlayRenderFrame {
+    // (undocumented)
+    paneId: string;
+    // (undocumented)
+    plot: OverlayPlotRect;
+    // (undocumented)
+    priceToY(price: number): number;
+    // (undocumented)
+    timeToX(time: Time): number | null;
+    // (undocumented)
+    visibleRange: VisibleRange;
+    // (undocumented)
+    yToPrice(y: number): number;
+}
+
+// @public
 export interface PaneApi {
     // (undocumented)
     readonly id: string;
@@ -732,7 +787,7 @@ export class WickError extends Error {
 }
 
 // @public
-export type WickErrorCode = "INVALID_ARGUMENT" | "INVALID_DATA" | "NOT_IMPLEMENTED" | "LICENSE_REQUIRED" | "DUPLICATE_SERIES" | "DUPLICATE_EXTENSION" | "UNKNOWN_SERIES_TYPE" | "DATAFEED_ERROR" | "DISPOSED";
+export type WickErrorCode = "INVALID_ARGUMENT" | "INVALID_DATA" | "NOT_IMPLEMENTED" | "LICENSE_REQUIRED" | "DUPLICATE_SERIES" | "DUPLICATE_EXTENSION" | "DUPLICATE_OVERLAY" | "UNKNOWN_SERIES_TYPE" | "DATAFEED_ERROR" | "DISPOSED";
 
 // @public
 export interface WickExtension {

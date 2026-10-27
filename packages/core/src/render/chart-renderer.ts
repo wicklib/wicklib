@@ -4,7 +4,7 @@ import type { IndicatorRenderData, IndicatorPlotRenderData } from "../indicator"
 import type { PriceScale } from "../scale/price-scale";
 import type { TimeScale } from "../scale/time-scale";
 import { formatCrosshairTime, formatTimeLabel } from "../scale/ticks";
-import type { DrawingAnchor, Point } from "../types";
+import type { ChartOverlay, DrawingAnchor, OverlayRenderFrame, Point } from "../types";
 import type { CanvasStack } from "./canvas-stack";
 
 export interface PlotRect {
@@ -80,10 +80,17 @@ export interface CrosshairRenderPoint {
   point: Point;
 }
 
+export interface OverlayRenderData {
+  id: string;
+  paneId: string;
+  overlay: ChartOverlay;
+}
+
 export interface ChartRenderModel {
   width: number;
   height: number;
   panes: readonly PaneRenderModel[];
+  overlays: readonly OverlayRenderData[];
   drawings: readonly DrawingRenderData[];
   timeScale: TimeScale;
   layout: ResolvedLayout;
@@ -115,6 +122,7 @@ export class ChartRenderer {
   renderAll(model: ChartRenderModel): void {
     this.drawGrid(model);
     this.drawSeries(model);
+    this.drawExtensions(model);
     this.drawDrawings(model);
     this.drawOverlay(model);
   }
@@ -690,6 +698,34 @@ export class ChartRenderer {
 
     context.fillStyle = model.layout.textColor;
     context.fillText(indicator.title, pane.plot.left + 20, y);
+  }
+
+  private drawExtensions(model: ChartRenderModel): void {
+    const context = this.stack.context("extensions");
+    this.stack.clear("extensions");
+    context.setTransform(this.stack.getDpr(), 0, 0, this.stack.getDpr(), 0, 0);
+
+    const visibleRange = this.timeScale.getVisibleRange();
+    for (const entry of model.overlays) {
+      const pane = model.panes.find((candidate) => candidate.paneId === entry.paneId);
+      if (!pane) {
+        continue;
+      }
+      context.save();
+      context.beginPath();
+      context.rect(pane.plot.left, pane.plot.top, pane.plot.width, pane.plot.height);
+      context.clip();
+      const frame: OverlayRenderFrame = {
+        paneId: pane.paneId,
+        plot: pane.plot,
+        visibleRange,
+        timeToX: (time) => this.timeScale.timeToX(time),
+        priceToY: (price) => pane.priceScale.priceToY(price, pane.plot.top, pane.plot.height),
+        yToPrice: (y) => pane.priceScale.yToPrice(y, pane.plot.top, pane.plot.height),
+      };
+      entry.overlay.draw(context, frame);
+      context.restore();
+    }
   }
 
   private drawDrawings(model: ChartRenderModel): void {

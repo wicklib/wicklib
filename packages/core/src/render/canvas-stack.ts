@@ -1,6 +1,6 @@
 import { fail } from "../errors";
 
-export type Layer = "grid" | "series" | "drawings" | "overlay";
+export type Layer = "grid" | "series" | "extensions" | "drawings" | "overlay";
 
 /**
  * Stacked canvases. Each layer is cleared and redrawn independently so the crosshair
@@ -44,13 +44,15 @@ export class CanvasStack {
 
     const [grid, gridContext] = make("grid");
     const [series, seriesContext] = make("series");
+    const [extensions, extensionsContext] = make("extensions");
     const [drawings, drawingsContext] = make("drawings");
     const [overlay, overlayContext] = make("overlay");
 
-    this.canvases = { grid, series, drawings, overlay };
+    this.canvases = { grid, series, extensions, drawings, overlay };
     this.contexts = {
       grid: gridContext,
       series: seriesContext,
+      extensions: extensionsContext,
       drawings: drawingsContext,
       overlay: overlayContext,
     };
@@ -76,7 +78,7 @@ export class CanvasStack {
     this.height = Math.max(0, height);
     this.dpr = Math.max(1, dpr);
 
-    for (const layer of ["grid", "series", "drawings", "overlay"] as const) {
+    for (const layer of ["grid", "series", "extensions", "drawings", "overlay"] as const) {
       const canvas = this.canvases[layer];
       const context = this.contexts[layer];
 

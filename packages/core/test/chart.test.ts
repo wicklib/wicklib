@@ -769,6 +769,57 @@ describe("createChart", () => {
     expect(chart.serializeDrawings().drawings).toHaveLength(0);
   });
 
+  it("adds and renders extension overlays", async () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(50));
+    chart.timeScale().fitContent();
+
+    const draw = vi.fn();
+    const overlay = chart.addOverlay({ id: "test-overlay", draw });
+    await settle();
+
+    expect(draw).toHaveBeenCalled();
+    const frame = draw.mock.calls.at(-1)?.[1] as {
+      paneId: string;
+      plot: { width: number };
+      visibleRange: { from: number; to: number };
+      timeToX(time: number): number | null;
+      priceToY(price: number): number;
+      yToPrice(y: number): number;
+    };
+    expect(frame.paneId).toBe("main");
+    expect(frame.plot.width).toBeGreaterThan(0);
+    expect(frame.timeToX(frame.visibleRange.from)).not.toBeNull();
+    expect(frame.priceToY(frame.yToPrice(200))).toBeCloseTo(200);
+
+    overlay.remove();
+    draw.mockClear();
+    await settle();
+    expect(draw).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate overlays and removes overlays with their pane", async () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+    const draw = vi.fn();
+    chart.addOverlay({ id: "overlay", draw });
+    expect(() => chart.addOverlay({ id: "overlay", draw })).toThrow(/Duplicate overlay/);
+
+    const pane = chart.addPane({ height: 100 });
+    const paneDraw = vi.fn();
+    chart.addOverlay({ id: "pane-overlay", paneId: pane.id, draw: paneDraw });
+    await settle();
+    expect(paneDraw).toHaveBeenCalled();
+
+    pane.remove();
+    paneDraw.mockClear();
+    await settle();
+    expect(paneDraw).not.toHaveBeenCalled();
+  });
+
   it("exposes price scale controls", () => {
     const chart = track(createChart(mount()));
     const series = chart.addSeries(CandlestickSeries);

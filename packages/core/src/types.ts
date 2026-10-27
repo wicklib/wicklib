@@ -543,6 +543,50 @@ export interface DrawingDocument {
 }
 
 /**
+ * Plot geometry passed to a chart overlay.
+ */
+export interface OverlayPlotRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Per-draw frame passed to a chart overlay.
+ */
+export interface OverlayRenderFrame {
+  paneId: string;
+  plot: OverlayPlotRect;
+  visibleRange: VisibleRange;
+  timeToX(time: Time): number | null;
+  priceToY(price: number): number;
+  yToPrice(y: number): number;
+}
+
+/**
+ * Custom drawing contributed by an extension.
+ */
+export interface ChartOverlay {
+  readonly id: string;
+  /** Pane to draw in. Defaults to the main pane. */
+  readonly paneId?: string;
+  draw(context: CanvasRenderingContext2D, frame: OverlayRenderFrame): void;
+}
+
+/**
+ * A live chart overlay.
+ */
+export interface ChartOverlayApi {
+  readonly id: string;
+  readonly paneId: string;
+  requestRender(): void;
+  remove(): void;
+}
+
+/**
  * Payload for the `ready` event.
  */
 export type ReadyEvent = void;
@@ -719,6 +763,7 @@ export interface ChartApi {
     options?: AddIndicatorOptions<TInputs>,
   ): IndicatorApi<TInputs>;
   addDrawing(tool: DrawingToolDefinition, options: AddDrawingOptions): DrawingApi;
+  addOverlay(overlay: ChartOverlay): ChartOverlayApi;
   startDrawing(tool: DrawingToolDefinition, options?: Partial<AddDrawingOptions>): void;
   cancelDrawing(): void;
   selectedDrawing(): DrawingApi | null;
