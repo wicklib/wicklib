@@ -59,6 +59,23 @@ See `docs/rfc/0001-public-api.md` for the accepted public API contract, and
 `packages/script/PLAN.md` plus its ADRs for the scripting design that is frozen but not yet
 implemented.
 
+## Releasing
+
+Publishing is **manual**: run the `release` workflow from the Actions tab. It uses npm
+trusted publishing (OIDC) with provenance; no `NPM_TOKEN` is stored.
+
+The alpha line uses the `next` tag. Enter prerelease mode once with
+`pnpm changeset pre enter next`; exit with `pnpm changeset pre exit` before the first stable
+release.
+
+1. Add a changeset with `pnpm changeset`.
+2. Version with `pnpm changeset version`, or merge the Changesets version PR.
+3. Commit the version changes and push.
+4. Run the `release` workflow manually.
+
+The initial `0.1.0-dev.0` versions were published manually. `latest` stays on them until a
+stable release; install the alpha with `@next` or an exact version.
+
 ## License
 
 Apache-2.0. See [LICENSE](./LICENSE).

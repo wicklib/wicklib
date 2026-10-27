@@ -1,8 +1,9 @@
 name: release
 
+# Manual release workflow. Run it from the Actions tab after versioning.
+# Trusted publishing (OIDC) is configured per package on npm; no NPM_TOKEN is stored.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.ref }}
