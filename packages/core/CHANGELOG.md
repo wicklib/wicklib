@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.27
+
+### Minor Changes
+
+- 4fa4f08: Add a typed chart theme contract with neutral light and dark presets for host-controlled theme application.
+
 ## 0.1.0-next.26
 
 ### Minor Changes
