@@ -16,6 +16,7 @@
     "paths": {
       "@wicklib/core": ["../../packages/core/src/index.ts"],
       "@wicklib/indicators": ["../../packages/indicators/src/index.ts"],
+      "@wicklib/script": ["../../packages/script/src/index.ts"],
       "@wicklib/script-editor": ["../../packages/script-editor/src/index.ts"]
     }
   },
