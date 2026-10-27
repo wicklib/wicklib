@@ -17,9 +17,9 @@ pnpm dev
 
 Opens the private playground at `localhost:5173` with 5k / 25k / 100k synthetic 1m bars, a
 crosshair OHLC readout, a theme toggle, an FPS meter, SMA/RSI/MACD toggles, drawing tools,
-and a "Use feed" mode with a simulated async feed and live bars. A local Binance 2025
-snapshot can be generated for the playground without any live connection. Keyboard: arrows pan,
-`+`/`-` zoom, `Home` fits. Pinch zoom works on touch. Core edits hot-reload.
+timeframe aggregation, and a "Use feed" mode with a simulated async feed. A local Binance
+2025 snapshot can be generated without any live connection. Keyboard: arrows pan, `+`/`-`
+zoom, `Home` fits. Pinch zoom works on touch. Core edits hot-reload.
 
 ## Packages
 
