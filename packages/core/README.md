@@ -3,9 +3,9 @@
 Canvas2D charting engine: scales, candlestick rendering, axes, crosshair, interactions,
 indicators, panes, and drawings.
 
-**Status: Phase 3 — indicators, panes, and drawings.** Candlestick charts render real data,
-can be driven by an async series-level datafeed, and support multiple panes, indicators, and
-drawing tools.
+**Status: Phase 3 complete.** Candlestick charts render real data, can be driven by an async
+series-level datafeed, and support multiple panes, indicators, drawing tools, and a React
+wrapper.
 
 ```ts
 import {
@@ -20,7 +20,10 @@ import { SMA } from "@wicklib/indicators";
 // A host-provided feed; see docs/rfc/0002-datafeed.md for the full contract.
 declare const feed: Datafeed<OhlcData>;
 
-const chart = createChart(document.getElementById("chart")!, { autoSize: true });
+const chart = createChart(document.getElementById("chart")!, {
+  autoSize: true,
+  timeScale: { maxVisibleBars: 720 },
+});
 const series = chart.addSeries(CandlestickSeries, { title: "BTC/USD" });
 
 series.setData([{ time: Date.UTC(2024, 0, 1), open: 100, high: 105, low: 95, close: 102 }]);
@@ -50,7 +53,10 @@ chart.loadDrawings(document);
 - Continuous index-based time scale and linear price scale, with optional zoom-out limits.
 - Candlestick series with layered canvas rendering.
 - Price and time axes, grid, last-value line and label, series legend.
-- Crosshair (normal and magnet), click, drag pan, wheel zoom, resize, clean teardown.
+- Crosshair (normal and magnet), click, drag pan, wheel zoom, horizontal trackpad pan, resize,
+  clean teardown.
+- Draggable price axis that scales the price range; manual mode then allows vertical chart
+  panning. Double-click the axis to restore auto-scale, or call `chart.resetView()`.
 - Keyboard pan/zoom/fit, and two-pointer pinch zoom on touch devices.
 - Series datafeed: initial count load, debounced range loads with prefetch, abort on stale
   requests, prepend anchoring, realtime revision, loading and error events.

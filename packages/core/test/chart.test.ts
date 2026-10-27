@@ -234,6 +234,124 @@ describe("createChart", () => {
     expect(fitted.to - fitted.from).toBeGreaterThan(zoomed.to - zoomed.from);
   });
 
+  it("pans the timeline with horizontal trackpad wheel movement", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(1_000));
+    chart.timeScale().fitContent();
+
+    const root = element.firstElementChild as HTMLElement;
+    const before = chart.timeScale().getVisibleRange();
+
+    root.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaX: 200,
+        deltaY: 0,
+        clientX: 400,
+        clientY: 200,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    const forward = chart.timeScale().getVisibleRange();
+    expect(forward.from).toBeGreaterThan(before.from);
+
+    root.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaX: -200,
+        deltaY: 0,
+        clientX: 400,
+        clientY: 200,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    const backward = chart.timeScale().getVisibleRange();
+    expect(backward.from).toBeLessThan(forward.from);
+  });
+
+  it("drags the price axis into manual mode and resets auto-scale on double click", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(200));
+    chart.timeScale().fitContent();
+
+    const scale = series.priceScale();
+    expect(scale.isAutoScale()).toBe(true);
+    const before = scale.getVisibleRange();
+
+    const root = element.firstElementChild as HTMLElement;
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 760, 200));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 760, 200));
+    expect(scale.isAutoScale()).toBe(true);
+
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 760, 200));
+    root.dispatchEvent(pointerEvent("pointermove", 1, 760, 240));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 760, 240));
+
+    expect(scale.isAutoScale()).toBe(false);
+    const after = scale.getVisibleRange();
+    expect(after.max - after.min).not.toBeCloseTo(before.max - before.min);
+    expect((after.min + after.max) / 2).toBeCloseTo((before.min + before.max) / 2);
+
+    root.dispatchEvent(
+      new MouseEvent("dblclick", { clientX: 760, clientY: 200, bubbles: true, cancelable: true }),
+    );
+    expect(scale.isAutoScale()).toBe(true);
+  });
+
+  it("resetView restores auto-scale and fits the timeline", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(200));
+    chart.timeScale().fitContent();
+
+    const root = element.firstElementChild as HTMLElement;
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 760, 200));
+    root.dispatchEvent(pointerEvent("pointermove", 1, 760, 240));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 760, 240));
+    expect(series.priceScale().isAutoScale()).toBe(false);
+
+    chart.timeScale().setVisibleRange({ from: 50 * MINUTE, to: 60 * MINUTE });
+    chart.resetView();
+
+    expect(series.priceScale().isAutoScale()).toBe(true);
+    const range = chart.timeScale().getVisibleRange();
+    expect(range.from).toBe(0);
+    expect(range.to).toBe(199 * MINUTE);
+  });
+
+  it("pans price vertically only after the price scale leaves auto mode", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(200));
+    chart.timeScale().fitContent();
+
+    const root = element.firstElementChild as HTMLElement;
+    const scale = series.priceScale();
+
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 400, 200));
+    root.dispatchEvent(pointerEvent("pointermove", 1, 440, 240));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 440, 240));
+    expect(scale.isAutoScale()).toBe(true);
+
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 760, 200));
+    root.dispatchEvent(pointerEvent("pointermove", 1, 760, 240));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 760, 240));
+    const manual = scale.getVisibleRange();
+    expect(scale.isAutoScale()).toBe(false);
+
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 400, 200));
+    root.dispatchEvent(pointerEvent("pointermove", 1, 440, 240));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 440, 240));
+
+    expect(scale.getVisibleRange()).not.toEqual(manual);
+  });
+
   it("supports two-pointer pinch zoom", () => {
     const element = mount();
     const chart = track(createChart(element));

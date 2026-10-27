@@ -58,6 +58,7 @@ export interface ChartApi {
     loadDrawings(document: DrawingDocument): void;
     // (undocumented)
     on<K extends keyof ChartEventMap>(event: K, handler: (payload: ChartEventMap[K]) => void): Unsubscribe;
+    resetView(): void;
     // (undocumented)
     resize(): void;
     // (undocumented)
@@ -541,6 +542,7 @@ export interface PriceRange {
 export interface PriceScaleApi {
     // (undocumented)
     getVisibleRange(): PriceRange;
+    isAutoScale(): boolean;
     // (undocumented)
     setAutoScale(enabled: boolean): void;
     // (undocumented)

@@ -46,6 +46,7 @@ import type {
   PaneApi,
   PaneOptions,
   Point,
+  PriceRange,
   PriceScaleApi,
   PriceScaleOptions,
   SeriesApi,
@@ -134,7 +135,16 @@ class Chart implements ChartApi, SeriesHost {
   private dragging = false;
   private pointerId: number | null = null;
   private dragLastX = 0;
+  private dragLastY = 0;
+  private dragPane: Pane | null = null;
   private dragMoved = false;
+  private priceAxisDrag: {
+    pane: Pane;
+    pointerId: number;
+    startY: number;
+    startRange: PriceRange;
+    moved: boolean;
+  } | null = null;
 
   constructor(container: HTMLElement, rawOptions: ChartOptions) {
     this.container = container;
@@ -781,6 +791,17 @@ class Chart implements ChartApi, SeriesHost {
     this.drawingDragPointerId = null;
   }
 
+  resetView(): void {
+    this.assertAlive();
+    this.timeScaleModel.fitContent();
+    for (const pane of this.panes) {
+      pane.priceScale.setAutoScale(true);
+    }
+    this.requestRender();
+    this.emitVisibleRange();
+    this.notifyViewChange();
+  }
+
   timeScale(): TimeScaleApi {
     this.assertAlive();
     return this.timeScaleController;
@@ -1127,6 +1148,35 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     const point = this.localPoint(event);
+    const axisPane = this.priceAxisPaneAtPoint(point);
+    if (axisPane) {
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+      if (this.activeTool) {
+        this.cancelDrawing();
+      }
+      this.clearCrosshair();
+      this.resetDrawingDrag();
+      this.dragging = false;
+      this.pointerId = null;
+      this.priceAxisDrag = {
+        pane: axisPane,
+        pointerId: event.pointerId,
+        startY: point.y,
+        startRange: axisPane.priceScale.getVisibleRange(),
+        moved: false,
+      };
+      this.stack.root.style.cursor = "ns-resize";
+      try {
+        this.stack.root.setPointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture is best-effort.
+      }
+      this.requestRender();
+      return;
+    }
+
     const pane = this.paneAtPoint(point);
     if (!pane) {
       return;
@@ -1166,12 +1216,19 @@ class Chart implements ChartApi, SeriesHost {
     this.dragging = true;
     this.pointerId = event.pointerId;
     this.dragLastX = point.x;
+    this.dragLastY = point.y;
+    this.dragPane = pane;
     this.dragMoved = false;
     this.updateCrosshair(point.x, point.y);
   };
 
   private readonly onPointerMove = (event: PointerEvent): void => {
     const point = this.localPoint(event);
+
+    if (this.priceAxisDrag && event.pointerId === this.priceAxisDrag.pointerId) {
+      this.updatePriceAxisDrag(point);
+      return;
+    }
 
     if (this.activeTool) {
       this.previewPoint = point;
@@ -1209,11 +1266,24 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     if (this.dragging && event.pointerId === this.pointerId) {
-      const delta = point.x - this.dragLastX;
-      if (Math.abs(delta) >= 0.5) {
+      const deltaX = point.x - this.dragLastX;
+      const deltaY = point.y - this.dragLastY;
+      let changed = false;
+
+      if (Math.abs(deltaX) >= 0.5) {
         this.dragMoved = true;
         this.dragLastX = point.x;
-        this.timeScaleModel.pan(delta);
+        this.timeScaleModel.pan(deltaX);
+        changed = true;
+      }
+      if (Math.abs(deltaY) >= 0.5 && this.dragPane && !this.dragPane.priceScale.isAutoScale()) {
+        this.dragMoved = true;
+        this.dragLastY = point.y;
+        this.panPanePrice(this.dragPane, deltaY);
+        changed = true;
+      }
+
+      if (changed) {
         this.requestRender();
         this.emitVisibleRange();
         this.notifyViewChange();
@@ -1222,11 +1292,24 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
+    this.updatePointerCursor(point);
     this.updateCrosshair(point.x, point.y);
   };
 
   private readonly onPointerUp = (event: PointerEvent): void => {
     this.activePointers.delete(event.pointerId);
+
+    if (this.priceAxisDrag && event.pointerId === this.priceAxisDrag.pointerId) {
+      const point = this.localPoint(event);
+      try {
+        this.stack.root.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture is best-effort.
+      }
+      this.priceAxisDrag = null;
+      this.updatePointerCursor(point);
+      return;
+    }
 
     if (this.activeTool) {
       return;
@@ -1267,6 +1350,7 @@ class Chart implements ChartApi, SeriesHost {
     const point = this.localPoint(event);
     this.dragging = false;
     this.pointerId = null;
+    this.dragPane = null;
 
     try {
       this.stack.root.releasePointerCapture(event.pointerId);
@@ -1288,7 +1372,10 @@ class Chart implements ChartApi, SeriesHost {
     }
     this.dragging = false;
     this.pointerId = null;
+    this.dragPane = null;
+    this.priceAxisDrag = null;
     this.resetDrawingDrag();
+    this.stack.root.style.cursor = "crosshair";
     this.clearCrosshair();
   };
 
@@ -1298,9 +1385,29 @@ class Chart implements ChartApi, SeriesHost {
       this.requestRender();
       return;
     }
-    if (!this.dragging && this.pinchDistance === null && !this.draggingDrawing) {
+    if (!this.priceAxisDrag) {
+      this.stack.root.style.cursor = "crosshair";
+    }
+    if (
+      !this.dragging &&
+      this.pinchDistance === null &&
+      !this.draggingDrawing &&
+      !this.priceAxisDrag
+    ) {
       this.clearCrosshair();
     }
+  };
+
+  private readonly onDoubleClick = (event: MouseEvent): void => {
+    const point = this.localPoint(event);
+    const pane = this.priceAxisPaneAtPoint(point);
+    if (!pane) {
+      return;
+    }
+    event.preventDefault();
+    pane.priceScale.setAutoScale(true);
+    this.requestRender();
+    this.updateCrosshair(point.x, point.y);
   };
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
@@ -1393,7 +1500,18 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     event.preventDefault();
-    this.timeScaleModel.zoomAt(point.x, event.deltaY);
+
+    if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+      if (event.deltaX === 0) {
+        return;
+      }
+      this.timeScaleModel.pan(-event.deltaX);
+    } else if (event.deltaY !== 0) {
+      this.timeScaleModel.zoomAt(point.x, event.deltaY);
+    } else {
+      return;
+    }
+
     this.requestRender();
     this.emitVisibleRange();
     this.notifyViewChange();
@@ -1654,6 +1772,53 @@ class Chart implements ChartApi, SeriesHost {
     return pane;
   }
 
+  private priceAxisPaneAtPoint(point: Point): Pane | null {
+    const pane = this.paneAtY(point.y);
+    if (!pane || !pane.plot) {
+      return null;
+    }
+    if (point.x < pane.plot.right || point.x > pane.plot.right + AXIS_WIDTH) {
+      return null;
+    }
+    return pane;
+  }
+
+  private updatePriceAxisDrag(point: Point): void {
+    const drag = this.priceAxisDrag;
+    if (!drag || !drag.pane.plot) {
+      return;
+    }
+    const deltaY = point.y - drag.startY;
+    if (!drag.moved && Math.abs(deltaY) < 2) {
+      return;
+    }
+    drag.moved = true;
+    const factor = Math.min(20, Math.max(0.05, Math.exp(deltaY * 0.005)));
+    const middle = (drag.startRange.min + drag.startRange.max) / 2;
+    const halfSpan = ((drag.startRange.max - drag.startRange.min) / 2) * factor;
+    drag.pane.priceScale.setVisibleRange({
+      min: middle - halfSpan,
+      max: middle + halfSpan,
+    });
+    this.requestRender();
+  }
+
+  private panPanePrice(pane: Pane, deltaY: number): void {
+    if (!pane.plot) {
+      return;
+    }
+    const range = pane.priceScale.getVisibleRange();
+    const deltaPrice = (deltaY / pane.plot.height) * (range.max - range.min);
+    pane.priceScale.setVisibleRange({
+      min: range.min + deltaPrice,
+      max: range.max + deltaPrice,
+    });
+  }
+
+  private updatePointerCursor(point: Point): void {
+    this.stack.root.style.cursor = this.priceAxisPaneAtPoint(point) ? "ns-resize" : "crosshair";
+  }
+
   private setupObserver(): void {
     this.teardownObserver();
 
@@ -1681,6 +1846,7 @@ class Chart implements ChartApi, SeriesHost {
     root.addEventListener("pointerup", this.onPointerUp);
     root.addEventListener("pointercancel", this.onPointerCancel);
     root.addEventListener("pointerleave", this.onPointerLeave);
+    root.addEventListener("dblclick", this.onDoubleClick);
     root.addEventListener("keydown", this.onKeyDown);
     root.addEventListener("wheel", this.onWheel, { passive: false });
   }
@@ -1692,6 +1858,7 @@ class Chart implements ChartApi, SeriesHost {
     root.removeEventListener("pointerup", this.onPointerUp);
     root.removeEventListener("pointercancel", this.onPointerCancel);
     root.removeEventListener("pointerleave", this.onPointerLeave);
+    root.removeEventListener("dblclick", this.onDoubleClick);
     root.removeEventListener("keydown", this.onKeyDown);
     root.removeEventListener("wheel", this.onWheel);
   }

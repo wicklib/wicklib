@@ -633,6 +633,8 @@ export interface PriceScaleApi {
   getVisibleRange(): PriceRange;
   setVisibleRange(range: PriceRange): void;
   setAutoScale(enabled: boolean): void;
+  /** True while the scale follows the visible data. */
+  isAutoScale(): boolean;
 }
 
 /**
@@ -686,6 +688,8 @@ export interface ChartApi {
   selectDrawing(id: string | null): void;
   serializeDrawings(): DrawingDocument;
   loadDrawings(document: DrawingDocument): void;
+  /** Fits the time scale and restores auto-scale on every pane. */
+  resetView(): void;
   timeScale(): TimeScaleApi;
   setOptions(options: Partial<ChartOptions>): void;
   on<K extends keyof ChartEventMap>(

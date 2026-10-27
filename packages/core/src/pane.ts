@@ -64,6 +64,10 @@ export class Pane implements PaneApi {
         this.priceScale.setAutoScale(enabled);
         host.requestRender();
       },
+      isAutoScale: () => {
+        host.assertAlive();
+        return this.priceScale.isAutoScale();
+      },
     };
   }
 
