@@ -1,4 +1,10 @@
 import * as monaco from "monaco-editor";
+import {
+  ModuleKind,
+  ModuleResolutionKind,
+  ScriptTarget,
+  typescriptDefaults,
+} from "monaco-editor/languages/features/typescript/register";
 
 import { CORE_TYPES, SCRIPT_TYPES } from "./types.generated";
 
@@ -70,45 +76,31 @@ export function createScriptEditor(options: ScriptEditorOptions): ScriptEditor {
   };
 }
 
-interface MonacoTypescriptApi {
-  typescriptDefaults: {
-    setCompilerOptions(options: Record<string, unknown>): void;
-    setDiagnosticsOptions(options: Record<string, unknown>): void;
-    addExtraLib(content: string, filePath?: string): unknown;
-  };
-  ScriptTarget: { ES2022: number };
-  ModuleKind: { ESNext: number };
-  ModuleResolutionKind: { NodeJs: number };
-}
-
 function configureMonaco(): void {
   if (configured) {
     return;
   }
   configured = true;
 
-  const typescript = (monaco.languages as unknown as { typescript: MonacoTypescriptApi })
-    .typescript;
-  const defaults = typescript.typescriptDefaults;
-  defaults.setCompilerOptions({
-    target: typescript.ScriptTarget.ES2022,
-    module: typescript.ModuleKind.ESNext,
-    moduleResolution: typescript.ModuleResolutionKind.NodeJs,
+  typescriptDefaults.setCompilerOptions({
+    target: ScriptTarget.ES2020,
+    module: ModuleKind.ESNext,
+    moduleResolution: ModuleResolutionKind.NodeJs,
     strict: true,
     noEmit: true,
     allowNonTsExtensions: true,
   });
-  defaults.setDiagnosticsOptions({
+  typescriptDefaults.setDiagnosticsOptions({
     noSemanticValidation: false,
     noSyntaxValidation: false,
   });
-  defaults.addExtraLib(CORE_TYPES, "file:///node_modules/@wicklib/core/index.d.ts");
-  defaults.addExtraLib(
+  typescriptDefaults.addExtraLib(CORE_TYPES, "file:///node_modules/@wicklib/core/index.d.ts");
+  typescriptDefaults.addExtraLib(
     '{"name":"@wicklib/core","types":"index.d.ts"}',
     "file:///node_modules/@wicklib/core/package.json",
   );
-  defaults.addExtraLib(SCRIPT_TYPES, "file:///node_modules/@wicklib/script/index.d.ts");
-  defaults.addExtraLib(
+  typescriptDefaults.addExtraLib(SCRIPT_TYPES, "file:///node_modules/@wicklib/script/index.d.ts");
+  typescriptDefaults.addExtraLib(
     '{"name":"@wicklib/script","types":"index.d.ts"}',
     "file:///node_modules/@wicklib/script/package.json",
   );

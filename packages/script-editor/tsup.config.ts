@@ -7,7 +7,12 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   target: "es2022",
-  external: ["@wicklib/core", "@wicklib/script", "monaco-editor"],
+  external: [
+    "@wicklib/core",
+    "@wicklib/script",
+    "monaco-editor",
+    "monaco-editor/languages/features/typescript/register",
+  ],
   outExtension({ format }) {
     return { js: format === "cjs" ? ".cjs" : ".js" };
   },

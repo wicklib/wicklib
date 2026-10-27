@@ -16,8 +16,10 @@ pnpm add @wicklib/script-editor monaco-editor
 Configure Monaco workers once before creating an editor:
 
 ```ts
-import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
-import TsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
+// Vite 8 does not resolve Monaco worker subpaths through package exports.
+// Adjust these relative paths to your app layout.
+import EditorWorker from "../node_modules/monaco-editor/esm/vs/editor/editor.worker.js?worker";
+import TsWorker from "../node_modules/monaco-editor/esm/vs/language/typescript/ts.worker.js?worker";
 
 self.MonacoEnvironment = {
   getWorker(_moduleId, label) {

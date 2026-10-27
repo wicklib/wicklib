@@ -1,9 +1,9 @@
 # WickScript — Plan
 
 Status: **normative**. Phase 4 is in progress: ADR-0006 is accepted, API v1 authoring is
-frozen, and the transpiler with import/global rejection is implemented. The QuickJS worker
-runtime, strict streaming semantics, and the initial free `ta.*` set are implemented; broader
-`ta.*` coverage, golden/fuzz tests, and the editor remain.
+frozen, the QuickJS worker runtime and strict streaming semantics are implemented, the initial
+free `ta.*` set and golden/fuzz suites are in place, and the Monaco editor is implemented.
+Broader `ta.*` coverage and the pro script layer remain.
 Changing a decision in this document requires a new ADR in `docs/adr/`.
 
 ## 1. What WickScript is

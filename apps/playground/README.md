@@ -32,6 +32,13 @@ Never published. Not part of the Changesets group.
 - FPS meter and crosshair OHLC readout.
 - Keyboard: arrows pan, `+`/`-` zoom, `Home` fits, `Escape` clears the crosshair.
 - Touch: one-finger pan, two-finger pinch zoom.
+- Script editor: open `/editor.html` for the Monaco WickScript editor with generated types.
+
+## Script editor
+
+Open `/editor.html` during development or preview. It mounts Monaco with generated Wicklib
+authoring types and the TypeScript worker. This is the browser smoke test for
+`@wicklib/script-editor`.
 
 ## URL modes
 

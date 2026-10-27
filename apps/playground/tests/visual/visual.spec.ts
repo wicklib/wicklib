@@ -9,6 +9,7 @@ declare global {
       p95Ms: number;
       fps: number;
     };
+    __wicklibEditorReady?: boolean;
   }
 }
 
@@ -111,6 +112,24 @@ test("session calendar", async ({ page }) => {
     },
     animations: "disabled",
   });
+});
+
+test("script editor mounts Monaco", async ({ page }) => {
+  await page.goto("/editor.html");
+  await page.waitForFunction(() => window.__wicklibEditorReady === true, null, {
+    timeout: 30_000,
+  });
+
+  await expect(page.locator(".monaco-editor")).toBeVisible();
+  const value = await page.evaluate(() =>
+    (
+      window as unknown as {
+        __wicklibEditor?: { getValue(): string };
+      }
+    ).__wicklibEditor?.getValue(),
+  );
+  expect(value).toContain("defineScript");
+  expect(value).toContain("@wicklib/script");
 });
 
 test("100k bar pan benchmark", async ({ page }) => {

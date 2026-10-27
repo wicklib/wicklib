@@ -72,9 +72,15 @@ importers:
       '@types/node':
         specifier: ^26.6.5
         version: 26.6.5
+      '@wicklib/script-editor':
+        specifier: workspace:*
+        version: link:../../packages/script-editor
       fflate:
         specifier: ^0.8.3
         version: 0.8.3
+      monaco-editor:
+        specifier: ^0.57.0
+        version: 0.57.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

@@ -3,11 +3,10 @@
 Open-source charting engine for web applications. Canvas-first, framework-agnostic, and
 designed for a clean separation between the free engine and the commercial add-on.
 
-**Status: Phase 3 complete — core chart, indicators, panes, drawings, and React.**
-A candlestick chart renders real data with axes, crosshair, pan, zoom, keyboard and pinch
-interactions, an async series-level datafeed, multiple panes, seven built-in indicators, five
-drawing tools, a React wrapper, session-aware labels/gaps, and the first WickScript API v1
-compiler slice. The sandboxed script runtime comes next.
+**Status: Phase 4 in progress — WickScript.**
+The free engine includes the chart, indicators, panes, drawings, React, session-aware axes, and
+a WickScript authoring/compiler/worker runtime with an initial `ta.*` set and Monaco editor.
+Broader `ta.*` coverage, the editor demo polish, and the pro script layer remain.
 
 ## Try it
 
@@ -18,8 +17,9 @@ pnpm dev
 
 Opens the private playground at `localhost:5173` with 5k / 25k / 100k synthetic 1m bars, a
 crosshair OHLC readout, a theme toggle, an FPS meter, SMA/RSI/MACD toggles, drawing tools,
-timeframe aggregation, local Binance and SPX snapshots, and a "Use feed" mode with a
-simulated async feed. No live connection is required. Keyboard: arrows pan, `+`/`-`
+timeframe aggregation, local Binance and SPX snapshots, a Monaco script editor at
+`/editor.html`, and a "Use feed" mode with a simulated async feed. No live connection is
+required. Keyboard: arrows pan, `+`/`-`
 zoom, `Home` fits. Pinch zoom works on touch. Core edits hot-reload.
 
 ## Packages
