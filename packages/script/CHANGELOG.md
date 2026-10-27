@@ -1,5 +1,15 @@
 # @wicklib/script
 
+## 0.1.0-next.22
+
+### Minor Changes
+
+- 7d50599: Add VWMA, true range, OBV, linear regression, and keyed bars-since support to the free `ta.*` set.
+
+### Patch Changes
+
+- @wicklib/core@0.1.0-next.22
+
 ## 0.1.0-next.21
 
 ### Minor Changes
