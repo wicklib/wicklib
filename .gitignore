@@ -27,3 +27,6 @@ temp/
 playwright-report/
 test-results/
 blob-report/
+
+# generated market-data snapshots
+apps/playground/public/data/binance-*.json

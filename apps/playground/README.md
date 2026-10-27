@@ -16,6 +16,7 @@ Never published. Not part of the Changesets group.
 - Dataset size: 5k, 25k, 100k synthetic 1m bars.
 - Regenerate: new deterministic dataset (seed increments).
 - Use feed: simulated async feed with latency, live bars, loading state, and range loads.
+- Binance 2025: load the local one-year BTCUSDT 1m snapshot (525,600 bars).
 - SMA / RSI / MACD toggles: overlays and separate indicator panes.
 - Trend, H-Line, Rect, Fib, and Clear: interactive drawing tools.
 - Fit: reset the time scale.
@@ -27,11 +28,35 @@ Never published. Not part of the Changesets group.
 ## URL modes
 
 - `?feed` — start in datafeed mode.
+- `?binance` — load the local Binance 2025 BTCUSDT 1m snapshot.
 - `?indicators` — enable SMA, RSI, and MACD.
 - `?drawings` — add a deterministic set of demo drawings.
 - `?test` — deterministic static chart, animation/FPS loop disabled, sets
   `window.__wicklibReady` for Playwright.
 - `?bench` — runs a 180-frame 100k-bar pan benchmark and exposes `window.__wicklibBench`.
+
+## Binance snapshot
+
+The playground can load a static Binance USD-M futures snapshot. It is not a live feed and
+does not use the datafeed contract.
+
+1. Download the 12 monthly BTCUSDT 1m ZIPs for 2025 from
+   [Binance Data Collection](https://data.binance.vision/?prefix=data/futures/um/monthly/klines/BTCUSDT/1m/)
+   into `~/Downloads`.
+2. Generate the local snapshot:
+
+```sh
+pnpm --filter @wicklib/playground data:binance
+```
+
+The importer validates ascending times and OHLC, then writes:
+
+`apps/playground/public/data/binance-btcusdt-1m-2025.json`
+
+That file is generated and gitignored. The loader maps the compact bar arrays to `OhlcData`
+and calls `series.setData()`. No live feed, polling, WebSocket, or range loading is involved.
+
+Optional importer arguments are `--input`, `--symbol`, `--interval`, `--year`, and `--output`.
 
 ## Visual tests
 

@@ -21,6 +21,16 @@ interface BenchResult {
   fps: number;
 }
 
+interface BinanceSnapshot {
+  version: number;
+  source: string;
+  market: string;
+  symbol: string;
+  interval: string;
+  year: string;
+  bars: number[][];
+}
+
 declare global {
   interface Window {
     __wicklibReady?: boolean;
@@ -50,6 +60,7 @@ app.innerHTML = `
       </label>
       <button id="regenerate" type="button">Regenerate</button>
       <button id="feed" type="button">Use feed</button>
+      <button id="binance" type="button">Binance 2025</button>
       <button id="fit" type="button">Fit</button>
       <label class="toggle"><input id="sma" type="checkbox" /> SMA</label>
       <label class="toggle"><input id="rsi" type="checkbox" /> RSI</label>
@@ -91,6 +102,7 @@ const fps = byId<HTMLSpanElement>("fps");
 const countSelect = byId<HTMLSelectElement>("count");
 const regenerateButton = byId<HTMLButtonElement>("regenerate");
 const feedButton = byId<HTMLButtonElement>("feed");
+const binanceButton = byId<HTMLButtonElement>("binance");
 const feedStatus = byId<HTMLSpanElement>("feed-status");
 const fitButton = byId<HTMLButtonElement>("fit");
 const smaToggle = byId<HTMLInputElement>("sma");
@@ -161,6 +173,7 @@ let seed = 7;
 let data: OhlcData[] = [];
 let feedActive = false;
 let fitAfterFeedLoad = false;
+let binanceLabel: string | null = null;
 
 interface IndicatorHandle {
   remove(): void;
@@ -199,8 +212,10 @@ function updateSummary(): void {
   const from = range.from > 0 ? dayFormatter.format(range.from) : "—";
   const to = range.to > 0 ? dayFormatter.format(range.to) : "—";
 
-  const label = feedActive ? "live feed" : `${data.length.toLocaleString("en-US")} bars`;
-  summary.textContent = `BTC/USD · 1m · ${label} · ${from} → ${to}`;
+  const label = feedActive
+    ? "live feed"
+    : (binanceLabel ?? `${data.length.toLocaleString("en-US")} bars`);
+  summary.textContent = `BTC/USDT · 1m · ${label} · ${from} → ${to}`;
 }
 
 function stopFeed(): void {
@@ -213,6 +228,7 @@ function stopFeed(): void {
 }
 
 function startFeed(): void {
+  binanceButton.classList.remove("active");
   feedActive = true;
   fitAfterFeedLoad = true;
   feedStatus.textContent = "loading…";
@@ -283,6 +299,8 @@ function load(): void {
   if (wasFeed) {
     stopFeed();
   }
+  binanceLabel = null;
+  binanceButton.classList.remove("active");
 
   data = generateOhlc(count, seed);
 
@@ -294,6 +312,83 @@ function load(): void {
   }
 
   updateSummary();
+}
+
+async function loadBinance(): Promise<void> {
+  if (feedActive) {
+    stopFeed();
+    feedButton.textContent = "Use feed";
+  }
+
+  binanceButton.disabled = true;
+  feedStatus.textContent = "loading Binance…";
+
+  try {
+    const response = await fetch("/data/binance-btcusdt-1m-2025.json");
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const snapshot = (await response.json()) as BinanceSnapshot;
+    const bars = parseBinanceSnapshot(snapshot);
+    data = bars;
+    binanceLabel = `Binance ${snapshot.market} ${snapshot.symbol} ${snapshot.year} · ${snapshot.interval}`;
+    binanceButton.classList.add("active");
+    series.setData(data);
+    chart.timeScale().fitContent();
+    updateSummary();
+    feedStatus.textContent = `${bars.length.toLocaleString("en-US")} bars`;
+  } catch (error) {
+    console.error("Could not load the local Binance snapshot", error);
+    feedStatus.textContent = "Binance snapshot missing — run data:binance";
+  } finally {
+    binanceButton.disabled = false;
+  }
+}
+
+function parseBinanceSnapshot(snapshot: BinanceSnapshot): OhlcData[] {
+  if (snapshot.version !== 1 || !Array.isArray(snapshot.bars)) {
+    throw new Error("Unsupported Binance snapshot");
+  }
+
+  let previousTime = Number.NEGATIVE_INFINITY;
+  const bars: OhlcData[] = new Array(snapshot.bars.length);
+
+  for (let index = 0; index < snapshot.bars.length; index += 1) {
+    const row = snapshot.bars[index];
+    if (!Array.isArray(row) || row.length < 6) {
+      throw new Error(`Malformed Binance bar at index ${index}`);
+    }
+
+    const time = Number(row[0]);
+    const open = Number(row[1]);
+    const high = Number(row[2]);
+    const low = Number(row[3]);
+    const close = Number(row[4]);
+    const volume = Number(row[5]);
+    if (
+      !Number.isFinite(time) ||
+      !Number.isFinite(open) ||
+      !Number.isFinite(high) ||
+      !Number.isFinite(low) ||
+      !Number.isFinite(close) ||
+      !Number.isFinite(volume)
+    ) {
+      throw new Error(`Non-finite Binance bar at index ${index}`);
+    }
+    if (time <= previousTime) {
+      throw new Error(`Unsorted Binance bar at index ${index}`);
+    }
+
+    bars[index] = { time, open, high, low, close, volume };
+    previousTime = time;
+  }
+
+  if (bars.length === 0) {
+    throw new Error("The Binance snapshot is empty");
+  }
+
+  return bars;
 }
 
 function nextFrame(): Promise<number> {
@@ -418,11 +513,16 @@ feedButton.addEventListener("click", () => {
     series.setData(data);
     chart.timeScale().fitContent();
     feedButton.textContent = "Use feed";
+    binanceButton.classList.toggle("active", binanceLabel !== null);
   } else {
     startFeed();
     feedButton.textContent = "Use static";
   }
   updateSummary();
+});
+
+binanceButton.addEventListener("click", () => {
+  void loadBinance();
 });
 
 fitButton.addEventListener("click", () => {
@@ -559,6 +659,10 @@ if (params.has("indicators")) {
 
 if (params.has("drawings")) {
   addDemoDrawings();
+}
+
+if (params.has("binance")) {
+  void loadBinance();
 }
 
 if (testMode) {
