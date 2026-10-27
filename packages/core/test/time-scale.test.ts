@@ -121,6 +121,20 @@ describe("TimeScale", () => {
     expect(range.to).toBeGreaterThanOrEqual(50 * MINUTE);
   });
 
+  it("extends time coordinates into empty space after the last bar", () => {
+    const scale = new TimeScale(source(100));
+    scale.setWidth(800);
+    scale.fitContent();
+
+    const last = 99 * MINUTE;
+    const future = last + 10 * MINUTE;
+    const extended = scale.getVisibleTimeRange();
+
+    expect(extended.to).toBeGreaterThan(last);
+    expect(scale.timeToX(future)).toBeGreaterThan(scale.timeToX(last)!);
+    expect(scale.timeAtX(800)).toBeGreaterThan(last);
+  });
+
   it("handles an empty source", () => {
     const scale = new TimeScale(source(0));
     scale.setWidth(800);

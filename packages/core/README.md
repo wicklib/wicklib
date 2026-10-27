@@ -57,6 +57,8 @@ chart.loadDrawings(document);
   clean teardown.
 - Draggable price axis that scales the price range; manual mode then allows vertical chart
   panning. Double-click the axis to restore auto-scale, or call `chart.resetView()`.
+- Time-axis labels and drawings can extend into empty space after the last bar, using the last
+  observed interval.
 - Keyboard pan/zoom/fit, and two-pointer pinch zoom on touch devices.
 - Series datafeed: initial count load, debounced range loads with prefetch, abort on stale
   requests, prepend anchoring, realtime revision, loading and error events.

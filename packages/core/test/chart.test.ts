@@ -635,6 +635,24 @@ describe("createChart", () => {
     expect(anchor?.time).toBe(clicks[0]!.time);
   });
 
+  it("places drawings in empty space after the last bar", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    const series = chart.addSeries(CandlestickSeries);
+    const data = bars(200);
+    series.setData(data);
+    chart.timeScale().fitContent();
+    chart.timeScale().setOptions({ rightOffset: 60 });
+
+    const root = element.firstElementChild as HTMLElement;
+    chart.startDrawing(HorizontalLine);
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 700, 200));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 700, 200));
+
+    const anchor = chart.serializeDrawings().drawings[0]?.anchors[0];
+    expect(anchor?.time).toBeGreaterThan(data.at(-1)!.time);
+  });
+
   it("creates drawings with pointer anchors and cancels with Escape", () => {
     const element = mount();
     const chart = track(createChart(element));

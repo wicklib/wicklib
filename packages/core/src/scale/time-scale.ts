@@ -99,23 +99,44 @@ export class TimeScale {
   }
 
   timeToX(time: Time): number | null {
-    const index = this.source.nearestIndex(time);
-    if (index < 0) {
-      return null;
-    }
-    return this.indexToX(index);
-  }
-
-  timeAtX(x: number): Time | null {
     const count = this.source.count();
     if (count === 0) {
       return null;
     }
-    const index = Math.round(this.xToIndex(x));
-    if (index < 0 || index >= count) {
+
+    const first = this.source.timeAt(0);
+    const last = this.source.timeAt(count - 1);
+    if (first === undefined || last === undefined) {
       return null;
     }
-    return this.source.timeAt(index) ?? null;
+
+    if (time < first) {
+      return this.indexToX((time - first) / this.timeStep());
+    }
+    if (time > last) {
+      return this.indexToX(count - 1 + (time - last) / this.timeStep());
+    }
+
+    const index = this.source.nearestIndex(time);
+    return index < 0 ? null : this.indexToX(index);
+  }
+
+  timeAtX(x: number): Time | null {
+    if (this.source.count() === 0) {
+      return null;
+    }
+    return this.timeAtIndex(Math.round(this.xToIndex(x)));
+  }
+
+  /** Visible time range including empty space to the left or right of the data. */
+  getVisibleTimeRange(): VisibleRange {
+    if (this.source.count() === 0) {
+      return { from: 0, to: 0 };
+    }
+    return {
+      from: this.timeAtIndex(this.xToIndex(0), false),
+      to: this.timeAtIndex(this.xToIndex(this.width), false),
+    };
   }
 
   visibleIndexRange(): IndexRange {
@@ -293,6 +314,44 @@ export class TimeScale {
 
   private rightEdgeIndex(): number {
     return this.lastIndex() + this.rightOffset;
+  }
+
+  private timeStep(): number {
+    const count = this.source.count();
+    if (count < 2) {
+      return 60_000;
+    }
+    const last = this.source.timeAt(count - 1);
+    const previous = this.source.timeAt(count - 2);
+    if (last === undefined || previous === undefined || last <= previous) {
+      return 60_000;
+    }
+    return last - previous;
+  }
+
+  private timeAtIndex(index: number, snap = true): Time {
+    const count = this.source.count();
+    const lastIndex = count - 1;
+    const first = this.source.timeAt(0) ?? 0;
+    const last = this.source.timeAt(lastIndex) ?? first;
+
+    if (index < 0) {
+      return first + index * this.timeStep();
+    }
+    if (index > lastIndex) {
+      return last + (index - lastIndex) * this.timeStep();
+    }
+    if (!snap) {
+      const lower = Math.floor(index);
+      const upper = Math.ceil(index);
+      if (lower === upper) {
+        return this.source.timeAt(lower) ?? first;
+      }
+      const from = this.source.timeAt(lower) ?? first;
+      const to = this.source.timeAt(upper) ?? from;
+      return from + (to - from) * (index - lower);
+    }
+    return this.source.timeAt(Math.round(index)) ?? first;
   }
 
   private lastIndex(): number {

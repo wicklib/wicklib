@@ -131,7 +131,7 @@ export class ChartRenderer {
     context.fillStyle = model.layout.background;
     context.fillRect(0, 0, model.width, model.height);
 
-    const visible = this.timeScale.getVisibleRange();
+    const visible = this.timeScale.getVisibleTimeRange();
     const bottomPane = model.panes[model.panes.length - 1];
     if (!bottomPane) {
       return;
