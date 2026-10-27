@@ -47,7 +47,7 @@ Never published. Not part of the Changesets group.
 ## Session fixture
 
 `?sessions` generates two deterministic US equities regular-hours sessions. The chart uses
-`America/New_York`, Monday–Friday 09:30–16:00, so the time axis demonstrates session-aware
+`America/New_York`, Monday–Friday 09:30–16:00, an 80px closed-session gap, and session-aware
 labels without requiring external data. The fixture is synthetic and private to the
 playground.
 

@@ -292,6 +292,7 @@ function startFeed(): void {
   series.setOptions({ title: "BTC/USD" });
   chart.timeScale().setOptions({
     calendar: null,
+    gapMode: "compress",
     maxVisibleBars: MAX_VISIBLE_BARS,
   });
   if (timeframe !== "1m") {
@@ -378,6 +379,7 @@ function load(): void {
   binanceButton.classList.remove("active");
   chart.timeScale().setOptions({
     calendar: null,
+    gapMode: "compress",
     maxVisibleBars: MAX_VISIBLE_BARS,
   });
   baseData = generateOhlc(count, seed);
@@ -448,6 +450,8 @@ function loadSessions(): void {
   timeframeSelect.disabled = false;
   chart.timeScale().setOptions({
     calendar: US_EQUITIES_RTH,
+    gapMode: "show",
+    gapWidth: 80,
     maxVisibleBars: SESSION_VISIBLE_BARS,
   });
   baseData = generateSessionOhlc(2, 390, seed);
@@ -473,6 +477,7 @@ async function loadBinance(): Promise<void> {
     const snapshot = (await response.json()) as BinanceSnapshot;
     chart.timeScale().setOptions({
       calendar: null,
+      gapMode: "compress",
       maxVisibleBars: MAX_VISIBLE_BARS,
     });
     baseData = parseBinanceSnapshot(snapshot);
