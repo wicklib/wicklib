@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.25
+
+### Minor Changes
+
+- e76e9e7: Add `titlePosition` to price lines so titles can render inside the plot while the price-axis label retains the value.
+
 ## 0.1.0-next.24
 
 ### Minor Changes
