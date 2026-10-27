@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Wicklib — open-source charting engine",
+  "description": "Wicklib \u2014 open-source charting engine",
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.18.0",
   "engines": {
@@ -22,7 +22,8 @@
     "checks": "pnpm lint && pnpm typecheck && pnpm build && pnpm depcruise && pnpm test && pnpm api",
     "pack:core": "pnpm --filter @wicklib/core pack --pack-destination .artifacts",
     "changeset": "changeset",
-    "release": "changeset publish"
+    "release": "changeset publish",
+    "test:visual": "pnpm --filter @wicklib/playground test:visual"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",

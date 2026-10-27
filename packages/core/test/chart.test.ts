@@ -50,6 +50,17 @@ function settle(): Promise<void> {
   });
 }
 
+function pointerEvent(type: string, pointerId: number, x: number, y: number): MouseEvent {
+  const event = new MouseEvent(type, {
+    clientX: x,
+    clientY: y,
+    bubbles: true,
+    button: 0,
+  });
+  Object.defineProperty(event, "pointerId", { value: pointerId });
+  return event;
+}
+
 beforeAll(() => {
   const context = new Proxy(
     { measureText: (text: string) => ({ width: text.length * 7 }) } as Record<string, unknown>,
@@ -151,6 +162,53 @@ describe("createChart", () => {
     expect(events[0]?.point).toEqual({ x: 100, y: 100 });
     expect(events[0]?.time).toBeTypeOf("number");
     expect(events[0]?.price).toBeTypeOf("number");
+  });
+
+  it("supports keyboard pan, zoom, and fit", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(200));
+    chart.timeScale().fitContent();
+
+    const root = element.firstElementChild as HTMLElement;
+    expect(root.tabIndex).toBe(0);
+
+    const initial = chart.timeScale().getVisibleRange();
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+    const panned = chart.timeScale().getVisibleRange();
+    expect(panned.to).toBeLessThan(initial.to);
+
+    const beforeZoom = panned.to - panned.from;
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "+", bubbles: true }));
+    const zoomed = chart.timeScale().getVisibleRange();
+    expect(zoomed.to - zoomed.from).toBeLessThan(beforeZoom);
+
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+    const fitted = chart.timeScale().getVisibleRange();
+    expect(fitted.to - fitted.from).toBeGreaterThan(zoomed.to - zoomed.from);
+  });
+
+  it("supports two-pointer pinch zoom", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(200));
+    chart.timeScale().fitContent();
+
+    const root = element.firstElementChild as HTMLElement;
+    const before = chart.timeScale().getVisibleRange();
+    const beforeSpan = before.to - before.from;
+
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 200, 200));
+    root.dispatchEvent(pointerEvent("pointerdown", 2, 400, 200));
+    root.dispatchEvent(pointerEvent("pointermove", 2, 500, 200));
+
+    const after = chart.timeScale().getVisibleRange();
+    expect(after.to - after.from).toBeLessThan(beforeSpan);
+
+    root.dispatchEvent(pointerEvent("pointerup", 2, 500, 200));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 200, 200));
   });
 
   it("rejects invalid data", () => {

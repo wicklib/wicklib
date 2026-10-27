@@ -49,3 +49,22 @@ jobs:
           test -n "$(tar -tzf "$TARBALL" | grep 'package/dist/index.js')"
           test -n "$(tar -tzf "$TARBALL" | grep 'package/dist/index.d.ts')"
           test -n "$(tar -tzf "$TARBALL" | grep 'package/LICENSE')"
+
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @wicklib/playground exec playwright install --with-deps chromium
+      - run: pnpm --filter @wicklib/playground test:visual

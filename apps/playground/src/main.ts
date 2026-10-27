@@ -4,10 +4,28 @@ import { generateOhlc } from "./data";
 import { createMockFeed } from "./mock-feed";
 import "./style.css";
 
+interface BenchResult {
+  frames: number;
+  medianMs: number;
+  p95Ms: number;
+  fps: number;
+}
+
+declare global {
+  interface Window {
+    __wicklibReady?: boolean;
+    __wicklibBench?: BenchResult;
+  }
+}
+
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) {
   throw new Error("#app not found");
 }
+
+const params = new URLSearchParams(window.location.search);
+const testMode = params.has("test");
+const benchMode = params.has("bench");
 
 app.innerHTML = `
   <header class="toolbar">
@@ -177,6 +195,59 @@ function load(): void {
   updateSummary();
 }
 
+function nextFrame(): Promise<number> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(resolve);
+  });
+}
+
+function markReady(): void {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.__wicklibReady = true;
+    });
+  });
+}
+
+async function runBenchmark(): Promise<void> {
+  chart.timeScale().fitContent();
+  await nextFrame();
+  await nextFrame();
+
+  const samples: number[] = [];
+  let previous = performance.now();
+
+  for (let index = 0; index < 180; index += 1) {
+    const now = await nextFrame();
+    samples.push(now - previous);
+    previous = now;
+
+    const range = chart.timeScale().getVisibleRange();
+    const step = (range.to - range.from) * 0.0001;
+    chart.timeScale().setVisibleRange({
+      from: range.from + step,
+      to: range.to + step,
+    });
+  }
+
+  samples.shift();
+  samples.sort((first, second) => first - second);
+
+  const median = samples[Math.floor(samples.length * 0.5)]!;
+  const p95 = samples[Math.min(samples.length - 1, Math.floor(samples.length * 0.95))]!;
+  const result: BenchResult = {
+    frames: samples.length,
+    medianMs: median,
+    p95Ms: p95,
+    fps: 1000 / median,
+  };
+
+  window.__wicklibBench = result;
+  window.__wicklibReady = true;
+  feedStatus.textContent = `${result.fps.toFixed(1)} fps · p95 ${p95.toFixed(1)} ms`;
+  console.log("WICKLIB_BENCH", JSON.stringify(result));
+}
+
 chart.on("visible-range", () => {
   updateSummary();
 });
@@ -285,13 +356,23 @@ function tick(now: number): void {
   requestAnimationFrame(tick);
 }
 
-requestAnimationFrame(tick);
+if (!testMode && !benchMode) {
+  requestAnimationFrame(tick);
+}
 
 document.body.dataset.theme = "dark";
 load();
 
-if (new URLSearchParams(window.location.search).has("feed")) {
+if (params.has("feed")) {
   startFeed();
   feedButton.textContent = "Use static";
   updateSummary();
+}
+
+if (testMode) {
+  markReady();
+}
+
+if (benchMode) {
+  void runBenchmark();
 }

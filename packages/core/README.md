@@ -2,8 +2,8 @@
 
 Canvas2D charting engine: scales, candlestick rendering, axes, crosshair, and interactions.
 
-**Status: Phase 2 vertical slice + datafeed.** Candlestick charts render real data and can
-be driven by an async series-level datafeed.
+**Status: Phase 2 complete.** Candlestick charts render real data and can be driven by an
+async series-level datafeed.
 
 ```ts
 import { CandlestickSeries, createChart, type Datafeed, type OhlcData } from "@wicklib/core";
@@ -27,7 +27,8 @@ chart.on("data-loading", ({ loading }) => console.log("loading", loading));
 - Continuous index-based time scale and linear price scale.
 - Candlestick series with layered canvas rendering.
 - Price and time axes, grid, last-value line and label, series legend.
-- Crosshair (normal and magnet), click, pan, wheel zoom, resize, clean teardown.
+- Crosshair (normal and magnet), click, drag pan, wheel zoom, resize, clean teardown.
+- Keyboard pan/zoom/fit, and two-pointer pinch zoom on touch devices.
 - Series datafeed: initial count load, debounced range loads with prefetch, abort on stale
   requests, prepend anchoring, realtime revision, loading and error events.
 - Typed errors, strict data validation, per-chart extensions snapshot.

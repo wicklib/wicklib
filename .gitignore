@@ -22,3 +22,8 @@ out/
 # generated
 .turbo/
 temp/
+
+# playwright
+playwright-report/
+test-results/
+blob-report/

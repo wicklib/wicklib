@@ -409,7 +409,7 @@ export interface TimeScaleOptions {
 export type Unsubscribe = () => void;
 
 // @public
-export const VERSION = "0.1.0-dev.0";
+export const VERSION: string;
 
 // @public
 export interface VisibleRange {

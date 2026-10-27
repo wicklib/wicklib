@@ -91,6 +91,8 @@ class Chart implements ChartApi, SeriesHost {
   private readyEmitted = false;
   private seriesCounter = 0;
   private crosshairPoint: Point | null = null;
+  private readonly activePointers = new Map<number, Point>();
+  private pinchDistance: number | null = null;
   private dragging = false;
   private pointerId: number | null = null;
   private dragLastX = 0;
@@ -103,6 +105,8 @@ class Chart implements ChartApi, SeriesHost {
 
     this.stack = new CanvasStack(container);
     this.stack.root.style.touchAction = "none";
+    this.stack.root.tabIndex = 0;
+    this.stack.root.setAttribute("aria-label", "Chart");
 
     const source: TimeScaleSource = {
       count: () => this.primaryStore()?.length ?? 0,
@@ -303,6 +307,8 @@ class Chart implements ChartApi, SeriesHost {
       series.destroyInternal();
     }
 
+    this.activePointers.clear();
+    this.pinchDistance = null;
     this.bus.dispose();
     this.series.length = 0;
     this.stack.destroy();
@@ -409,10 +415,7 @@ class Chart implements ChartApi, SeriesHost {
       event.preventDefault();
     }
 
-    this.dragging = true;
-    this.pointerId = event.pointerId;
-    this.dragLastX = point.x;
-    this.dragMoved = false;
+    this.activePointers.set(event.pointerId, point);
 
     try {
       this.stack.root.setPointerCapture(event.pointerId);
@@ -420,11 +423,46 @@ class Chart implements ChartApi, SeriesHost {
       // Pointer capture is best-effort.
     }
 
+    if (this.activePointers.size === 2) {
+      this.dragging = false;
+      this.pointerId = null;
+      this.pinchDistance = this.currentPinchDistance();
+      this.clearCrosshair();
+      return;
+    }
+
+    this.dragging = true;
+    this.pointerId = event.pointerId;
+    this.dragLastX = point.x;
+    this.dragMoved = false;
     this.updateCrosshair(point.x, point.y);
   };
 
   private readonly onPointerMove = (event: PointerEvent): void => {
     const point = this.localPoint(event);
+
+    if (this.activePointers.has(event.pointerId)) {
+      this.activePointers.set(event.pointerId, point);
+    }
+
+    if (this.pinchDistance !== null && this.activePointers.size >= 2) {
+      const distance = this.currentPinchDistance();
+      if (distance !== null && distance > 0 && this.pinchDistance > 0) {
+        const scale = distance / this.pinchDistance;
+        if (Number.isFinite(scale) && scale !== 1) {
+          const centerX = this.currentPinchCenterX();
+          if (centerX !== null) {
+            this.timeScaleModel.zoomAt(centerX, -Math.log(scale) / 0.0015);
+            this.requestRender();
+            this.emitVisibleRange();
+            this.notifyViewChange();
+          }
+        }
+      }
+      this.pinchDistance = distance;
+      this.clearCrosshair();
+      return;
+    }
 
     if (this.dragging && event.pointerId === this.pointerId) {
       const delta = point.x - this.dragLastX;
@@ -444,6 +482,24 @@ class Chart implements ChartApi, SeriesHost {
   };
 
   private readonly onPointerUp = (event: PointerEvent): void => {
+    this.activePointers.delete(event.pointerId);
+
+    if (this.pinchDistance !== null) {
+      try {
+        this.stack.root.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture is best-effort.
+      }
+
+      if (this.activePointers.size < 2) {
+        this.pinchDistance = null;
+        this.dragging = false;
+        this.pointerId = null;
+        this.clearCrosshair();
+      }
+      return;
+    }
+
     if (!this.dragging || event.pointerId !== this.pointerId) {
       return;
     }
@@ -465,17 +521,83 @@ class Chart implements ChartApi, SeriesHost {
     this.updateCrosshair(point.x, point.y);
   };
 
-  private readonly onPointerCancel = (): void => {
+  private readonly onPointerCancel = (event: PointerEvent): void => {
+    this.activePointers.delete(event.pointerId);
+    if (this.activePointers.size < 2) {
+      this.pinchDistance = null;
+    }
     this.dragging = false;
     this.pointerId = null;
     this.clearCrosshair();
   };
 
   private readonly onPointerLeave = (): void => {
-    if (!this.dragging) {
+    if (!this.dragging && this.pinchDistance === null) {
       this.clearCrosshair();
     }
   };
+
+  private readonly onKeyDown = (event: KeyboardEvent): void => {
+    if (!this.plot) {
+      return;
+    }
+
+    const step = this.plot.width * 0.1;
+    const center = this.plot.width / 2;
+
+    switch (event.key) {
+      case "ArrowLeft":
+        this.timeScaleModel.pan(step);
+        break;
+      case "ArrowRight":
+        this.timeScaleModel.pan(-step);
+        break;
+      case "+":
+      case "=":
+        this.timeScaleModel.zoomAt(center, -200);
+        break;
+      case "-":
+      case "_":
+        this.timeScaleModel.zoomAt(center, 200);
+        break;
+      case "Home":
+        this.timeScaleModel.fitContent();
+        break;
+      case "Escape":
+        this.clearCrosshair();
+        event.preventDefault();
+        return;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    this.requestRender();
+    this.emitVisibleRange();
+    this.notifyViewChange();
+  };
+
+  private currentPinchDistance(): number | null {
+    const points = Array.from(this.activePointers.values());
+    if (points.length < 2) {
+      return null;
+    }
+
+    const first = points[0]!;
+    const second = points[1]!;
+    return Math.hypot(first.x - second.x, first.y - second.y);
+  }
+
+  private currentPinchCenterX(): number | null {
+    const points = Array.from(this.activePointers.values());
+    if (points.length < 2 || !this.plot) {
+      return null;
+    }
+
+    const first = points[0]!;
+    const second = points[1]!;
+    return Math.max(0, Math.min(this.plot.width, (first.x + second.x) / 2));
+  }
 
   private readonly onWheel = (event: WheelEvent): void => {
     const point = this.localPoint(event);
@@ -712,6 +834,7 @@ class Chart implements ChartApi, SeriesHost {
     root.addEventListener("pointerup", this.onPointerUp);
     root.addEventListener("pointercancel", this.onPointerCancel);
     root.addEventListener("pointerleave", this.onPointerLeave);
+    root.addEventListener("keydown", this.onKeyDown);
     root.addEventListener("wheel", this.onWheel, { passive: false });
   }
 
@@ -722,6 +845,7 @@ class Chart implements ChartApi, SeriesHost {
     root.removeEventListener("pointerup", this.onPointerUp);
     root.removeEventListener("pointercancel", this.onPointerCancel);
     root.removeEventListener("pointerleave", this.onPointerLeave);
+    root.removeEventListener("keydown", this.onKeyDown);
     root.removeEventListener("wheel", this.onWheel);
   }
 }

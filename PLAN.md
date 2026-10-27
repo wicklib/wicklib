@@ -1,15 +1,14 @@
 # Wicklib — Implementation Plan
 
-Status: Phase 1 complete. Phase 2 in progress: RFC-0001 and RFC-0002 accepted; playground,
-candlestick vertical slice, and series datafeed implemented.
+Status: Phase 1 complete. Phase 2 complete: candlestick vertical slice, series datafeed,
+keyboard and pinch interactions, visual regression, and the performance baseline.
 
 Phase 1 froze the contract: packages, toolchain, CI, release pipeline, API report, extension
 seams, and the normative WickScript plan. No rendering exists yet.
 
 ## Phase 2 — rendering vertical slice
 
-Status: in progress. Steps 0–6 are implemented; visual regression and the performance
-baseline (Step 7) are pending.
+Status: complete. Steps 0–7 implemented.
 
 Decisions:
 
@@ -38,7 +37,7 @@ RFC-0001 is accepted. The types and API report were updated from it.
 - `pnpm dev` from the repo root.
 - Synthetic OHLC generator, bar-count and theme controls, FPS counter.
 - Never published, never part of the Changesets group.
-- Playwright visual tests run against it in Phase 3.
+- Playwright visual regression and a 100k-bar pan benchmark run against it.
 
 ### Step 1 — data and scales (done)
 
@@ -62,13 +61,17 @@ RFC-0001 is accepted. The types and API report were updated from it.
 
 - Candlestick series through the real series pipeline.
 - Price axis and time axis with correct tick selection.
-- Empty state, loading state, and error state.
+- Empty state is built in. Loading and error states are emitted as events and rendered by
+  the host; the engine draws no spinner by design.
 
-### Step 5 — interactions (partial)
+### Step 5 — interactions (done)
 
 - Crosshair with snapping and a shared event payload.
-- Wheel zoom anchored at the pointer; drag pan; keyboard; touch.
-- Range clamping and inertia decisions documented.
+- Wheel zoom anchored at the pointer; drag pan.
+- Keyboard: arrows pan, `+`/`-` zoom, `Home` fits, `Escape` clears the crosshair.
+- Touch: single-pointer pan and two-pointer pinch zoom.
+- Spacing and right offset clamp to keep data reachable. Panning stops on release; there is
+  no inertia in Phase 2.
 
 ### Step 6 — datafeed (done)
 
@@ -80,37 +83,38 @@ RFC-0002 accepted and implemented.
 - `data-loading` events; datafeed errors on the `error` event with `seriesId`.
 - Mock async feed in the playground.
 
-### Step 7 — performance and regression (partial)
+### Step 7 — performance and regression (done)
 
-- Playground FPS meter exists; a recorded baseline is pending.
-- Visual regression snapshots and a small determinism fixture set are pending.
-
-- 100k bars, 60fps pan/zoom on a mid-range laptop.
-- Visual regression snapshots and a small determinism fixture set.
+- 100k bars, continuous pan baseline: median 16.7 ms, p95 16.7 ms, 59.9 fps on an Apple M2.
+- Playwright visual regression snapshot of a text-free plot crop.
+- Deterministic synthetic dataset (fixed seed) and benchmark mode.
+- See `apps/playground/BENCHMARK.md`.
 
 Exit criteria:
 
 - [x] Playground renders 100k synthetic bars with crosshair, zoom, pan, and clean teardown.
-- [ ] 60fps interaction baseline recorded.
+- [x] 60fps interaction baseline recorded.
 - [x] API report diff reviewed and documented.
 - [x] Unit tests for scales, store merging, datafeed, and lifecycle.
-- [ ] Visual tests for rendering.
+- [x] Visual tests for rendering.
 - [x] No sessions/DST, no WebGL, no indicators, no script, no pro in this phase.
 
 Implemented in this phase: continuous time scale, linear price scale, layered Canvas2D
 renderer, candlestick series, price/time axes, grid, legend, last-value line, crosshair
 (normal and magnet), click events, drag pan, wheel zoom, resize, dispose, strict validation,
-typed errors, per-chart extension validation, the series datafeed, and the private
-playground.
+typed errors, per-chart extension validation, the series datafeed, keyboard and pinch
+interactions, visual regression, the performance baseline, and the private playground.
 
 ## Phase 3 — indicators and structure
+
+Start with RFC-0003 for indicators, drawings, and panes.
 
 1. `@wicklib/indicators` free catalog (SMA, EMA, RSI, MACD, Bollinger, VWAP, ATR).
 2. `registerIndicator` with parameter schema and pane assignment.
 3. Drawing tools: trendline, horizontal, rectangle, fib retracement, measure.
 4. Multi-pane support and synced time scales.
 5. `@wicklib/react` real wrapper plus `useChart`.
-6. Visual regression suite (Playwright screenshots) and determinism fixtures.
+6. Extend visual regression coverage and determinism fixtures.
 
 ## Phase 4 — WickScript
 

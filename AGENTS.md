@@ -59,6 +59,7 @@ pnpm lint
 pnpm depcruise
 pnpm api
 pnpm checks
+pnpm test:visual
 pnpm format:check
 pnpm pack:core
 ```

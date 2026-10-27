@@ -3,9 +3,9 @@
 Open-source charting engine for web applications. Canvas-first, framework-agnostic, and
 designed for a clean separation between the free engine and the commercial add-on.
 
-**Status: Phase 2 — rendering vertical slice + datafeed.** A candlestick chart renders real
-data with axes, crosshair, pan, zoom, and an async series-level datafeed. Indicators and
-WickTS are not implemented yet.
+**Status: Phase 2 complete.** A candlestick chart renders real data with axes, crosshair,
+pan, zoom, keyboard and pinch interactions, and an async series-level datafeed. Phase 3
+starts with indicators and drawings. WickTS comes later.
 
 ## Try it
 
@@ -16,7 +16,8 @@ pnpm dev
 
 Opens the private playground at `localhost:5173` with 5k / 25k / 100k synthetic 1m bars, a
 crosshair OHLC readout, a theme toggle, an FPS meter, and a "Use feed" mode with a simulated
-async feed and live bars. Core edits hot-reload.
+async feed and live bars. Keyboard: arrows pan, `+`/`-` zoom, `Home` fits. Pinch zoom works
+on touch. Core edits hot-reload.
 
 ## Packages
 
@@ -43,9 +44,12 @@ pnpm lint
 pnpm depcruise
 pnpm api
 pnpm checks
+pnpm test:visual   # Playwright snapshot + 100k-bar benchmark
 ```
 
-`pnpm checks` runs the same sequence CI runs. Node 24 and pnpm 10 are required.
+`pnpm checks` runs the same sequence CI runs. Visual tests need Chromium once:
+`pnpm --filter @wicklib/playground exec playwright install chromium`. Node 24 and pnpm 10
+are required.
 
 ## Architecture rules
 
@@ -58,8 +62,9 @@ pnpm checks
 - The site consumes published packages only; `apps/playground` is the local dev harness.
 
 See `docs/rfc/0001-public-api.md` and `docs/rfc/0002-datafeed.md` for the accepted public
-API and datafeed contracts, and `packages/script/PLAN.md` plus its ADRs for the scripting
-design that is frozen but not yet implemented.
+API and datafeed contracts, `apps/playground/BENCHMARK.md` for the rendering baseline, and
+`packages/script/PLAN.md` plus its ADRs for the scripting design that is frozen but not yet
+implemented.
 
 ## Releasing
 
