@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.9
+
+### Minor Changes
+
+- 54eb258: Add host-supplied trading calendars. Session-aware time-axis labels now skip closed periods and include session opens and closes across DST transitions.
+
 ## 0.1.0-next.8
 
 ### Patch Changes
