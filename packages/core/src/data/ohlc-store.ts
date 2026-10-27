@@ -23,6 +23,9 @@ function validateBar(bar: OhlcData, index: number): void {
   if (bar.low > Math.min(bar.open, bar.close)) {
     invalid("low must be less than or equal to open and close", index);
   }
+  if (bar.volume !== undefined && (!Number.isFinite(bar.volume) || bar.volume < 0)) {
+    invalid("volume must be finite and non-negative", index);
+  }
 }
 
 function validateIncoming(data: readonly OhlcData[]): void {
@@ -56,6 +59,7 @@ export class OhlcStore {
   private highs = new Float64Array(0);
   private lows = new Float64Array(0);
   private closes = new Float64Array(0);
+  private volumes = new Float64Array(0);
   private count = 0;
 
   get length(): number {
@@ -72,6 +76,7 @@ export class OhlcStore {
       this.highs[i] = bar.high;
       this.lows[i] = bar.low;
       this.closes[i] = bar.close;
+      this.volumes[i] = bar.volume ?? Number.NaN;
     }
     this.count = data.length;
   }
@@ -124,14 +129,24 @@ export class OhlcStore {
     return this.closes[index]!;
   }
 
+  volumeAt(index: number): number | undefined {
+    const value = this.volumes[index]!;
+    return Number.isNaN(value) ? undefined : value;
+  }
+
   barAt(index: number): OhlcData {
-    return {
+    const bar: OhlcData = {
       time: this.times[index]!,
       open: this.opens[index]!,
       high: this.highs[index]!,
       low: this.lows[index]!,
       close: this.closes[index]!,
     };
+    const volume = this.volumes[index]!;
+    if (!Number.isNaN(volume)) {
+      bar.volume = volume;
+    }
+    return bar;
   }
 
   lastBar(): OhlcData | null {
@@ -192,6 +207,7 @@ export class OhlcStore {
       this.highs.copyWithin(data.length, 0, this.count);
       this.lows.copyWithin(data.length, 0, this.count);
       this.closes.copyWithin(data.length, 0, this.count);
+      this.volumes.copyWithin(data.length, 0, this.count);
       for (let index = 0; index < data.length; index += 1) {
         this.write(index, data[index]!);
       }
@@ -223,6 +239,7 @@ export class OhlcStore {
     const highs = new Float64Array(capacity);
     const lows = new Float64Array(capacity);
     const closes = new Float64Array(capacity);
+    const volumes = new Float64Array(capacity);
 
     let oldIndex = 0;
     let newIndex = 0;
@@ -239,6 +256,7 @@ export class OhlcStore {
         highs[writeIndex] = this.highs[oldIndex]!;
         lows[writeIndex] = this.lows[oldIndex]!;
         closes[writeIndex] = this.closes[oldIndex]!;
+        volumes[writeIndex] = this.volumes[oldIndex]!;
         oldIndex += 1;
       } else if (oldTime > bar.time) {
         times[writeIndex] = bar.time;
@@ -246,6 +264,7 @@ export class OhlcStore {
         highs[writeIndex] = bar.high;
         lows[writeIndex] = bar.low;
         closes[writeIndex] = bar.close;
+        volumes[writeIndex] = bar.volume ?? Number.NaN;
         newIndex += 1;
       } else {
         times[writeIndex] = bar.time;
@@ -253,6 +272,7 @@ export class OhlcStore {
         highs[writeIndex] = bar.high;
         lows[writeIndex] = bar.low;
         closes[writeIndex] = bar.close;
+        volumes[writeIndex] = bar.volume ?? Number.NaN;
         oldIndex += 1;
         newIndex += 1;
         replaced += 1;
@@ -266,6 +286,7 @@ export class OhlcStore {
       highs[writeIndex] = this.highs[oldIndex]!;
       lows[writeIndex] = this.lows[oldIndex]!;
       closes[writeIndex] = this.closes[oldIndex]!;
+      volumes[writeIndex] = this.volumes[oldIndex]!;
       oldIndex += 1;
       writeIndex += 1;
     }
@@ -277,6 +298,7 @@ export class OhlcStore {
       highs[writeIndex] = bar.high;
       lows[writeIndex] = bar.low;
       closes[writeIndex] = bar.close;
+      volumes[writeIndex] = bar.volume ?? Number.NaN;
       newIndex += 1;
       writeIndex += 1;
     }
@@ -286,6 +308,7 @@ export class OhlcStore {
     this.highs = highs;
     this.lows = lows;
     this.closes = closes;
+    this.volumes = volumes;
     this.count = writeIndex;
 
     return { prepended, appended, replaced };
@@ -383,6 +406,7 @@ export class OhlcStore {
     this.highs[index] = bar.high;
     this.lows[index] = bar.low;
     this.closes[index] = bar.close;
+    this.volumes[index] = bar.volume ?? Number.NaN;
   }
 
   private nextCapacity(minimum: number): number {
@@ -404,17 +428,20 @@ export class OhlcStore {
     const highs = new Float64Array(capacity);
     const lows = new Float64Array(capacity);
     const closes = new Float64Array(capacity);
+    const volumes = new Float64Array(capacity);
 
     times.set(this.times.subarray(0, this.count));
     opens.set(this.opens.subarray(0, this.count));
     highs.set(this.highs.subarray(0, this.count));
     lows.set(this.lows.subarray(0, this.count));
     closes.set(this.closes.subarray(0, this.count));
+    volumes.set(this.volumes.subarray(0, this.count));
 
     this.times = times;
     this.opens = opens;
     this.highs = highs;
     this.lows = lows;
     this.closes = closes;
+    this.volumes = volumes;
   }
 }

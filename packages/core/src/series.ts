@@ -46,7 +46,7 @@ export interface SeriesHost {
   assertAlive(): void;
   onSeriesDataChanged(series: Series): void;
   requestRender(): void;
-  priceScaleApi(): PriceScaleApi;
+  priceScaleApi(paneId: string): PriceScaleApi;
   removeSeries(series: Series): void;
   getVisibleRange(): VisibleRange;
   restoreVisibleRange(range: VisibleRange): void;
@@ -61,7 +61,7 @@ export interface SeriesHost {
  */
 export class Series implements SeriesApi<OhlcData, CandlestickSeriesOptions> {
   readonly id: string;
-  readonly paneId = "main";
+  readonly paneId: string;
 
   private readonly host: SeriesHost;
   private readonly store = new OhlcStore();
@@ -74,15 +74,14 @@ export class Series implements SeriesApi<OhlcData, CandlestickSeriesOptions> {
     id: string,
     _type: SeriesType<OhlcData, CandlestickSeriesOptions>,
     options: CandlestickSeriesOptions | undefined,
+    paneId: string,
   ) {
     this.host = host;
     this.id = id;
+    this.paneId = paneId;
 
-    if (options?.paneId !== undefined && options.paneId !== "main") {
-      fail("NOT_IMPLEMENTED", "Only the default pane exists in Phase 2");
-    }
     if (options?.priceScaleId !== undefined && options.priceScaleId !== "right") {
-      fail("NOT_IMPLEMENTED", "Only the default right price scale exists in Phase 2");
+      fail("NOT_IMPLEMENTED", "Only the default right price scale exists in Phase 3");
     }
 
     this.options = mergeDefined<Required<CandlestickSeriesOptions>>(DEFAULT_OPTIONS, options);
@@ -106,7 +105,7 @@ export class Series implements SeriesApi<OhlcData, CandlestickSeriesOptions> {
     this.assertAlive();
 
     if (options.paneId !== undefined && options.paneId !== this.paneId) {
-      fail("NOT_IMPLEMENTED", "Only the default pane exists in Phase 2");
+      fail("NOT_IMPLEMENTED", "Moving a series between panes is not supported");
     }
     if (options.priceScaleId !== undefined && options.priceScaleId !== "right") {
       fail("NOT_IMPLEMENTED", "Only the default right price scale exists in Phase 2");
@@ -162,7 +161,7 @@ export class Series implements SeriesApi<OhlcData, CandlestickSeriesOptions> {
 
   priceScale(): PriceScaleApi {
     this.assertAlive();
-    return this.host.priceScaleApi();
+    return this.host.priceScaleApi(this.paneId);
   }
 
   remove(): void {

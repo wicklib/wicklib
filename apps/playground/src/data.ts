@@ -33,6 +33,7 @@ export function generateOhlc(count: number, seed = 1): OhlcData[] {
       high,
       low,
       close,
+      volume: 100 + Math.abs(close - open) * 1000,
     };
     price = close;
   }

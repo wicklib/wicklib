@@ -2,11 +2,12 @@
 
 Canvas2D charting engine: scales, candlestick rendering, axes, crosshair, and interactions.
 
-**Status: Phase 2 complete.** Candlestick charts render real data and can be driven by an
-async series-level datafeed.
+**Status: Phase 3 — indicators and panes.** Candlestick charts render real data, can be
+driven by an async series-level datafeed, and support multiple panes and indicators.
 
 ```ts
 import { CandlestickSeries, createChart, type Datafeed, type OhlcData } from "@wicklib/core";
+import { SMA } from "@wicklib/indicators";
 
 // A host-provided feed; see docs/rfc/0002-datafeed.md for the full contract.
 declare const feed: Datafeed<OhlcData>;
@@ -20,6 +21,9 @@ chart.timeScale().fitContent();
 // Or let a datafeed drive the series:
 series.setDatafeed(feed, { symbol: "BTC/USD", interval: "1m", initialBars: 500 });
 chart.on("data-loading", ({ loading }) => console.log("loading", loading));
+
+// Indicators come from the companion package:
+chart.addIndicator(SMA, { inputs: { period: 50, source: "close" } });
 ```
 
 ## What is implemented
@@ -31,11 +35,14 @@ chart.on("data-loading", ({ loading }) => console.log("loading", loading));
 - Keyboard pan/zoom/fit, and two-pointer pinch zoom on touch devices.
 - Series datafeed: initial count load, debounced range loads with prefetch, abort on stale
   requests, prepend anchoring, realtime revision, loading and error events.
+- Panes with independent price scales and a shared time axis.
+- Indicator engine: typed inputs, pure compute, coalesced recompute, line/histogram/area plots.
+- Optional OHLC volume, used by VWAP.
 - Typed errors, strict data validation, per-chart extensions snapshot.
 
 ## What is not
 
-- Other series types, indicators, drawings, panes, sessions/DST.
+- Drawings, standalone line/area/histogram series, WickScript, sessions/DST.
 - Logarithmic price scale (accepted option, throws `NOT_IMPLEMENTED`).
 
 ## Rules

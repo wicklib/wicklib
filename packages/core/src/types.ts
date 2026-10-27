@@ -25,6 +25,8 @@ export interface OhlcData extends SeriesData {
   high: number;
   low: number;
   close: number;
+  /** Optional volume. Non-negative and finite when present. */
+  volume?: number;
 }
 
 /**
@@ -264,7 +266,10 @@ export interface PriceScaleOptions {
  * Pane options. Panes are implemented in Phase 3.
  */
 export interface PaneOptions {
+  /** Preferred height in CSS pixels. Remaining height is distributed equally. */
   height?: number;
+  /** Price scale options for this pane. */
+  priceScale?: PriceScaleOptions;
 }
 
 /**
@@ -330,6 +335,124 @@ export interface LineSeriesOptions extends SeriesOptions {
 }
 
 /**
+ * A value accepted by an indicator input.
+ */
+export type IndicatorInputValue = number | boolean | string;
+
+/**
+ * Resolved indicator inputs keyed by input id.
+ */
+export type IndicatorInputs = Record<string, IndicatorInputValue>;
+
+/**
+ * Price source used by the built-in indicators.
+ */
+export type SourceValue = "open" | "high" | "low" | "close" | "hl2" | "hlc3" | "ohlc4";
+
+/**
+ * Declares one indicator input for the host UI and validation.
+ */
+export interface IndicatorInputDefinition {
+  id: string;
+  name: string;
+  type: "number" | "boolean" | "string" | "source";
+  defaultValue: IndicatorInputValue;
+  min?: number;
+  max?: number;
+  step?: number;
+  /** Allowed values for string and source inputs. */
+  options?: readonly string[];
+}
+
+/**
+ * Declares one plotted output of an indicator.
+ */
+export interface IndicatorPlotDefinition {
+  id: string;
+  title: string;
+  type: "line" | "histogram" | "area";
+  color?: string;
+  lineWidth?: number;
+  lineStyle?: "solid" | "dotted" | "dashed";
+  /** Histogram or area baseline. Defaults to 0. */
+  baseline?: number;
+  /** Initial visibility. Defaults to true. */
+  visible?: boolean;
+}
+
+/**
+ * Read-only view of the source bars an indicator computes over.
+ */
+export interface IndicatorBars {
+  readonly length: number;
+  timeAt(index: number): Time;
+  openAt(index: number): number;
+  highAt(index: number): number;
+  lowAt(index: number): number;
+  closeAt(index: number): number;
+  /** Undefined when the source did not provide volume. */
+  volumeAt(index: number): number | undefined;
+}
+
+/**
+ * Context passed to an indicator's compute function.
+ */
+export interface IndicatorContext<TInputs extends IndicatorInputs> {
+  readonly bars: IndicatorBars;
+  readonly inputs: Readonly<TInputs>;
+}
+
+/**
+ * One array per plot id, index-aligned with the source bars. `null` marks a missing value.
+ */
+export type IndicatorOutput = Readonly<Record<string, ReadonlyArray<number | null>>>;
+
+/**
+ * A pure indicator definition.
+ */
+export interface IndicatorDefinition<TInputs extends IndicatorInputs = IndicatorInputs> {
+  readonly meta: ExtensionMeta;
+  readonly inputs: readonly IndicatorInputDefinition[];
+  readonly plots: readonly IndicatorPlotDefinition[];
+  /** Default placement. Defaults to "main". */
+  readonly defaultPane?: "main" | "separate";
+  compute(context: IndicatorContext<TInputs>): IndicatorOutput;
+}
+
+/**
+ * Options for adding an indicator to a chart.
+ */
+export interface AddIndicatorOptions<TInputs extends IndicatorInputs = IndicatorInputs> {
+  /** Defaults to the first series in the chart. */
+  sourceSeriesId?: string;
+  /** `main` uses the source pane, `separate` creates one, a string uses an existing pane. */
+  pane?: "main" | "separate" | string;
+  inputs?: Partial<TInputs>;
+}
+
+/**
+ * Runtime plot overrides.
+ */
+export interface IndicatorPlotOptions {
+  color?: string;
+  lineWidth?: number;
+  lineStyle?: "solid" | "dotted" | "dashed";
+  visible?: boolean;
+}
+
+/**
+ * A live indicator.
+ */
+export interface IndicatorApi<TInputs extends IndicatorInputs = IndicatorInputs> {
+  readonly id: string;
+  readonly sourceSeriesId: string;
+  readonly paneId: string;
+  setInputs(inputs: Partial<TInputs>): void;
+  setPlotOptions(plotId: string, options: IndicatorPlotOptions): void;
+  remove(): void;
+}
+
+/**
  * Payload for the `ready` event.
  */
 export type ReadyEvent = void;
@@ -369,9 +492,11 @@ export interface ChartClickEvent {
  */
 export interface ChartErrorEvent {
   error: WickError;
-  source: "chart" | "series" | "extension" | "datafeed";
+  source: "chart" | "series" | "extension" | "datafeed" | "indicator";
   /** Present when the error came from a series datafeed. */
   seriesId?: string;
+  /** Present when the error came from an indicator. */
+  indicatorId?: string;
 }
 
 /**
@@ -459,6 +584,10 @@ export interface ChartApi {
     options?: TOptions,
   ): SeriesApi<TData, TOptions>;
   addPane(options?: PaneOptions): PaneApi;
+  addIndicator<TInputs extends IndicatorInputs>(
+    definition: IndicatorDefinition<TInputs>,
+    options?: AddIndicatorOptions<TInputs>,
+  ): IndicatorApi<TInputs>;
   timeScale(): TimeScaleApi;
   setOptions(options: Partial<ChartOptions>): void;
   on<K extends keyof ChartEventMap>(

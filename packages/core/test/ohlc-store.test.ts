@@ -69,6 +69,20 @@ describe("OhlcStore", () => {
     expect(() => store.update(bar(30_000))).toThrow(/greater than or equal/);
   });
 
+  it("tracks optional volume", () => {
+    const store = new OhlcStore();
+    store.setData([bar(0), bar(60_000, { volume: 1_500 })]);
+
+    expect(store.volumeAt(0)).toBeUndefined();
+    expect(store.volumeAt(1)).toBe(1_500);
+
+    store.merge([bar(60_000, { volume: 2_000 })]);
+    expect(store.volumeAt(1)).toBe(2_000);
+
+    store.update(bar(120_000, { volume: 3_000 }));
+    expect(store.volumeAt(2)).toBe(3_000);
+  });
+
   it("computes min and max over a range", () => {
     const store = new OhlcStore();
     store.setData([

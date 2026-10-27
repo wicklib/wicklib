@@ -117,3 +117,12 @@ select:hover {
   min-height: 0;
   position: relative;
 }
+
+label.toggle {
+  gap: 4px;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--muted);
+  margin: 0;
+}

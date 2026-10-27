@@ -1,6 +1,6 @@
 # RFC-0003: Indicators and panes
 
-- Status: **Proposed** — decision required before Phase 3 implementation
+- Status: **Accepted** — 2026-10-26; implemented
 - Date: 2026-10-26
 - Depends on: RFC-0001 (accepted), RFC-0002 (accepted)
 - Out of scope: drawing tools (RFC-0004), standalone line/area/histogram series, multi-source
@@ -248,7 +248,8 @@ export interface OhlcData extends SeriesData {
 
 - Pure computation helpers live in the package.
 - Warm-up values are `null`.
-- Defaults: SMA 20, EMA 20, RSI 14, MACD 12/26/9, Bollinger 20/2, ATR 14, source `close`.
+- Defaults: SMA 20, EMA 20, RSI 14, MACD 12/26/9, Bollinger 20/2, ATR 14, source `close`
+  (VWAP defaults to `hlc3`).
 - `meta.license` is `"free"` for all seven.
 
 ## 8. Panes and rendering

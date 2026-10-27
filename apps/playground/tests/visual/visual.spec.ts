@@ -34,6 +34,28 @@ test("static 100k candlestick plot", async ({ page }) => {
   });
 });
 
+test("indicator panes", async ({ page }) => {
+  await page.goto("/?test&indicators");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+  await page.waitForTimeout(150);
+
+  const box = await page.locator("#chart").boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) {
+    return;
+  }
+
+  await expect(page).toHaveScreenshot("indicator-panes.png", {
+    clip: {
+      x: Math.floor(box.x + 12),
+      y: Math.floor(box.y + 64),
+      width: Math.floor(box.width - 80),
+      height: Math.floor(box.height - 110),
+    },
+    animations: "disabled",
+  });
+});
+
 test("100k bar pan benchmark", async ({ page }) => {
   await page.goto("/?bench");
   await page.waitForFunction(() => Boolean(window.__wicklibBench), null, {

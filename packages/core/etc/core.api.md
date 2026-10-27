@@ -5,6 +5,14 @@
 ```ts
 
 // @public
+export interface AddIndicatorOptions<TInputs extends IndicatorInputs = IndicatorInputs> {
+    // (undocumented)
+    inputs?: Partial<TInputs>;
+    pane?: "main" | "separate" | string;
+    sourceSeriesId?: string;
+}
+
+// @public
 export function assertFeature(context: LicenseContext, feature: Feature): void;
 
 // @public
@@ -25,6 +33,8 @@ export interface CandlestickSeriesOptions extends SeriesOptions {
 
 // @public
 export interface ChartApi {
+    // (undocumented)
+    addIndicator<TInputs extends IndicatorInputs>(definition: IndicatorDefinition<TInputs>, options?: AddIndicatorOptions<TInputs>): IndicatorApi<TInputs>;
     // (undocumented)
     addPane(options?: PaneOptions): PaneApi;
     // (undocumented)
@@ -59,9 +69,10 @@ export interface ChartClickEvent {
 export interface ChartErrorEvent {
     // (undocumented)
     error: WickError;
+    indicatorId?: string;
     seriesId?: string;
     // (undocumented)
-    source: "chart" | "series" | "extension" | "datafeed";
+    source: "chart" | "series" | "extension" | "datafeed" | "indicator";
 }
 
 // @public
@@ -210,6 +221,118 @@ export interface GridOptions {
 }
 
 // @public
+export interface IndicatorApi<TInputs extends IndicatorInputs = IndicatorInputs> {
+    // (undocumented)
+    readonly id: string;
+    // (undocumented)
+    readonly paneId: string;
+    // (undocumented)
+    remove(): void;
+    // (undocumented)
+    setInputs(inputs: Partial<TInputs>): void;
+    // (undocumented)
+    setPlotOptions(plotId: string, options: IndicatorPlotOptions): void;
+    // (undocumented)
+    readonly sourceSeriesId: string;
+}
+
+// @public
+export interface IndicatorBars {
+    // (undocumented)
+    closeAt(index: number): number;
+    // (undocumented)
+    highAt(index: number): number;
+    // (undocumented)
+    readonly length: number;
+    // (undocumented)
+    lowAt(index: number): number;
+    // (undocumented)
+    openAt(index: number): number;
+    // (undocumented)
+    timeAt(index: number): Time;
+    volumeAt(index: number): number | undefined;
+}
+
+// @public
+export interface IndicatorContext<TInputs extends IndicatorInputs> {
+    // (undocumented)
+    readonly bars: IndicatorBars;
+    // (undocumented)
+    readonly inputs: Readonly<TInputs>;
+}
+
+// @public
+export interface IndicatorDefinition<TInputs extends IndicatorInputs = IndicatorInputs> {
+    // (undocumented)
+    compute(context: IndicatorContext<TInputs>): IndicatorOutput;
+    readonly defaultPane?: "main" | "separate";
+    // (undocumented)
+    readonly inputs: readonly IndicatorInputDefinition[];
+    // (undocumented)
+    readonly meta: ExtensionMeta;
+    // (undocumented)
+    readonly plots: readonly IndicatorPlotDefinition[];
+}
+
+// @public
+export interface IndicatorInputDefinition {
+    // (undocumented)
+    defaultValue: IndicatorInputValue;
+    // (undocumented)
+    id: string;
+    // (undocumented)
+    max?: number;
+    // (undocumented)
+    min?: number;
+    // (undocumented)
+    name: string;
+    options?: readonly string[];
+    // (undocumented)
+    step?: number;
+    // (undocumented)
+    type: "number" | "boolean" | "string" | "source";
+}
+
+// @public
+export type IndicatorInputs = Record<string, IndicatorInputValue>;
+
+// @public
+export type IndicatorInputValue = number | boolean | string;
+
+// @public
+export type IndicatorOutput = Readonly<Record<string, ReadonlyArray<number | null>>>;
+
+// @public
+export interface IndicatorPlotDefinition {
+    baseline?: number;
+    // (undocumented)
+    color?: string;
+    // (undocumented)
+    id: string;
+    // (undocumented)
+    lineStyle?: "solid" | "dotted" | "dashed";
+    // (undocumented)
+    lineWidth?: number;
+    // (undocumented)
+    title: string;
+    // (undocumented)
+    type: "line" | "histogram" | "area";
+    visible?: boolean;
+}
+
+// @public
+export interface IndicatorPlotOptions {
+    // (undocumented)
+    color?: string;
+    // (undocumented)
+    lineStyle?: "solid" | "dotted" | "dashed";
+    // (undocumented)
+    lineWidth?: number;
+    // (undocumented)
+    visible?: boolean;
+}
+
+// @public
 export type Interval = string;
 
 // @public
@@ -257,6 +380,7 @@ export interface OhlcData extends SeriesData {
     low: number;
     // (undocumented)
     open: number;
+    volume?: number;
 }
 
 // @public
@@ -271,8 +395,8 @@ export interface PaneApi {
 
 // @public
 export interface PaneOptions {
-    // (undocumented)
     height?: number;
+    priceScale?: PriceScaleOptions;
 }
 
 // @public
@@ -369,6 +493,9 @@ export interface SeriesType<TData extends SeriesData = SeriesData, TOptions exte
     // (undocumented)
     readonly meta: ExtensionMeta;
 }
+
+// @public
+export type SourceValue = "open" | "high" | "low" | "close" | "hl2" | "hlc3" | "ohlc4";
 
 // @public
 export interface SubscriptionRequest {

@@ -12,7 +12,8 @@
     "test:visual:update": "playwright test --update-snapshots"
   },
   "dependencies": {
-    "@wicklib/core": "workspace:*"
+    "@wicklib/core": "workspace:*",
+    "@wicklib/indicators": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

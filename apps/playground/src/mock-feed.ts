@@ -53,6 +53,7 @@ export function createMockFeed(getBars: () => OhlcData[]): Datafeed<OhlcData> {
           high,
           low,
           close,
+          volume: 100 + Math.abs(close - open) * 1000,
         };
 
         bars.push(next);

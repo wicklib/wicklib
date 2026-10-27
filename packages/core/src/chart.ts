@@ -1,26 +1,32 @@
 import type { OhlcStore } from "./data/ohlc-store";
 import { fail, type WickError } from "./errors";
 import { EventBus } from "./events";
+import { Indicator } from "./indicator";
+import { Pane, type PaneHost } from "./pane";
 import { CanvasStack } from "./render/canvas-stack";
 import {
   ChartRenderer,
   TIME_AXIS_HEIGHT,
   type ChartRenderModel,
-  type PlotRect,
+  type CrosshairRenderPoint,
+  type PaneRenderModel,
   type ResolvedCrosshair,
   type ResolvedGrid,
   type ResolvedLayout,
 } from "./render/chart-renderer";
-import { PriceScale } from "./scale/price-scale";
 import { TimeScale, type TimeScaleSource } from "./scale/time-scale";
 import { CandlestickSeries, Series, type SeriesHost } from "./series";
 import type {
+  AddIndicatorOptions,
   CandlestickSeriesOptions,
   ChartApi,
   ChartEventMap,
   ChartOptions,
   CrosshairOptions,
   GridOptions,
+  IndicatorApi,
+  IndicatorDefinition,
+  IndicatorInputs,
   LayoutOptions,
   PaneApi,
   PaneOptions,
@@ -74,23 +80,24 @@ export function createChart(container: HTMLElement, options: ChartOptions = {}):
 class Chart implements ChartApi, SeriesHost {
   private readonly container: HTMLElement;
   private readonly bus = new EventBus();
-  private readonly series: Series[] = [];
+  private readonly panes: Pane[] = [];
+  private readonly mainPane: Pane;
+  private readonly paneHost: PaneHost;
   private readonly stack: CanvasStack;
   private readonly timeScaleModel: TimeScale;
-  private readonly priceScale: PriceScale;
   private readonly renderer: ChartRenderer;
   private readonly timeScaleController: TimeScaleApi;
-  private readonly priceScaleController: PriceScaleApi;
 
   private rawOptions: ChartOptions;
   private options: ResolvedOptions;
-  private plot: PlotRect | null = null;
   private observer: ResizeObserver | null = null;
   private frame: number | null = null;
   private disposed = false;
   private readyEmitted = false;
   private seriesCounter = 0;
-  private crosshairPoint: Point | null = null;
+  private paneCounter = 0;
+  private indicatorCounter = 0;
+  private crosshairPoint: CrosshairRenderPoint | null = null;
   private readonly activePointers = new Map<number, Point>();
   private pinchDistance: number | null = null;
   private dragging = false;
@@ -121,8 +128,18 @@ class Chart implements ChartApi, SeriesHost {
     };
 
     this.timeScaleModel = new TimeScale(source, this.options.timeScale);
-    this.priceScale = new PriceScale(this.options.priceScale);
-    this.renderer = new ChartRenderer(this.stack, this.timeScaleModel, this.priceScale);
+
+    this.paneHost = {
+      assertAlive: () => this.assertAlive(),
+      requestRender: () => this.requestRender(),
+      relayout: () => this.relayout(),
+      removePane: (pane) => this.removePane(pane),
+    };
+
+    this.mainPane = new Pane("main", { priceScale: this.options.priceScale }, false, this.paneHost);
+    this.panes.push(this.mainPane);
+
+    this.renderer = new ChartRenderer(this.stack, this.timeScaleModel);
 
     this.timeScaleController = {
       getVisibleRange: () => {
@@ -161,23 +178,6 @@ class Chart implements ChartApi, SeriesHost {
       },
     };
 
-    this.priceScaleController = {
-      getVisibleRange: () => {
-        this.assertAlive();
-        return this.priceScale.getVisibleRange();
-      },
-      setVisibleRange: (range) => {
-        this.assertAlive();
-        this.priceScale.setVisibleRange(range);
-        this.requestRender();
-      },
-      setAutoScale: (enabled) => {
-        this.assertAlive();
-        this.priceScale.setAutoScale(enabled);
-        this.requestRender();
-      },
-    };
-
     this.attachEvents();
     this.setupObserver();
     this.resize();
@@ -193,23 +193,104 @@ class Chart implements ChartApi, SeriesHost {
       fail("UNKNOWN_SERIES_TYPE", `Unsupported series type: ${type.id}`);
     }
 
+    const paneId = (options as SeriesOptions | undefined)?.paneId ?? "main";
+    const pane = this.findPane(paneId);
+    if (!pane) {
+      fail("INVALID_ARGUMENT", `Unknown pane: ${paneId}`);
+    }
+
     this.seriesCounter += 1;
     const series = new Series(
       this,
       `series-${this.seriesCounter}`,
       CandlestickSeries,
       options as CandlestickSeriesOptions | undefined,
+      pane.id,
     );
-    this.series.push(series);
+    pane.series.push(series);
     this.timeScaleModel.onDataChanged();
     this.requestRender();
+    this.emitVisibleRange();
 
     return series as unknown as SeriesApi<TData, TOptions>;
   }
 
-  addPane(_options?: PaneOptions): PaneApi {
+  addPane(options: PaneOptions = {}): PaneApi {
     this.assertAlive();
-    fail("NOT_IMPLEMENTED", "Panes are implemented in Phase 3");
+
+    this.paneCounter += 1;
+    const pane = new Pane(
+      `pane-${this.paneCounter}`,
+      options,
+      false,
+      this.paneHost,
+      this.options.priceScale,
+    );
+    this.panes.push(pane);
+    this.relayout();
+    return pane;
+  }
+
+  addIndicator<TInputs extends IndicatorInputs>(
+    definition: IndicatorDefinition<TInputs>,
+    options?: AddIndicatorOptions<TInputs>,
+  ): IndicatorApi<TInputs> {
+    this.assertAlive();
+
+    const primary = this.primarySeries();
+    if (!primary) {
+      fail("INVALID_ARGUMENT", "Add a series before adding an indicator");
+    }
+
+    const sourceSeriesId = options?.sourceSeriesId ?? primary.id;
+    if (sourceSeriesId !== primary.id) {
+      fail("NOT_IMPLEMENTED", "Indicators currently support the primary series only");
+    }
+
+    const source = this.findSeries(sourceSeriesId);
+    if (!source) {
+      fail("INVALID_ARGUMENT", `Unknown source series: ${sourceSeriesId}`);
+    }
+
+    const requestedPane = options?.pane ?? definition.defaultPane ?? "main";
+    let pane: Pane | undefined;
+
+    if (requestedPane === "main") {
+      pane = this.findPane(source.paneId);
+    } else if (requestedPane === "separate") {
+      this.paneCounter += 1;
+      pane = new Pane(`pane-${this.paneCounter}`, {}, true, this.paneHost, this.options.priceScale);
+      this.panes.push(pane);
+    } else {
+      pane = this.findPane(requestedPane);
+    }
+
+    if (!pane) {
+      fail("INVALID_ARGUMENT", `Unknown pane: ${String(requestedPane)}`);
+    }
+
+    this.indicatorCounter += 1;
+    const indicatorId = `indicator-${this.indicatorCounter}`;
+
+    const indicator = new Indicator<TInputs>(
+      indicatorId,
+      sourceSeriesId,
+      pane.id,
+      definition,
+      options?.inputs,
+      {
+        assertAlive: () => this.assertAlive(),
+        getSourceStore: (seriesId) => this.findSeries(seriesId)?.getStore() ?? null,
+        requestRender: () => this.requestRender(),
+        reportError: (error) => this.emitIndicatorError(indicatorId, error),
+        removeIndicator: (target) => this.removeIndicator(target),
+      },
+    );
+
+    pane.indicators.push(indicator);
+    indicator.markDirty();
+    this.relayout();
+    return indicator as IndicatorApi<TInputs>;
   }
 
   timeScale(): TimeScaleApi {
@@ -228,7 +309,7 @@ class Chart implements ChartApi, SeriesHost {
     const next = resolveOptions(merged);
 
     if (patch.priceScale !== undefined) {
-      this.priceScale.setOptions(next.priceScale);
+      this.mainPane.priceScale.setOptions(next.priceScale);
     }
     if (patch.timeScale !== undefined) {
       this.timeScaleModel.setOptions(next.timeScale);
@@ -271,18 +352,39 @@ class Chart implements ChartApi, SeriesHost {
 
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
     this.stack.resize(width, height, dpr);
+    this.relayout();
+  }
+
+  private relayout(): void {
+    if (this.disposed) {
+      return;
+    }
+
+    const width = this.stack.getWidth();
+    const height = this.stack.getHeight();
+    if (width <= 0 || height <= 0) {
+      return;
+    }
 
     const plotWidth = Math.max(1, width - AXIS_WIDTH);
-    const plotHeight = Math.max(1, height - TIME_AXIS_HEIGHT);
+    const availableHeight = Math.max(1, height - TIME_AXIS_HEIGHT);
+    const heights = computePaneHeights(this.panes, availableHeight);
 
-    this.plot = {
-      left: 0,
-      top: 0,
-      right: plotWidth,
-      bottom: plotHeight,
-      width: plotWidth,
-      height: plotHeight,
-    };
+    let top = 0;
+    for (let index = 0; index < this.panes.length; index += 1) {
+      const pane = this.panes[index]!;
+      const paneHeight = heights[index]!;
+      const bottom = index === this.panes.length - 1 ? availableHeight : top + paneHeight;
+      pane.plot = {
+        left: 0,
+        top,
+        right: plotWidth,
+        bottom,
+        width: plotWidth,
+        height: bottom - top,
+      };
+      top = bottom;
+    }
 
     this.timeScaleModel.setWidth(plotWidth);
     this.requestRender();
@@ -303,14 +405,21 @@ class Chart implements ChartApi, SeriesHost {
     this.teardownObserver();
     this.detachEvents();
 
-    for (const series of this.series) {
-      series.destroyInternal();
+    for (const pane of this.panes) {
+      for (const series of pane.series) {
+        series.destroyInternal();
+      }
+      for (const indicator of pane.indicators) {
+        indicator.destroyInternal();
+      }
+      pane.indicators.length = 0;
+      pane.series.length = 0;
     }
 
     this.activePointers.clear();
     this.pinchDistance = null;
     this.bus.dispose();
-    this.series.length = 0;
+    this.panes.length = 0;
     this.stack.destroy();
   }
 
@@ -368,8 +477,15 @@ class Chart implements ChartApi, SeriesHost {
     this.bus.emit("error", { error, source: "datafeed", seriesId });
   }
 
-  onSeriesDataChanged(_series: Series): void {
+  onSeriesDataChanged(series: Series): void {
     this.assertAlive();
+    for (const pane of this.panes) {
+      for (const indicator of pane.indicators) {
+        if (indicator.sourceSeriesId === series.id) {
+          indicator.markDirty();
+        }
+      }
+    }
     this.timeScaleModel.onDataChanged();
     this.requestRender();
     this.emitVisibleRange();
@@ -379,26 +495,130 @@ class Chart implements ChartApi, SeriesHost {
     if (this.disposed) {
       return;
     }
-    for (const series of this.series) {
+    for (const series of this.allSeries()) {
       series.onViewChanged();
     }
   }
 
-  priceScaleApi(): PriceScaleApi {
+  priceScaleApi(paneId: string): PriceScaleApi {
     this.assertAlive();
-    return this.priceScaleController;
+    const pane = this.findPane(paneId);
+    if (!pane) {
+      fail("INVALID_ARGUMENT", `Unknown pane: ${paneId}`);
+    }
+    return pane.priceScaleApi;
   }
 
   removeSeries(series: Series): void {
-    const index = this.series.indexOf(series);
-    if (index < 0) {
+    const pane = this.panes.find((candidate) => candidate.series.includes(series));
+    if (!pane) {
       return;
     }
 
-    this.series.splice(index, 1);
+    series.destroyInternal();
+    pane.series.splice(pane.series.indexOf(series), 1);
+    this.removeIndicatorsForSource(series.id);
+    this.cleanupEmptyAutoPanes();
     this.timeScaleModel.onDataChanged();
-    this.requestRender();
+    this.relayout();
     this.emitVisibleRange();
+  }
+
+  removeIndicator(indicator: Indicator): void {
+    const pane = this.panes.find((candidate) => candidate.indicators.includes(indicator));
+    if (!pane) {
+      return;
+    }
+    indicator.destroyInternal();
+    pane.indicators.splice(pane.indicators.indexOf(indicator), 1);
+    this.cleanupEmptyAutoPanes();
+    this.relayout();
+  }
+
+  private removeIndicatorsForSource(seriesId: string): void {
+    for (const pane of [...this.panes]) {
+      for (const indicator of [...pane.indicators]) {
+        if (indicator.sourceSeriesId === seriesId) {
+          indicator.destroyInternal();
+          pane.indicators.splice(pane.indicators.indexOf(indicator), 1);
+        }
+      }
+    }
+    this.cleanupEmptyAutoPanes();
+  }
+
+  private cleanupEmptyAutoPanes(): void {
+    for (let index = this.panes.length - 1; index >= 0; index -= 1) {
+      const pane = this.panes[index]!;
+      if (pane === this.mainPane) {
+        continue;
+      }
+      if (pane.autoCreated && pane.series.length === 0 && pane.indicators.length === 0) {
+        this.panes.splice(index, 1);
+      }
+    }
+  }
+
+  private removePane(pane: Pane): void {
+    this.assertAlive();
+    if (pane === this.mainPane) {
+      fail("INVALID_ARGUMENT", "The main pane cannot be removed");
+    }
+    if (!this.panes.includes(pane)) {
+      return;
+    }
+
+    for (const series of [...pane.series]) {
+      series.destroyInternal();
+      this.removeIndicatorsForSource(series.id);
+    }
+
+    for (const indicator of pane.indicators) {
+      indicator.destroyInternal();
+    }
+    pane.series.length = 0;
+    pane.indicators.length = 0;
+
+    const index = this.panes.indexOf(pane);
+    if (index >= 0) {
+      this.panes.splice(index, 1);
+    }
+
+    this.cleanupEmptyAutoPanes();
+    this.timeScaleModel.onDataChanged();
+    this.relayout();
+    this.emitVisibleRange();
+  }
+
+  private findPane(id: string): Pane | undefined {
+    return this.panes.find((pane) => pane.id === id);
+  }
+
+  private allSeries(): Series[] {
+    return this.panes.flatMap((pane) => pane.series);
+  }
+
+  private findSeries(id: string): Series | undefined {
+    for (const pane of this.panes) {
+      const series = pane.series.find((candidate) => candidate.id === id);
+      if (series) {
+        return series;
+      }
+    }
+    return undefined;
+  }
+
+  private primarySeries(): Series | null {
+    for (const pane of this.panes) {
+      if (pane.series.length > 0) {
+        return pane.series[0]!;
+      }
+    }
+    return null;
+  }
+
+  private emitIndicatorError(indicatorId: string, error: WickError): void {
+    this.bus.emit("error", { error, source: "indicator", indicatorId });
   }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
@@ -407,7 +627,7 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     const point = this.localPoint(event);
-    if (!this.isInPlot(point)) {
+    if (!this.paneAtPoint(point)) {
       return;
     }
 
@@ -514,7 +734,7 @@ class Chart implements ChartApi, SeriesHost {
       // Pointer capture is best-effort.
     }
 
-    if (!this.dragMoved && this.isInPlot(point)) {
+    if (!this.dragMoved && this.paneAtPoint(point)) {
       this.emitClick(point);
     }
 
@@ -538,12 +758,13 @@ class Chart implements ChartApi, SeriesHost {
   };
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
-    if (!this.plot) {
+    const plot = this.panes[0]?.plot;
+    if (!plot) {
       return;
     }
 
-    const step = this.plot.width * 0.1;
-    const center = this.plot.width / 2;
+    const step = plot.width * 0.1;
+    const center = plot.width / 2;
 
     switch (event.key) {
       case "ArrowLeft":
@@ -590,18 +811,19 @@ class Chart implements ChartApi, SeriesHost {
 
   private currentPinchCenterX(): number | null {
     const points = Array.from(this.activePointers.values());
-    if (points.length < 2 || !this.plot) {
+    const plot = this.panes[0]?.plot;
+    if (points.length < 2 || !plot) {
       return null;
     }
 
     const first = points[0]!;
     const second = points[1]!;
-    return Math.max(0, Math.min(this.plot.width, (first.x + second.x) / 2));
+    return Math.max(0, Math.min(plot.width, (first.x + second.x) / 2));
   }
 
   private readonly onWheel = (event: WheelEvent): void => {
     const point = this.localPoint(event);
-    if (!this.isInPlot(point)) {
+    if (!this.paneAtPoint(point)) {
       return;
     }
 
@@ -618,15 +840,26 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
+    for (const pane of this.panes) {
+      for (const indicator of pane.indicators) {
+        if (indicator.isDirty()) {
+          indicator.recompute();
+        }
+      }
+    }
+
     const model = this.buildModel();
     if (!model) {
       return;
     }
 
-    if (this.priceScale.isAutoScale()) {
-      const range = this.visiblePriceRange();
+    for (const pane of this.panes) {
+      if (!pane.priceScale.isAutoScale()) {
+        continue;
+      }
+      const range = this.visiblePanePriceRange(pane);
       if (range) {
-        this.priceScale.setAutoRange(range.min, range.max);
+        pane.priceScale.setAutoRange(range.min, range.max);
       }
     }
 
@@ -639,7 +872,22 @@ class Chart implements ChartApi, SeriesHost {
   }
 
   private buildModel(): ChartRenderModel | null {
-    if (!this.plot) {
+    const panes: PaneRenderModel[] = [];
+
+    for (const pane of this.panes) {
+      if (!pane.plot) {
+        return null;
+      }
+      panes.push({
+        paneId: pane.id,
+        plot: pane.plot,
+        priceScale: pane.priceScale,
+        series: pane.series.map((series) => series.toRenderData()),
+        indicators: pane.indicators.map((indicator) => indicator.toRenderData()),
+      });
+    }
+
+    if (panes.length === 0) {
       return null;
     }
 
@@ -648,12 +896,8 @@ class Chart implements ChartApi, SeriesHost {
     return {
       width: this.stack.getWidth(),
       height: this.stack.getHeight(),
-      plot: this.plot,
-      axisWidth: AXIS_WIDTH,
-      axisHeight: TIME_AXIS_HEIGHT,
+      panes,
       timeScale: this.timeScaleModel,
-      priceScale: this.priceScale,
-      series: this.series.map((series) => series.toRenderData()),
       layout: this.options.layout,
       grid: this.options.grid,
       crosshair: this.options.crosshair,
@@ -662,10 +906,12 @@ class Chart implements ChartApi, SeriesHost {
       timezone: this.options.timezone,
       timeVisible: timeOptions.timeVisible,
       secondsVisible: timeOptions.secondsVisible,
+      axisWidth: AXIS_WIDTH,
+      axisHeight: TIME_AXIS_HEIGHT,
     };
   }
 
-  private visiblePriceRange(): { min: number; max: number } | null {
+  private visiblePanePriceRange(pane: Pane): { min: number; max: number } | null {
     const range = this.timeScaleModel.visibleIndexRange();
     if (range.last < range.first) {
       return null;
@@ -674,7 +920,7 @@ class Chart implements ChartApi, SeriesHost {
     let min = Number.POSITIVE_INFINITY;
     let max = Number.NEGATIVE_INFINITY;
 
-    for (const series of this.series) {
+    for (const series of pane.series) {
       if (!series.isVisible()) {
         continue;
       }
@@ -694,11 +940,24 @@ class Chart implements ChartApi, SeriesHost {
       }
     }
 
+    for (const indicator of pane.indicators) {
+      const minMax = indicator.minMax(range.first, range.last);
+      if (!minMax) {
+        continue;
+      }
+      if (minMax.min < min) {
+        min = minMax.min;
+      }
+      if (minMax.max > max) {
+        max = minMax.max;
+      }
+    }
+
     return min === Number.POSITIVE_INFINITY ? null : { min, max };
   }
 
   private primaryStore(): OhlcStore | null {
-    return this.series[0]?.getStore() ?? null;
+    return this.primarySeries()?.getStore() ?? null;
   }
 
   private emitVisibleRange(): void {
@@ -719,31 +978,39 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
-    if (this.options.crosshair.mode === "hidden" || !this.plot || !this.isInPlot({ x, y })) {
+    const pane = this.paneAtPoint({ x, y });
+    if (this.options.crosshair.mode === "hidden" || !pane || !pane.plot) {
       this.clearCrosshair();
       return;
     }
 
     const store = this.primaryStore();
     let time: number | null = null;
-    let price: number | null = this.priceScale.yToPrice(y, this.plot.top, this.plot.height);
+    let price: number | null = pane.priceScale.yToPrice(y, pane.plot.top, pane.plot.height);
 
     if (store && store.length > 0) {
       const index = Math.round(this.timeScaleModel.xToIndex(x));
       if (index >= 0 && index < store.length) {
         time = store.timeAt(index);
+
         if (this.options.crosshair.mode === "magnet") {
-          price = store.closeAt(index);
+          const snapStore = pane.series[0]?.getStore();
+          if (snapStore && snapStore.length > 0) {
+            const snapIndex = Math.round(this.timeScaleModel.xToIndex(x));
+            if (snapIndex >= 0 && snapIndex < snapStore.length) {
+              price = snapStore.closeAt(snapIndex);
+            }
+          }
         }
       }
     }
 
-    this.crosshairPoint = { x, y };
+    this.crosshairPoint = { paneId: pane.id, point: { x, y } };
     this.requestRender();
     this.bus.emit("crosshair", {
       time,
       price,
-      paneId: "main",
+      paneId: pane.id,
       point: { x, y },
     });
   }
@@ -753,18 +1020,20 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
+    const paneId = this.crosshairPoint.paneId;
     this.crosshairPoint = null;
     this.requestRender();
     this.bus.emit("crosshair", {
       time: null,
       price: null,
-      paneId: "main",
+      paneId,
       point: null,
     });
   }
 
   private emitClick(point: Point): void {
-    if (!this.plot) {
+    const pane = this.paneAtPoint(point);
+    if (!pane || !pane.plot) {
       return;
     }
 
@@ -778,11 +1047,11 @@ class Chart implements ChartApi, SeriesHost {
       }
     }
 
-    const price = this.priceScale.yToPrice(point.y, this.plot.top, this.plot.height);
+    const price = pane.priceScale.yToPrice(point.y, pane.plot.top, pane.plot.height);
     this.bus.emit("click", {
       time,
       price,
-      paneId: "main",
+      paneId: pane.id,
       point,
       button: "left",
     });
@@ -796,15 +1065,27 @@ class Chart implements ChartApi, SeriesHost {
     };
   }
 
-  private isInPlot(point: Point): boolean {
-    const plot = this.plot;
-    return (
-      plot !== null &&
-      point.x >= plot.left &&
-      point.x <= plot.right &&
-      point.y >= plot.top &&
-      point.y <= plot.bottom
-    );
+  private paneAtY(y: number): Pane | null {
+    for (const pane of this.panes) {
+      if (!pane.plot) {
+        continue;
+      }
+      if (y >= pane.plot.top && y <= pane.plot.bottom) {
+        return pane;
+      }
+    }
+    return null;
+  }
+
+  private paneAtPoint(point: Point): Pane | null {
+    const pane = this.paneAtY(point.y);
+    if (!pane || !pane.plot) {
+      return null;
+    }
+    if (point.x < pane.plot.left || point.x > pane.plot.right) {
+      return null;
+    }
+    return pane;
   }
 
   private setupObserver(): void {
@@ -848,6 +1129,40 @@ class Chart implements ChartApi, SeriesHost {
     root.removeEventListener("keydown", this.onKeyDown);
     root.removeEventListener("wheel", this.onWheel);
   }
+}
+
+function computePaneHeights(panes: readonly Pane[], available: number): number[] {
+  if (panes.length === 0) {
+    return [];
+  }
+
+  const preferred = panes.map((pane) => pane.preferredHeight);
+  const autoCount = preferred.filter((height) => height === null).length;
+  let heights: number[];
+
+  if (autoCount === 0) {
+    const sum = preferred.reduce((total: number, height) => total + (height ?? 0), 0);
+    const scale = sum > 0 ? available / sum : 0;
+    heights = preferred.map((height) => (height ?? 0) * scale);
+  } else {
+    const fixedSum = preferred.reduce((total: number, height) => total + (height ?? 0), 0);
+    const autoHeight = Math.max(0, available - fixedSum) / autoCount;
+    heights = preferred.map((height) => height ?? autoHeight);
+    const total = heights.reduce((sum: number, height) => sum + height, 0);
+    if (total > available) {
+      heights = heights.map((height) => (height * available) / total);
+    }
+  }
+
+  const minimum = Math.min(40, available / Math.max(1, panes.length));
+  heights = heights.map((height) => Math.max(minimum, height));
+
+  const total = heights.reduce((sum: number, height) => sum + height, 0);
+  if (total > 0) {
+    heights = heights.map((height) => (height * available) / total);
+  }
+
+  return heights;
 }
 
 function resolveOptions(options: ChartOptions): ResolvedOptions {

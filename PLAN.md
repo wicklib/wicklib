@@ -1,7 +1,7 @@
 # Wicklib — Implementation Plan
 
-Status: Phase 1 complete. Phase 2 complete: candlestick vertical slice, series datafeed,
-keyboard and pinch interactions, visual regression, and the performance baseline.
+Status: Phase 1 complete. Phase 2 complete. Phase 3 in progress: RFC-0003 accepted;
+indicators and panes implemented.
 
 Phase 1 froze the contract: packages, toolchain, CI, release pipeline, API report, extension
 seams, and the normative WickScript plan. No rendering exists yet.
@@ -105,16 +105,21 @@ renderer, candlestick series, price/time axes, grid, legend, last-value line, cr
 typed errors, per-chart extension validation, the series datafeed, keyboard and pinch
 interactions, visual regression, the performance baseline, and the private playground.
 
-## Phase 3 — indicators and structure
+## Phase 3 — indicators and panes
 
-Start with RFC-0003 for indicators and panes, then RFC-0004 for drawings.
+Status: in progress. RFC-0003 accepted; indicators and panes implemented. Drawings (RFC-0004)
+and the React wrapper remain.
 
-1. `@wicklib/indicators` free catalog (SMA, EMA, RSI, MACD, Bollinger, VWAP, ATR).
-2. `registerIndicator` with parameter schema and pane assignment.
-3. Drawing tools: trendline, horizontal, rectangle, fib retracement, measure.
-4. Multi-pane support and synced time scales.
-5. `@wicklib/react` real wrapper plus `useChart`.
-6. Extend visual regression coverage and determinism fixtures.
+1. [done] `@wicklib/indicators` free catalog: SMA, EMA, RSI, MACD, Bollinger Bands, VWAP, ATR.
+2. [done] `chart.addIndicator` with typed inputs, plot definitions, and pane assignment.
+3. [pending] Drawing tools: trendline, horizontal, rectangle, fib retracement, measure (RFC-0004).
+4. [done] Multi-pane support: per-pane price scales, shared time axis, pane crosshair.
+5. [pending] `@wicklib/react` real wrapper plus `useChart`.
+6. [done] Visual regression with indicator panes and a 7-indicator benchmark.
+
+Implementation notes: `OhlcData` now carries optional volume for VWAP; indicator plots use
+the internal line/histogram/area renderers; standalone line/area/histogram series remain
+deferred until a generic data store exists.
 
 ## Phase 4 — WickScript
 

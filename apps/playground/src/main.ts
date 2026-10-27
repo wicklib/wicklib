@@ -1,4 +1,5 @@
 import { CandlestickSeries, createChart, type OhlcData } from "@wicklib/core";
+import { ATR, BollingerBands, EMA, MACD, RSI, SMA, VWAP } from "@wicklib/indicators";
 
 import { generateOhlc } from "./data";
 import { createMockFeed } from "./mock-feed";
@@ -41,6 +42,9 @@ app.innerHTML = `
       <button id="regenerate" type="button">Regenerate</button>
       <button id="feed" type="button">Use feed</button>
       <button id="fit" type="button">Fit</button>
+      <label class="toggle"><input id="sma" type="checkbox" /> SMA</label>
+      <label class="toggle"><input id="rsi" type="checkbox" /> RSI</label>
+      <label class="toggle"><input id="macd" type="checkbox" /> MACD</label>
       <button id="theme" type="button">Light</button>
     </div>
     <div class="metrics"><span id="fps">— fps</span></div>
@@ -70,6 +74,9 @@ const regenerateButton = byId<HTMLButtonElement>("regenerate");
 const feedButton = byId<HTMLButtonElement>("feed");
 const feedStatus = byId<HTMLSpanElement>("feed-status");
 const fitButton = byId<HTMLButtonElement>("fit");
+const smaToggle = byId<HTMLInputElement>("sma");
+const rsiToggle = byId<HTMLInputElement>("rsi");
+const macdToggle = byId<HTMLInputElement>("macd");
 const themeButton = byId<HTMLButtonElement>("theme");
 
 const chart = createChart(chartElement, {
@@ -120,6 +127,14 @@ let seed = 7;
 let data: OhlcData[] = [];
 let feedActive = false;
 let fitAfterFeedLoad = false;
+
+interface IndicatorHandle {
+  remove(): void;
+}
+
+let smaIndicator: IndicatorHandle | null = null;
+let rsiIndicator: IndicatorHandle | null = null;
+let macdIndicator: IndicatorHandle | null = null;
 
 function format(value: number): string {
   return value.toFixed(2);
@@ -177,6 +192,58 @@ function startFeed(): void {
   );
 }
 
+function setIndicator(kind: "sma" | "rsi" | "macd", enabled: boolean): void {
+  if (kind === "sma") {
+    if (enabled && !smaIndicator) {
+      smaIndicator = chart.addIndicator(SMA, {
+        inputs: { period: 50, source: "close" },
+      });
+    } else if (!enabled && smaIndicator) {
+      smaIndicator.remove();
+      smaIndicator = null;
+    }
+    return;
+  }
+
+  if (kind === "rsi") {
+    if (enabled && !rsiIndicator) {
+      rsiIndicator = chart.addIndicator(RSI, {
+        inputs: { period: 14, source: "close" },
+      });
+    } else if (!enabled && rsiIndicator) {
+      rsiIndicator.remove();
+      rsiIndicator = null;
+    }
+    return;
+  }
+
+  if (enabled && !macdIndicator) {
+    macdIndicator = chart.addIndicator(MACD);
+  } else if (!enabled && macdIndicator) {
+    macdIndicator.remove();
+    macdIndicator = null;
+  }
+}
+
+function enableDemoIndicators(): void {
+  smaToggle.checked = true;
+  rsiToggle.checked = true;
+  macdToggle.checked = true;
+  setIndicator("sma", true);
+  setIndicator("rsi", true);
+  setIndicator("macd", true);
+}
+
+function addBenchmarkIndicators(): void {
+  chart.addIndicator(SMA, { inputs: { period: 50, source: "close" } });
+  chart.addIndicator(EMA, { inputs: { period: 20, source: "close" } });
+  chart.addIndicator(RSI, { inputs: { period: 14, source: "close" } });
+  chart.addIndicator(MACD);
+  chart.addIndicator(BollingerBands);
+  chart.addIndicator(VWAP);
+  chart.addIndicator(ATR);
+}
+
 function load(): void {
   const wasFeed = feedActive;
   if (wasFeed) {
@@ -210,6 +277,7 @@ function markReady(): void {
 }
 
 async function runBenchmark(): Promise<void> {
+  addBenchmarkIndicators();
   chart.timeScale().fitContent();
   await nextFrame();
   await nextFrame();
@@ -298,6 +366,18 @@ regenerateButton.addEventListener("click", () => {
   load();
 });
 
+smaToggle.addEventListener("change", () => {
+  setIndicator("sma", smaToggle.checked);
+});
+
+rsiToggle.addEventListener("change", () => {
+  setIndicator("rsi", rsiToggle.checked);
+});
+
+macdToggle.addEventListener("change", () => {
+  setIndicator("macd", macdToggle.checked);
+});
+
 feedButton.addEventListener("click", () => {
   if (feedActive) {
     stopFeed();
@@ -367,6 +447,10 @@ if (params.has("feed")) {
   startFeed();
   feedButton.textContent = "Use static";
   updateSummary();
+}
+
+if (params.has("indicators")) {
+  enableDemoIndicators();
 }
 
 if (testMode) {

@@ -7,6 +7,7 @@ import {
   type ChartErrorEvent,
   type CrosshairEvent,
   type Datafeed,
+  type IndicatorDefinition,
   type OhlcData,
 } from "../src/index";
 
@@ -60,6 +61,46 @@ function pointerEvent(type: string, pointerId: number, x: number, y: number): Mo
   Object.defineProperty(event, "pointerId", { value: pointerId });
   return event;
 }
+
+const MultiplierIndicator: IndicatorDefinition<{ multiplier: number }> = {
+  meta: {
+    id: "com.test.multiplier",
+    name: "Multiplier",
+    version: "1.0.0",
+    license: "free",
+  },
+  inputs: [
+    {
+      id: "multiplier",
+      name: "Multiplier",
+      type: "number",
+      defaultValue: 2,
+      min: 0,
+    },
+  ],
+  plots: [{ id: "line", title: "Line", type: "line" }],
+  compute({ bars, inputs }) {
+    const values: number[] = [];
+    for (let index = 0; index < bars.length; index += 1) {
+      values.push(bars.closeAt(index) * inputs.multiplier);
+    }
+    return { line: values };
+  },
+};
+
+const BrokenIndicator: IndicatorDefinition = {
+  meta: {
+    id: "com.test.broken",
+    name: "Broken",
+    version: "1.0.0",
+    license: "free",
+  },
+  inputs: [],
+  plots: [{ id: "line", title: "Line", type: "line" }],
+  compute() {
+    return { line: [1] };
+  },
+};
 
 beforeAll(() => {
   const context = new Proxy(
@@ -262,9 +303,15 @@ describe("createChart", () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it("reports unimplemented panes", () => {
+  it("creates, resizes, and removes panes", () => {
     const chart = track(createChart(mount()));
-    expect(() => chart.addPane()).toThrow(/Phase 3/);
+    const pane = chart.addPane({ height: 120 });
+
+    expect(pane.id).toBe("pane-1");
+    expect(() => pane.setHeight(160)).not.toThrow();
+
+    pane.remove();
+    expect(() => chart.addPane()).not.toThrow();
   });
 
   it("applies chart options and locks extensions", () => {
@@ -332,6 +379,87 @@ describe("createChart", () => {
     series.clearDatafeed();
     expect(unsubscribed).toBe(true);
     expect(() => series.setData(bars(2))).not.toThrow();
+  });
+
+  it("adds an indicator overlay and updates inputs", () => {
+    const chart = track(createChart(mount()));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(50));
+
+    const indicator = chart.addIndicator(MultiplierIndicator);
+    expect(indicator.paneId).toBe("main");
+    expect(indicator.sourceSeriesId).toBe(series.id);
+
+    expect(() => indicator.setInputs({ multiplier: 3 })).not.toThrow();
+    expect(() => indicator.setPlotOptions("line", { color: "#ffffff" })).not.toThrow();
+
+    indicator.remove();
+    expect(() => indicator.setInputs({ multiplier: 2 })).toThrow(/disposed/i);
+  });
+
+  it("creates a separate pane for a separate indicator", () => {
+    const chart = track(createChart(mount()));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(50));
+
+    const indicator = chart.addIndicator(MultiplierIndicator, { pane: "separate" });
+    expect(indicator.paneId).not.toBe("main");
+    indicator.remove();
+  });
+
+  it("rejects invalid indicator inputs and outputs", async () => {
+    const chart = track(createChart(mount()));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(20));
+
+    expect(() =>
+      chart.addIndicator(MultiplierIndicator, {
+        inputs: { multiplier: Number.NaN },
+      }),
+    ).toThrow(/finite/);
+
+    const errors: ChartErrorEvent[] = [];
+    chart.on("error", (event) => errors.push(event));
+    chart.addIndicator(BrokenIndicator);
+    await settle();
+
+    expect(errors.some((event) => event.source === "indicator")).toBe(true);
+  });
+
+  it("removes dependent indicators when the source series is removed", () => {
+    const chart = track(createChart(mount()));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(20));
+    const indicator = chart.addIndicator(MultiplierIndicator);
+
+    series.remove();
+
+    expect(() => indicator.setInputs({ multiplier: 3 })).toThrow(/disposed/i);
+  });
+
+  it("reports the hovered pane on crosshair", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(50));
+    chart.timeScale().fitContent();
+
+    const pane = chart.addPane({ height: 100 });
+    const events: CrosshairEvent[] = [];
+    chart.on("crosshair", (event) => events.push(event));
+
+    const root = element.firstElementChild as HTMLElement;
+    root.dispatchEvent(
+      new MouseEvent("pointermove", {
+        clientX: 100,
+        clientY: 300,
+        bubbles: true,
+      }),
+    );
+
+    expect(events.at(-1)?.paneId).toBe(pane.id);
+
+    pane.remove();
   });
 
   it("exposes price scale controls", () => {
