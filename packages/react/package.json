@@ -1,6 +1,6 @@
 {
   "name": "@wicklib/react",
-  "version": "0.1.0-next.12",
+  "version": "0.1.0-next.13",
   "description": "Thin React wrapper for Wicklib",
   "license": "Apache-2.0",
   "type": "module",
@@ -37,7 +37,7 @@
     "directory": "packages/react"
   },
   "peerDependencies": {
-    "@wicklib/core": "^0.1.0-next.12",
+    "@wicklib/core": "^0.1.0-next.13",
     "react": ">=18",
     "react-dom": ">=18"
   },

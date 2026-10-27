@@ -1,5 +1,15 @@
 # @wicklib/script
 
+## 0.1.0-next.13
+
+### Minor Changes
+
+- c92753f: Add the WickScript API v1 authoring surface with `defineScript`, typed inputs and plots, `ScriptError`, and compile-time import/global/`any` validation.
+
+### Patch Changes
+
+- @wicklib/core@0.1.0-next.13
+
 ## 0.1.0-next.12
 
 ### Patch Changes
