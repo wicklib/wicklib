@@ -6,6 +6,7 @@ export { createChart } from "./chart";
 export { isWickError, WickError } from "./errors";
 export type { WickErrorCode } from "./errors";
 export { assertFeature } from "./license";
+export { FibRetracement, HorizontalLine, Measure, Rectangle, TrendLine } from "./drawings";
 export { CandlestickSeries } from "./series";
 export { VERSION } from "./version";
 export type {
@@ -15,9 +16,16 @@ export type {
   ChartErrorEvent,
   ChartEventMap,
   ChartOptions,
+  AddDrawingOptions,
   CrosshairEvent,
   CrosshairLineOptions,
   CrosshairOptions,
+  DrawingAnchor,
+  DrawingApi,
+  DrawingDocument,
+  DrawingLineStyle,
+  DrawingOptions,
+  DrawingToolDefinition,
   DataLoadingEvent,
   DataRequest,
   DataResponse,
@@ -57,6 +65,7 @@ export type {
   SeriesData,
   SeriesDatafeedOptions,
   SeriesOptions,
+  SerializedDrawing,
   SeriesType,
   SourceValue,
   SubscriptionRequest,

@@ -5,6 +5,15 @@
 ```ts
 
 // @public
+export interface AddDrawingOptions {
+    // (undocumented)
+    anchors: readonly DrawingAnchor[];
+    // (undocumented)
+    options?: DrawingOptions;
+    paneId?: string;
+}
+
+// @public
 export interface AddIndicatorOptions<TInputs extends IndicatorInputs = IndicatorInputs> {
     // (undocumented)
     inputs?: Partial<TInputs>;
@@ -34,19 +43,33 @@ export interface CandlestickSeriesOptions extends SeriesOptions {
 // @public
 export interface ChartApi {
     // (undocumented)
+    addDrawing(tool: DrawingToolDefinition, options: AddDrawingOptions): DrawingApi;
+    // (undocumented)
     addIndicator<TInputs extends IndicatorInputs>(definition: IndicatorDefinition<TInputs>, options?: AddIndicatorOptions<TInputs>): IndicatorApi<TInputs>;
     // (undocumented)
     addPane(options?: PaneOptions): PaneApi;
     // (undocumented)
     addSeries<TData extends SeriesData, TOptions extends SeriesOptions>(type: SeriesType<TData, TOptions>, options?: TOptions): SeriesApi<TData, TOptions>;
     // (undocumented)
+    cancelDrawing(): void;
+    // (undocumented)
     destroy(): void;
+    // (undocumented)
+    loadDrawings(document: DrawingDocument): void;
     // (undocumented)
     on<K extends keyof ChartEventMap>(event: K, handler: (payload: ChartEventMap[K]) => void): Unsubscribe;
     // (undocumented)
     resize(): void;
     // (undocumented)
+    selectDrawing(id: string | null): void;
+    // (undocumented)
+    selectedDrawing(): DrawingApi | null;
+    // (undocumented)
+    serializeDrawings(): DrawingDocument;
+    // (undocumented)
     setOptions(options: Partial<ChartOptions>): void;
+    // (undocumented)
+    startDrawing(tool: DrawingToolDefinition, options?: Partial<AddDrawingOptions>): void;
     // (undocumented)
     timeScale(): TimeScaleApi;
 }
@@ -67,18 +90,39 @@ export interface ChartClickEvent {
 
 // @public
 export interface ChartErrorEvent {
+    drawingId?: string;
     // (undocumented)
     error: WickError;
     indicatorId?: string;
     seriesId?: string;
     // (undocumented)
-    source: "chart" | "series" | "extension" | "datafeed" | "indicator";
+    source: "chart" | "series" | "extension" | "datafeed" | "indicator" | "drawing";
 }
 
 // @public
 export interface ChartEventMap {
     // (undocumented)
     "data-loading": DataLoadingEvent;
+    // (undocumented)
+    "drawing-cancelled": {
+        toolId: string;
+    };
+    // (undocumented)
+    "drawing-created": {
+        drawing: DrawingApi;
+    };
+    // (undocumented)
+    "drawing-removed": {
+        drawingId: string;
+    };
+    // (undocumented)
+    "drawing-selected": {
+        drawing: DrawingApi | null;
+    };
+    // (undocumented)
+    "drawing-updated": {
+        drawing: DrawingApi;
+    };
     // (undocumented)
     "visible-range": VisibleRangeEvent;
     // (undocumented)
@@ -193,6 +237,75 @@ export interface DataResponse<TData extends SeriesData = SeriesData> {
 }
 
 // @public
+export interface DrawingAnchor {
+    // (undocumented)
+    price: number;
+    // (undocumented)
+    time: Time;
+}
+
+// @public
+export interface DrawingApi {
+    // (undocumented)
+    getAnchors(): readonly DrawingAnchor[];
+    // (undocumented)
+    readonly id: string;
+    // (undocumented)
+    readonly paneId: string;
+    // (undocumented)
+    remove(): void;
+    // (undocumented)
+    setAnchors(anchors: readonly DrawingAnchor[]): void;
+    // (undocumented)
+    setOptions(options: Partial<DrawingOptions>): void;
+    // (undocumented)
+    readonly toolId: string;
+}
+
+// @public
+export interface DrawingDocument {
+    // (undocumented)
+    drawings: SerializedDrawing[];
+    // (undocumented)
+    version: 1;
+}
+
+// @public
+export type DrawingLineStyle = "solid" | "dotted" | "dashed";
+
+// @public
+export interface DrawingOptions {
+    // (undocumented)
+    color?: string;
+    // (undocumented)
+    fillColor?: string;
+    // (undocumented)
+    fillOpacity?: number;
+    // (undocumented)
+    lineStyle?: DrawingLineStyle;
+    // (undocumented)
+    lineWidth?: number;
+    // (undocumented)
+    locked?: boolean;
+    // (undocumented)
+    showLabels?: boolean;
+    // (undocumented)
+    visible?: boolean;
+}
+
+// @public
+export interface DrawingToolDefinition {
+    readonly anchors: 1 | 2 | 3;
+    // (undocumented)
+    readonly defaultOptions?: DrawingOptions;
+    // (undocumented)
+    readonly id: string;
+    // (undocumented)
+    readonly meta: ExtensionMeta;
+    readonly persist?: boolean;
+}
+
+// @public
 export type ExtensionKind = "series" | "indicator" | "drawing" | "script-runtime" | "feature";
 
 // @public
@@ -205,6 +318,9 @@ export interface ExtensionMeta {
 
 // @public
 export type Feature = "orderflow" | "volume-profile" | "panes" | "layouts" | "strategy" | "alerts" | "script-functions";
+
+// @public (undocumented)
+export const FibRetracement: DrawingToolDefinition;
 
 // @public
 export interface GridLineOptions {
@@ -219,6 +335,9 @@ export interface GridOptions {
     // (undocumented)
     vertLines?: GridLineOptions;
 }
+
+// @public (undocumented)
+export const HorizontalLine: DrawingToolDefinition;
 
 // @public
 export interface IndicatorApi<TInputs extends IndicatorInputs = IndicatorInputs> {
@@ -370,6 +489,9 @@ export interface LineSeriesOptions extends SeriesOptions {
     lineWidth?: number;
 }
 
+// @public (undocumented)
+export const Measure: DrawingToolDefinition;
+
 // @public
 export interface OhlcData extends SeriesData {
     // (undocumented)
@@ -439,6 +561,23 @@ export interface PriceScaleOptions {
 
 // @public
 export type ReadyEvent = void;
+
+// @public (undocumented)
+export const Rectangle: DrawingToolDefinition;
+
+// @public
+export interface SerializedDrawing {
+    // (undocumented)
+    anchors: DrawingAnchor[];
+    // (undocumented)
+    id: string;
+    // (undocumented)
+    options: DrawingOptions;
+    // (undocumented)
+    paneId: string;
+    // (undocumented)
+    toolId: string;
+}
 
 // @public
 export interface SeriesApi<TData extends SeriesData = SeriesData, TOptions extends SeriesOptions = SeriesOptions> {
@@ -531,6 +670,9 @@ export interface TimeScaleOptions {
     secondsVisible?: boolean;
     timeVisible?: boolean;
 }
+
+// @public (undocumented)
+export const TrendLine: DrawingToolDefinition;
 
 // @public
 export type Unsubscribe = () => void;

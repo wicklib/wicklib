@@ -1,5 +1,13 @@
 import type { OhlcStore } from "./data/ohlc-store";
-import { fail, type WickError } from "./errors";
+import { fail, WickError } from "./errors";
+import { Drawing, type DrawingHost } from "./drawing";
+import {
+  DRAWING_TOOLS,
+  hitTestAnchor,
+  hitTestDrawing,
+  resolveDrawingOptions,
+  type DrawingGeometryPane,
+} from "./drawings";
 import { EventBus } from "./events";
 import { Indicator } from "./indicator";
 import { Pane, type PaneHost } from "./pane";
@@ -11,18 +19,25 @@ import {
   type CrosshairRenderPoint,
   type PaneRenderModel,
   type ResolvedCrosshair,
+  type DrawingRenderData,
   type ResolvedGrid,
   type ResolvedLayout,
 } from "./render/chart-renderer";
 import { TimeScale, type TimeScaleSource } from "./scale/time-scale";
 import { CandlestickSeries, Series, type SeriesHost } from "./series";
 import type {
+  AddDrawingOptions,
   AddIndicatorOptions,
   CandlestickSeriesOptions,
   ChartApi,
   ChartEventMap,
   ChartOptions,
   CrosshairOptions,
+  DrawingAnchor,
+  DrawingApi,
+  DrawingDocument,
+  DrawingOptions,
+  DrawingToolDefinition,
   GridOptions,
   IndicatorApi,
   IndicatorDefinition,
@@ -37,6 +52,7 @@ import type {
   SeriesData,
   SeriesOptions,
   SeriesType,
+  SerializedDrawing,
   TimeScaleApi,
   TimeScaleOptions,
   Unsubscribe,
@@ -83,6 +99,7 @@ class Chart implements ChartApi, SeriesHost {
   private readonly panes: Pane[] = [];
   private readonly mainPane: Pane;
   private readonly paneHost: PaneHost;
+  private readonly drawingHost: DrawingHost;
   private readonly stack: CanvasStack;
   private readonly timeScaleModel: TimeScale;
   private readonly renderer: ChartRenderer;
@@ -97,6 +114,20 @@ class Chart implements ChartApi, SeriesHost {
   private seriesCounter = 0;
   private paneCounter = 0;
   private indicatorCounter = 0;
+  private drawingCounter = 0;
+  private readonly drawings: Drawing[] = [];
+  private selectedDrawingId: string | null = null;
+  private activeTool: DrawingToolDefinition | null = null;
+  private activeDrawingOptions: DrawingOptions | undefined;
+  private activeDrawingPaneId = "main";
+  private pendingAnchors: DrawingAnchor[] = [];
+  private previewPoint: Point | null = null;
+  private draggingDrawing: Drawing | null = null;
+  private draggingAnchorIndex = -1;
+  private drawingDragStart: Point | null = null;
+  private drawingDragAnchors: DrawingAnchor[] | null = null;
+  private drawingDragMoved = false;
+  private drawingDragPointerId: number | null = null;
   private crosshairPoint: CrosshairRenderPoint | null = null;
   private readonly activePointers = new Map<number, Point>();
   private pinchDistance: number | null = null;
@@ -134,6 +165,13 @@ class Chart implements ChartApi, SeriesHost {
       requestRender: () => this.requestRender(),
       relayout: () => this.relayout(),
       removePane: (pane) => this.removePane(pane),
+    };
+
+    this.drawingHost = {
+      assertAlive: () => this.assertAlive(),
+      requestRender: () => this.requestRender(),
+      emitUpdated: (drawing) => this.emitDrawingUpdated(drawing),
+      removeDrawing: (drawing) => this.removeDrawing(drawing),
     };
 
     this.mainPane = new Pane("main", { priceScale: this.options.priceScale }, false, this.paneHost);
@@ -293,6 +331,456 @@ class Chart implements ChartApi, SeriesHost {
     return indicator as IndicatorApi<TInputs>;
   }
 
+  addDrawing(tool: DrawingToolDefinition, options: AddDrawingOptions): DrawingApi {
+    this.assertAlive();
+    const pane = this.resolveDrawingPane(options.paneId);
+    const drawing = this.createDrawing(tool, pane, options.anchors, options.options);
+    this.setSelected(drawing);
+    this.bus.emit("drawing-created", { drawing });
+    return drawing;
+  }
+
+  startDrawing(tool: DrawingToolDefinition, options?: Partial<AddDrawingOptions>): void {
+    this.assertAlive();
+    if (this.activeTool) {
+      this.cancelDrawing();
+    }
+    const pane = this.resolveDrawingPane(options?.paneId);
+    this.activeTool = tool;
+    this.activeDrawingOptions = options?.options;
+    this.activeDrawingPaneId = pane.id;
+    this.pendingAnchors = [];
+    this.previewPoint = null;
+    this.setSelected(null);
+    this.requestRender();
+  }
+
+  cancelDrawing(): void {
+    if (!this.activeTool) {
+      return;
+    }
+    const toolId = this.activeTool.id;
+    this.resetDrawingTool();
+    this.bus.emit("drawing-cancelled", { toolId });
+    this.requestRender();
+  }
+
+  selectedDrawing(): DrawingApi | null {
+    this.assertAlive();
+    return this.selectedInternal();
+  }
+
+  private selectedInternal(): Drawing | null {
+    return this.selectedDrawingId ? this.findDrawing(this.selectedDrawingId) : null;
+  }
+
+  private drawingPane(pane: Pane): DrawingGeometryPane | null {
+    if (!pane.plot) {
+      return null;
+    }
+    return { plot: pane.plot, priceScale: pane.priceScale };
+  }
+
+  selectDrawing(id: string | null): void {
+    this.assertAlive();
+    if (id === null) {
+      this.setSelected(null);
+      return;
+    }
+    const drawing = this.findDrawing(id);
+    if (!drawing) {
+      fail("INVALID_ARGUMENT", `Unknown drawing: ${id}`);
+    }
+    this.setSelected(drawing);
+  }
+
+  serializeDrawings(): DrawingDocument {
+    this.assertAlive();
+    const drawings: SerializedDrawing[] = [];
+    for (const drawing of this.drawings) {
+      const serialized = drawing.toSerialized();
+      if (serialized) {
+        drawings.push(serialized);
+      }
+    }
+    return { version: 1, drawings };
+  }
+
+  loadDrawings(document: DrawingDocument): void {
+    this.assertAlive();
+
+    if (!document || document.version !== 1 || !Array.isArray(document.drawings)) {
+      fail("INVALID_ARGUMENT", "Unsupported drawing document");
+    }
+
+    for (const drawing of this.drawings) {
+      drawing.destroyInternal();
+    }
+    this.drawings.length = 0;
+    this.selectedDrawingId = null;
+    this.resetDrawingTool();
+
+    const usedIds = new Set<string>();
+
+    for (const item of document.drawings) {
+      if (!item || typeof item.id !== "string" || usedIds.has(item.id)) {
+        this.emitDrawingError(item?.id ?? "unknown", "Invalid or duplicate drawing id");
+        continue;
+      }
+
+      const tool = DRAWING_TOOLS.get(item.toolId);
+      if (!tool) {
+        this.emitDrawingError(item.id, `Unknown drawing tool: ${item.toolId}`);
+        continue;
+      }
+
+      const pane = this.findPane(item.paneId);
+      if (!pane) {
+        this.emitDrawingError(item.id, `Unknown pane: ${item.paneId}`);
+        continue;
+      }
+
+      try {
+        const drawing = new Drawing(
+          item.id,
+          item.paneId,
+          tool,
+          item.anchors,
+          item.options,
+          this.drawingHost,
+        );
+        this.drawings.push(drawing);
+        usedIds.add(item.id);
+      } catch (error) {
+        this.emitDrawingError(item.id, error instanceof Error ? error.message : "Invalid drawing");
+      }
+    }
+
+    this.bus.emit("drawing-selected", { drawing: null });
+    this.requestRender();
+  }
+
+  private resolveDrawingPane(paneId: string | undefined): Pane {
+    const id = paneId ?? "main";
+    const pane = this.findPane(id);
+    if (!pane) {
+      fail("INVALID_ARGUMENT", `Unknown pane: ${id}`);
+    }
+    return pane;
+  }
+
+  private createDrawing(
+    tool: DrawingToolDefinition,
+    pane: Pane,
+    anchors: readonly DrawingAnchor[],
+    options: DrawingOptions | undefined,
+  ): Drawing {
+    const drawing = new Drawing(
+      this.nextDrawingId(),
+      pane.id,
+      tool,
+      anchors,
+      options,
+      this.drawingHost,
+    );
+    this.drawings.push(drawing);
+    return drawing;
+  }
+
+  private nextDrawingId(): string {
+    this.drawingCounter += 1;
+    let id = `drawing-${this.drawingCounter}`;
+    while (this.drawings.some((drawing) => drawing.id === id)) {
+      this.drawingCounter += 1;
+      id = `drawing-${this.drawingCounter}`;
+    }
+    return id;
+  }
+
+  private findDrawing(id: string): Drawing | null {
+    return this.drawings.find((drawing) => drawing.id === id) ?? null;
+  }
+
+  private setSelected(drawing: Drawing | null): void {
+    const id = drawing?.id ?? null;
+    if (this.selectedDrawingId === id) {
+      return;
+    }
+    this.selectedDrawingId = id;
+    this.bus.emit("drawing-selected", { drawing });
+    this.requestRender();
+  }
+
+  private removeDrawing(drawing: Drawing): void {
+    const index = this.drawings.indexOf(drawing);
+    if (index < 0) {
+      return;
+    }
+    drawing.destroyInternal();
+    this.drawings.splice(index, 1);
+    this.resetDrawingDrag();
+    if (this.selectedDrawingId === drawing.id) {
+      this.selectedDrawingId = null;
+      this.bus.emit("drawing-selected", { drawing: null });
+    }
+    this.bus.emit("drawing-removed", { drawingId: drawing.id });
+    this.cleanupEmptyAutoPanes();
+    this.relayout();
+  }
+
+  private removeDrawingsForPane(paneId: string): void {
+    for (let index = this.drawings.length - 1; index >= 0; index -= 1) {
+      const drawing = this.drawings[index]!;
+      if (drawing.paneId !== paneId) {
+        continue;
+      }
+      drawing.destroyInternal();
+      this.drawings.splice(index, 1);
+      if (this.selectedDrawingId === drawing.id) {
+        this.selectedDrawingId = null;
+        this.bus.emit("drawing-selected", { drawing: null });
+      }
+      this.bus.emit("drawing-removed", { drawingId: drawing.id });
+    }
+    this.resetDrawingDrag();
+    this.requestRender();
+  }
+
+  private emitDrawingUpdated(drawing: Drawing): void {
+    if (drawing.isRemoved()) {
+      return;
+    }
+    this.bus.emit("drawing-updated", { drawing });
+    this.requestRender();
+  }
+
+  private emitDrawingError(drawingId: string, message: string): void {
+    this.bus.emit("error", {
+      error: new WickError("INVALID_ARGUMENT", message, { drawingId }),
+      source: "drawing",
+      drawingId,
+    });
+  }
+
+  private resetDrawingTool(): void {
+    this.activeTool = null;
+    this.activeDrawingOptions = undefined;
+    this.activeDrawingPaneId = "main";
+    this.pendingAnchors = [];
+    this.previewPoint = null;
+  }
+
+  private buildDrawingRenderData(): DrawingRenderData[] {
+    const result: DrawingRenderData[] = this.drawings.map((drawing) => ({
+      id: drawing.id,
+      toolId: drawing.toolId,
+      paneId: drawing.paneId,
+      anchors: drawing.getAnchorsInternal(),
+      previewPoint: null,
+      options: drawing.getOptions(),
+      selected: drawing.id === this.selectedDrawingId,
+      preview: false,
+    }));
+
+    if (this.activeTool && this.pendingAnchors.length > 0) {
+      result.push({
+        id: "__preview__",
+        toolId: this.activeTool.id,
+        paneId: this.activeDrawingPaneId,
+        anchors: this.pendingAnchors,
+        previewPoint:
+          this.activeTool.anchors > 1 && this.pendingAnchors.length < this.activeTool.anchors
+            ? this.previewPoint
+            : null,
+        options: resolveDrawingOptions(this.activeTool.defaultOptions, this.activeDrawingOptions),
+        selected: false,
+        preview: true,
+      });
+    }
+
+    return result;
+  }
+
+  private drawingAnchor(pane: Pane, point: Point, altKey: boolean): DrawingAnchor | null {
+    if (!pane.plot) {
+      return null;
+    }
+
+    const time = this.timeScaleModel.timeAtX(point.x);
+    if (time === null) {
+      return null;
+    }
+
+    let price = pane.priceScale.yToPrice(point.y, pane.plot.top, pane.plot.height);
+
+    if (!altKey && this.options.crosshair.mode === "magnet") {
+      const store = pane.series[0]?.getStore();
+      if (store && store.length > 0) {
+        const index = Math.round(this.timeScaleModel.xToIndex(point.x));
+        if (index >= 0 && index < store.length) {
+          price = store.closeAt(index);
+        }
+      }
+    }
+
+    return { time, price };
+  }
+
+  private placeAnchor(pane: Pane, point: Point, altKey: boolean): void {
+    if (!this.activeTool) {
+      return;
+    }
+
+    if (this.pendingAnchors.length > 0 && pane.id !== this.activeDrawingPaneId) {
+      return;
+    }
+
+    const anchor = this.drawingAnchor(pane, point, altKey);
+    if (!anchor) {
+      return;
+    }
+
+    if (this.pendingAnchors.length === 0) {
+      this.activeDrawingPaneId = pane.id;
+    }
+
+    this.pendingAnchors.push(anchor);
+    this.previewPoint = point;
+
+    if (this.pendingAnchors.length >= this.activeTool.anchors) {
+      const tool = this.activeTool;
+      const options = this.activeDrawingOptions;
+      const targetPane = this.findPane(this.activeDrawingPaneId) ?? pane;
+      const drawing = this.createDrawing(tool, targetPane, this.pendingAnchors, options);
+      this.resetDrawingTool();
+      this.setSelected(drawing);
+      this.bus.emit("drawing-created", { drawing });
+      this.requestRender();
+      return;
+    }
+
+    this.requestRender();
+  }
+
+  private hitTarget(drawing: Drawing) {
+    return {
+      toolId: drawing.toolId,
+      anchors: drawing.getAnchorsInternal(),
+      options: drawing.getOptions(),
+    };
+  }
+
+  private tryStartDrawingDrag(pane: Pane, point: Point, event: PointerEvent): boolean {
+    const geometry = this.drawingPane(pane);
+    if (!geometry) {
+      return false;
+    }
+    const selected = this.selectedInternal();
+
+    if (selected && selected.paneId === pane.id) {
+      const selectedTarget = this.hitTarget(selected);
+      const handle = hitTestAnchor(selectedTarget, point, geometry, this.timeScaleModel);
+      if (handle >= 0) {
+        if (!selected.isLocked()) {
+          this.beginDrawingDrag(selected, handle, point, event);
+        }
+        return true;
+      }
+    }
+
+    for (let index = this.drawings.length - 1; index >= 0; index -= 1) {
+      const drawing = this.drawings[index]!;
+      if (drawing.paneId !== pane.id) {
+        continue;
+      }
+      if (!hitTestDrawing(this.hitTarget(drawing), point, geometry, this.timeScaleModel)) {
+        continue;
+      }
+
+      this.setSelected(drawing);
+      if (!drawing.isLocked()) {
+        this.beginDrawingDrag(drawing, -1, point, event);
+      }
+      return true;
+    }
+
+    this.setSelected(null);
+    return false;
+  }
+
+  private beginDrawingDrag(
+    drawing: Drawing,
+    anchorIndex: number,
+    point: Point,
+    event: PointerEvent,
+  ): void {
+    this.draggingDrawing = drawing;
+    this.draggingAnchorIndex = anchorIndex;
+    this.drawingDragStart = point;
+    this.drawingDragAnchors = drawing.getAnchors().map((anchor) => ({ ...anchor }));
+    this.drawingDragMoved = false;
+    this.drawingDragPointerId = event.pointerId;
+
+    try {
+      this.stack.root.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture is best-effort.
+    }
+
+    this.clearCrosshair();
+    this.requestRender();
+  }
+
+  private updateDrawingDrag(point: Point, altKey: boolean): void {
+    const drawing = this.draggingDrawing;
+    const anchors = this.drawingDragAnchors;
+    const start = this.drawingDragStart;
+    if (!drawing || !anchors || !start) {
+      return;
+    }
+
+    const pane = this.findPane(drawing.paneId);
+    if (!pane || !pane.plot) {
+      return;
+    }
+
+    const next = anchors.map((anchor) => ({ ...anchor }));
+
+    if (this.draggingAnchorIndex >= 0) {
+      const anchor = this.drawingAnchor(pane, point, altKey);
+      if (!anchor) {
+        return;
+      }
+      next[this.draggingAnchorIndex] = anchor;
+    } else {
+      const startTime = this.timeScaleModel.timeAtX(start.x);
+      const currentTime = this.timeScaleModel.timeAtX(point.x);
+      const timeDelta = (currentTime ?? startTime ?? 0) - (startTime ?? 0);
+      const startPrice = pane.priceScale.yToPrice(start.y, pane.plot.top, pane.plot.height);
+      const currentPrice = pane.priceScale.yToPrice(point.y, pane.plot.top, pane.plot.height);
+      const priceDelta = currentPrice - startPrice;
+
+      for (let index = 0; index < next.length; index += 1) {
+        next[index] = {
+          time: next[index]!.time + timeDelta,
+          price: next[index]!.price + priceDelta,
+        };
+      }
+    }
+
+    drawing.setAnchors(next);
+    this.drawingDragMoved = true;
+  }
+
+  private resetDrawingDrag(): void {
+    this.draggingDrawing = null;
+    this.draggingAnchorIndex = -1;
+    this.drawingDragStart = null;
+    this.drawingDragAnchors = null;
+    this.drawingDragMoved = false;
+    this.drawingDragPointerId = null;
+  }
+
   timeScale(): TimeScaleApi {
     this.assertAlive();
     return this.timeScaleController;
@@ -416,6 +904,11 @@ class Chart implements ChartApi, SeriesHost {
       pane.series.length = 0;
     }
 
+    for (const drawing of this.drawings) {
+      drawing.destroyInternal();
+    }
+    this.drawings.length = 0;
+    this.resetDrawingDrag();
     this.activePointers.clear();
     this.pinchDistance = null;
     this.bus.dispose();
@@ -553,7 +1046,12 @@ class Chart implements ChartApi, SeriesHost {
       if (pane === this.mainPane) {
         continue;
       }
-      if (pane.autoCreated && pane.series.length === 0 && pane.indicators.length === 0) {
+      if (
+        pane.autoCreated &&
+        pane.series.length === 0 &&
+        pane.indicators.length === 0 &&
+        !this.drawings.some((drawing) => drawing.paneId === pane.id)
+      ) {
         this.panes.splice(index, 1);
       }
     }
@@ -567,6 +1065,8 @@ class Chart implements ChartApi, SeriesHost {
     if (!this.panes.includes(pane)) {
       return;
     }
+
+    this.removeDrawingsForPane(pane.id);
 
     for (const series of [...pane.series]) {
       series.destroyInternal();
@@ -627,12 +1127,18 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     const point = this.localPoint(event);
-    if (!this.paneAtPoint(point)) {
+    const pane = this.paneAtPoint(point);
+    if (!pane) {
       return;
     }
 
     if (event.cancelable) {
       event.preventDefault();
+    }
+
+    if (this.activeTool) {
+      this.placeAnchor(pane, point, event.altKey);
+      return;
     }
 
     this.activePointers.set(event.pointerId, point);
@@ -647,7 +1153,13 @@ class Chart implements ChartApi, SeriesHost {
       this.dragging = false;
       this.pointerId = null;
       this.pinchDistance = this.currentPinchDistance();
+      this.resetDrawingDrag();
       this.clearCrosshair();
+      return;
+    }
+
+    if (this.tryStartDrawingDrag(pane, point, event)) {
+      this.dragging = false;
       return;
     }
 
@@ -660,6 +1172,13 @@ class Chart implements ChartApi, SeriesHost {
 
   private readonly onPointerMove = (event: PointerEvent): void => {
     const point = this.localPoint(event);
+
+    if (this.activeTool) {
+      this.previewPoint = point;
+      this.updateCrosshair(point.x, point.y);
+      this.requestRender();
+      return;
+    }
 
     if (this.activePointers.has(event.pointerId)) {
       this.activePointers.set(event.pointerId, point);
@@ -684,6 +1203,11 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
+    if (this.draggingDrawing && event.pointerId === this.drawingDragPointerId) {
+      this.updateDrawingDrag(point, event.altKey);
+      return;
+    }
+
     if (this.dragging && event.pointerId === this.pointerId) {
       const delta = point.x - this.dragLastX;
       if (Math.abs(delta) >= 0.5) {
@@ -703,6 +1227,22 @@ class Chart implements ChartApi, SeriesHost {
 
   private readonly onPointerUp = (event: PointerEvent): void => {
     this.activePointers.delete(event.pointerId);
+
+    if (this.activeTool) {
+      return;
+    }
+
+    if (this.draggingDrawing && event.pointerId === this.drawingDragPointerId) {
+      const point = this.localPoint(event);
+      try {
+        this.stack.root.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture is best-effort.
+      }
+      this.resetDrawingDrag();
+      this.updateCrosshair(point.x, point.y);
+      return;
+    }
 
     if (this.pinchDistance !== null) {
       try {
@@ -748,16 +1288,45 @@ class Chart implements ChartApi, SeriesHost {
     }
     this.dragging = false;
     this.pointerId = null;
+    this.resetDrawingDrag();
     this.clearCrosshair();
   };
 
   private readonly onPointerLeave = (): void => {
-    if (!this.dragging && this.pinchDistance === null) {
+    if (this.activeTool) {
+      this.previewPoint = null;
+      this.requestRender();
+      return;
+    }
+    if (!this.dragging && this.pinchDistance === null && !this.draggingDrawing) {
       this.clearCrosshair();
     }
   };
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === "Delete" || event.key === "Backspace") {
+      const selected = this.selectedInternal();
+      if (selected) {
+        if (!selected.isLocked()) {
+          selected.remove();
+        }
+        event.preventDefault();
+        return;
+      }
+    }
+
+    if (event.key === "Escape") {
+      if (this.activeTool) {
+        this.cancelDrawing();
+      } else if (this.selectedInternal()) {
+        this.selectDrawing(null);
+      } else {
+        this.clearCrosshair();
+      }
+      event.preventDefault();
+      return;
+    }
+
     const plot = this.panes[0]?.plot;
     if (!plot) {
       return;
@@ -784,10 +1353,6 @@ class Chart implements ChartApi, SeriesHost {
       case "Home":
         this.timeScaleModel.fitContent();
         break;
-      case "Escape":
-        this.clearCrosshair();
-        event.preventDefault();
-        return;
       default:
         return;
     }
@@ -897,6 +1462,7 @@ class Chart implements ChartApi, SeriesHost {
       width: this.stack.getWidth(),
       height: this.stack.getHeight(),
       panes,
+      drawings: this.buildDrawingRenderData(),
       timeScale: this.timeScaleModel,
       layout: this.options.layout,
       grid: this.options.grid,

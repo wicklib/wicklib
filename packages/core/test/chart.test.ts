@@ -3,6 +3,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import {
   CandlestickSeries,
   createChart,
+  HorizontalLine,
+  Measure,
+  Rectangle,
+  TrendLine,
   type ChartApi,
   type ChartErrorEvent,
   type CrosshairEvent,
@@ -460,6 +464,151 @@ describe("createChart", () => {
     expect(events.at(-1)?.paneId).toBe(pane.id);
 
     pane.remove();
+  });
+
+  it("creates, serializes, and restores drawings", () => {
+    const chart = track(createChart(mount()));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+
+    const drawing = chart.addDrawing(TrendLine, {
+      anchors: [
+        { time: 0, price: 100 },
+        { time: 10 * MINUTE, price: 110 },
+      ],
+    });
+    expect(drawing.toolId).toBe("trend-line");
+    expect(drawing.paneId).toBe("main");
+    expect(chart.selectedDrawing()?.id).toBe(drawing.id);
+
+    drawing.setOptions({ color: "#ffffff", locked: true });
+    const document = chart.serializeDrawings();
+    expect(document.version).toBe(1);
+    expect(document.drawings).toHaveLength(1);
+    expect(document.drawings[0]?.options.color).toBe("#ffffff");
+    expect(document.drawings[0]?.options.locked).toBe(true);
+
+    const restored = track(createChart(mount()));
+    restored.addSeries(CandlestickSeries).setData(bars(50));
+    restored.loadDrawings(document);
+
+    expect(restored.serializeDrawings().drawings).toEqual(document.drawings);
+    expect(restored.selectedDrawing()).toBeNull();
+  });
+
+  it("creates drawings with pointer anchors and cancels with Escape", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+    chart.timeScale().fitContent();
+
+    const created: string[] = [];
+    const cancelled: string[] = [];
+    chart.on("drawing-created", (event) => created.push(event.drawing.toolId));
+    chart.on("drawing-cancelled", (event) => cancelled.push(event.toolId));
+
+    const root = element.firstElementChild as HTMLElement;
+    chart.startDrawing(HorizontalLine);
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 100, 100));
+
+    expect(created).toEqual(["horizontal-line"]);
+    expect(chart.serializeDrawings().drawings).toHaveLength(1);
+    expect(chart.selectedDrawing()?.toolId).toBe("horizontal-line");
+
+    chart.startDrawing(TrendLine);
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 100, 120));
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+    expect(cancelled).toEqual(["trend-line"]);
+    expect(created).toEqual(["horizontal-line"]);
+  });
+
+  it("deletes selected drawings and ignores locked ones", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+
+    const locked = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 0, price: 100 }],
+      options: { locked: true },
+    });
+    const removed: string[] = [];
+    chart.on("drawing-removed", (event) => removed.push(event.drawingId));
+
+    const root = element.firstElementChild as HTMLElement;
+    chart.selectDrawing(locked.id);
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true }));
+    expect(removed).toEqual([]);
+    expect(() => locked.getAnchors()).not.toThrow();
+
+    locked.setOptions({ locked: false });
+    chart.selectDrawing(locked.id);
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true }));
+    expect(removed).toEqual([locked.id]);
+    expect(() => locked.getAnchors()).toThrow(/disposed/i);
+  });
+
+  it("removes drawings with their pane and keeps auto panes with drawings", () => {
+    const chart = track(createChart(mount()));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+
+    const pane = chart.addPane({ height: 120 });
+    const drawing = chart.addDrawing(Rectangle, {
+      paneId: pane.id,
+      anchors: [
+        { time: 0, price: 100 },
+        { time: 5 * MINUTE, price: 110 },
+      ],
+    });
+
+    pane.remove();
+    expect(() => drawing.getAnchors()).toThrow(/disposed/i);
+    expect(chart.serializeDrawings().drawings).toHaveLength(0);
+
+    const indicator = chart.addIndicator(MultiplierIndicator, { pane: "separate" });
+    const retained = chart.addDrawing(Measure, {
+      paneId: indicator.paneId,
+      anchors: [
+        { time: 0, price: 100 },
+        { time: 5 * MINUTE, price: 105 },
+      ],
+    });
+    indicator.remove();
+
+    expect(() => retained.getAnchors()).not.toThrow();
+    expect(chart.serializeDrawings().drawings).toHaveLength(0);
+  });
+
+  it("skips unknown tools and panes when loading drawings", () => {
+    const chart = track(createChart(mount()));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+    const errors: ChartErrorEvent[] = [];
+    chart.on("error", (event) => errors.push(event));
+
+    chart.loadDrawings({
+      version: 1,
+      drawings: [
+        {
+          id: "missing-tool",
+          toolId: "missing",
+          paneId: "main",
+          anchors: [{ time: 0, price: 100 }],
+          options: {},
+        },
+        {
+          id: "missing-pane",
+          toolId: "trend-line",
+          paneId: "nope",
+          anchors: [
+            { time: 0, price: 100 },
+            { time: 1, price: 101 },
+          ],
+          options: {},
+        },
+      ],
+    });
+
+    expect(errors.filter((event) => event.source === "drawing")).toHaveLength(2);
+    expect(chart.serializeDrawings().drawings).toHaveLength(0);
   });
 
   it("exposes price scale controls", () => {

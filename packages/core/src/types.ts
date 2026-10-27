@@ -453,6 +453,88 @@ export interface IndicatorApi<TInputs extends IndicatorInputs = IndicatorInputs>
 }
 
 /**
+ * A drawing anchor in data space. Anchors survive pan, zoom, and resize.
+ */
+export interface DrawingAnchor {
+  time: Time;
+  price: number;
+}
+
+/**
+ * Drawing line style.
+ */
+export type DrawingLineStyle = "solid" | "dotted" | "dashed";
+
+/**
+ * Drawing style and state options.
+ */
+export interface DrawingOptions {
+  color?: string;
+  lineWidth?: number;
+  lineStyle?: DrawingLineStyle;
+  fillColor?: string;
+  fillOpacity?: number;
+  showLabels?: boolean;
+  locked?: boolean;
+  visible?: boolean;
+}
+
+/**
+ * A drawing tool token.
+ */
+export interface DrawingToolDefinition {
+  readonly id: string;
+  readonly meta: ExtensionMeta;
+  /** Number of anchors required to create the drawing. */
+  readonly anchors: 1 | 2 | 3;
+  readonly defaultOptions?: DrawingOptions;
+  /** False for transient tools such as measure. Defaults to true. */
+  readonly persist?: boolean;
+}
+
+/**
+ * Options for adding a drawing programmatically.
+ */
+export interface AddDrawingOptions {
+  /** Defaults to the main pane. */
+  paneId?: string;
+  anchors: readonly DrawingAnchor[];
+  options?: DrawingOptions;
+}
+
+/**
+ * A live drawing annotation.
+ */
+export interface DrawingApi {
+  readonly id: string;
+  readonly toolId: string;
+  readonly paneId: string;
+  getAnchors(): readonly DrawingAnchor[];
+  setAnchors(anchors: readonly DrawingAnchor[]): void;
+  setOptions(options: Partial<DrawingOptions>): void;
+  remove(): void;
+}
+
+/**
+ * Serialized drawing.
+ */
+export interface SerializedDrawing {
+  id: string;
+  toolId: string;
+  paneId: string;
+  anchors: DrawingAnchor[];
+  options: DrawingOptions;
+}
+
+/**
+ * Versioned drawing document owned and persisted by the host.
+ */
+export interface DrawingDocument {
+  version: 1;
+  drawings: SerializedDrawing[];
+}
+
+/**
  * Payload for the `ready` event.
  */
 export type ReadyEvent = void;
@@ -492,11 +574,13 @@ export interface ChartClickEvent {
  */
 export interface ChartErrorEvent {
   error: WickError;
-  source: "chart" | "series" | "extension" | "datafeed" | "indicator";
+  source: "chart" | "series" | "extension" | "datafeed" | "indicator" | "drawing";
   /** Present when the error came from a series datafeed. */
   seriesId?: string;
   /** Present when the error came from an indicator. */
   indicatorId?: string;
+  /** Present when the error came from a drawing. */
+  drawingId?: string;
 }
 
 /**
@@ -515,6 +599,11 @@ export interface ChartEventMap {
   crosshair: CrosshairEvent;
   "visible-range": VisibleRangeEvent;
   "data-loading": DataLoadingEvent;
+  "drawing-created": { drawing: DrawingApi };
+  "drawing-selected": { drawing: DrawingApi | null };
+  "drawing-updated": { drawing: DrawingApi };
+  "drawing-removed": { drawingId: string };
+  "drawing-cancelled": { toolId: string };
   click: ChartClickEvent;
   error: ChartErrorEvent;
 }
@@ -588,6 +677,13 @@ export interface ChartApi {
     definition: IndicatorDefinition<TInputs>,
     options?: AddIndicatorOptions<TInputs>,
   ): IndicatorApi<TInputs>;
+  addDrawing(tool: DrawingToolDefinition, options: AddDrawingOptions): DrawingApi;
+  startDrawing(tool: DrawingToolDefinition, options?: Partial<AddDrawingOptions>): void;
+  cancelDrawing(): void;
+  selectedDrawing(): DrawingApi | null;
+  selectDrawing(id: string | null): void;
+  serializeDrawings(): DrawingDocument;
+  loadDrawings(document: DrawingDocument): void;
   timeScale(): TimeScaleApi;
   setOptions(options: Partial<ChartOptions>): void;
   on<K extends keyof ChartEventMap>(

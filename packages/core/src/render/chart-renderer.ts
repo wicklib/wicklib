@@ -1,9 +1,10 @@
 import type { OhlcStore } from "../data/ohlc-store";
+import { anchorPoints, clipLineToRect, FIB_LEVELS, type ResolvedDrawingOptions } from "../drawings";
 import type { IndicatorRenderData, IndicatorPlotRenderData } from "../indicator";
 import type { PriceScale } from "../scale/price-scale";
 import type { TimeScale } from "../scale/time-scale";
 import { formatCrosshairTime, formatTimeLabel, generateTimeTicks } from "../scale/ticks";
-import type { Point } from "../types";
+import type { DrawingAnchor, Point } from "../types";
 import type { CanvasStack } from "./canvas-stack";
 
 export interface PlotRect {
@@ -55,6 +56,17 @@ export interface SeriesRenderData {
   priceLineVisible: boolean;
 }
 
+export interface DrawingRenderData {
+  id: string;
+  toolId: string;
+  paneId: string;
+  anchors: readonly DrawingAnchor[];
+  previewPoint: Point | null;
+  options: ResolvedDrawingOptions;
+  selected: boolean;
+  preview: boolean;
+}
+
 export interface PaneRenderModel {
   paneId: string;
   plot: PlotRect;
@@ -72,6 +84,7 @@ export interface ChartRenderModel {
   width: number;
   height: number;
   panes: readonly PaneRenderModel[];
+  drawings: readonly DrawingRenderData[];
   timeScale: TimeScale;
   layout: ResolvedLayout;
   grid: ResolvedGrid;
@@ -102,6 +115,7 @@ export class ChartRenderer {
   renderAll(model: ChartRenderModel): void {
     this.drawGrid(model);
     this.drawSeries(model);
+    this.drawDrawings(model);
     this.drawOverlay(model);
   }
 
@@ -674,6 +688,193 @@ export class ChartRenderer {
     context.fillText(indicator.title, pane.plot.left + 20, y);
   }
 
+  private drawDrawings(model: ChartRenderModel): void {
+    const context = this.stack.context("drawings");
+    this.stack.clear("drawings");
+    context.setTransform(this.stack.getDpr(), 0, 0, this.stack.getDpr(), 0, 0);
+
+    for (const drawing of model.drawings) {
+      const pane = model.panes.find((candidate) => candidate.paneId === drawing.paneId);
+      if (!pane || !drawing.options.visible) {
+        continue;
+      }
+
+      const points = anchorPoints(drawing.anchors, pane, this.timeScale).filter(
+        (point): point is Point => point !== null,
+      );
+      if (points.length === 0) {
+        continue;
+      }
+      if (drawing.previewPoint && points.length < 2) {
+        points.push(drawing.previewPoint);
+      }
+
+      context.save();
+      context.beginPath();
+      context.rect(pane.plot.left, pane.plot.top, pane.plot.width, pane.plot.height);
+      context.clip();
+      context.globalAlpha = drawing.preview ? 0.65 : 1;
+      context.strokeStyle = drawing.options.color;
+      context.fillStyle = drawing.options.fillColor;
+      context.lineWidth = drawing.options.lineWidth;
+      context.setLineDash(drawing.preview ? [4, 4] : dash(drawing.options.lineStyle));
+
+      this.drawTool(context, model, pane, drawing, points);
+
+      context.setLineDash([]);
+      context.globalAlpha = 1;
+      context.restore();
+
+      if (drawing.selected && !drawing.preview) {
+        context.save();
+        context.beginPath();
+        context.rect(pane.plot.left, pane.plot.top, pane.plot.width, pane.plot.height);
+        context.clip();
+        for (const point of points) {
+          context.fillStyle = model.layout.background;
+          context.fillRect(point.x - 4, point.y - 4, 8, 8);
+          context.strokeStyle = drawing.options.color;
+          context.lineWidth = 1;
+          context.strokeRect(point.x - 4, point.y - 4, 8, 8);
+        }
+        context.restore();
+      }
+    }
+  }
+
+  private drawTool(
+    context: CanvasRenderingContext2D,
+    model: ChartRenderModel,
+    pane: PaneRenderModel,
+    drawing: DrawingRenderData,
+    points: Point[],
+  ): void {
+    const { plot } = pane;
+
+    switch (drawing.toolId) {
+      case "horizontal-line": {
+        const y = crisp(points[0]!.y);
+        context.beginPath();
+        context.moveTo(plot.left, y);
+        context.lineTo(plot.right, y);
+        context.stroke();
+        return;
+      }
+      case "trend-line": {
+        if (points.length < 2) {
+          return;
+        }
+        const clipped = clipLineToRect(points[0]!, points[1]!, plot);
+        if (!clipped) {
+          return;
+        }
+        context.beginPath();
+        context.moveTo(clipped[0].x, clipped[0].y);
+        context.lineTo(clipped[1].x, clipped[1].y);
+        context.stroke();
+        return;
+      }
+      case "rectangle": {
+        if (points.length < 2) {
+          return;
+        }
+        const x = Math.min(points[0]!.x, points[1]!.x);
+        const y = Math.min(points[0]!.y, points[1]!.y);
+        const width = Math.abs(points[1]!.x - points[0]!.x);
+        const height = Math.abs(points[1]!.y - points[0]!.y);
+
+        context.globalAlpha = drawing.preview ? 0.3 : drawing.options.fillOpacity;
+        context.fillRect(x, y, width, height);
+        context.globalAlpha = drawing.preview ? 0.65 : 1;
+        context.strokeRect(x, y, width, height);
+        return;
+      }
+      case "fib-retracement": {
+        if (points.length < 2) {
+          return;
+        }
+        const first = points[0]!;
+        const second = points[1]!;
+        for (const level of FIB_LEVELS) {
+          const y = first.y + (second.y - first.y) * level;
+          context.beginPath();
+          context.moveTo(plot.left, y);
+          context.lineTo(plot.right, y);
+          context.stroke();
+
+          if (drawing.options.showLabels) {
+            const value = pane.priceScale.yToPrice(y, plot.top, plot.height);
+            this.drawLabel(
+              context,
+              model,
+              `${level.toFixed(3)}  ${pane.priceScale.formatValue(value, model.locale)}`,
+              plot.left + 8,
+              y,
+            );
+          }
+        }
+        return;
+      }
+      case "measure": {
+        if (points.length < 2) {
+          return;
+        }
+        const first = points[0]!;
+        const second = points[1]!;
+        const priceDelta =
+          pane.priceScale.yToPrice(second.y, plot.top, plot.height) -
+          pane.priceScale.yToPrice(first.y, plot.top, plot.height);
+        const color = priceDelta >= 0 ? "#26a69a" : "#ef5350";
+        context.strokeStyle = color;
+        context.beginPath();
+        context.moveTo(first.x, first.y);
+        context.lineTo(second.x, second.y);
+        context.stroke();
+
+        if (drawing.options.showLabels) {
+          const firstPrice = pane.priceScale.yToPrice(first.y, plot.top, plot.height);
+          const percent = firstPrice === 0 ? 0 : (priceDelta / Math.abs(firstPrice)) * 100;
+          const seconds = Math.abs(drawing.anchors[1]!.time - drawing.anchors[0]!.time) / 1000;
+          const deltaText = formatDuration(seconds);
+          const label = `${priceDelta >= 0 ? "+" : ""}${pane.priceScale.formatValue(priceDelta, model.locale)} (${percent.toFixed(2)}%)  ${deltaText}`;
+          this.drawLabel(
+            context,
+            model,
+            label,
+            (first.x + second.x) / 2 + 8,
+            (first.y + second.y) / 2 - 8,
+            color,
+          );
+        }
+        return;
+      }
+      default:
+        return;
+    }
+  }
+
+  private drawLabel(
+    context: CanvasRenderingContext2D,
+    model: ChartRenderModel,
+    text: string,
+    x: number,
+    y: number,
+    color?: string,
+  ): void {
+    context.font = this.font(model);
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+    const width = context.measureText(text).width + 10;
+    const height = model.layout.fontSize + 6;
+    const left = Math.max(0, x - 5);
+    const top = y - height / 2;
+
+    context.fillStyle = color ?? model.crosshair.labelBackground;
+    context.fillRect(left, top, width, height);
+    context.fillStyle = "#ffffff";
+    context.fillText(text, left + 5, y);
+  }
+
   private drawOverlay(model: ChartRenderModel): void {
     const context = this.stack.context("overlay");
     this.stack.clear("overlay");
@@ -758,6 +959,19 @@ export class ChartRenderer {
 
     context.restore();
   }
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds >= 86_400) {
+    return `${(seconds / 86_400).toFixed(1)}d`;
+  }
+  if (seconds >= 3_600) {
+    return `${(seconds / 3_600).toFixed(1)}h`;
+  }
+  if (seconds >= 60) {
+    return `${(seconds / 60).toFixed(1)}m`;
+  }
+  return `${seconds.toFixed(0)}s`;
 }
 
 function plotStride(first: number, last: number, width: number): number {
