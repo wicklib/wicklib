@@ -1,7 +1,12 @@
 name: release
 
 # Manual release workflow. Run it from the Actions tab after versioning.
-# Trusted publishing (OIDC) is configured per package on npm; no NPM_TOKEN is stored.
+#
+# npm trusted publishing is configured on every package, but GitHub issues immutable OIDC
+# subjects for repositories created after 2026-07-15 and npm does not support them yet
+# (npm/cli#9969). Releases therefore use a granular NPM_TOKEN secret for now.
+# When npm accepts the new subject format: delete NPM_TOKEN, remove the token step,
+# restore `publishConfig.provenance` in the package manifests, and add `id-token: write`.
 on:
   workflow_dispatch:
 
@@ -10,8 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 jobs:
   release:
@@ -32,10 +36,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
-      - uses: changesets/action/publish@v2
-        with:
-          script: pnpm release
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          create-github-releases: true
+      - name: Verify npm auth
+        run: npm whoami
         env:
-          NPM_CONFIG_PROVENANCE: "true"
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm
+        run: pnpm release
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

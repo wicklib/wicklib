@@ -68,18 +68,26 @@ implemented.
 
 ## Releasing
 
-Publishing is **manual** and publish-only: run the `release` workflow from the Actions tab
-after versioning locally. It uses npm trusted publishing (OIDC) with provenance; no
-`NPM_TOKEN` is stored.
+Publishing is **manual** and publish-only: version locally, then run the `release` workflow
+from the Actions tab.
+
+npm trusted publishing is configured on every package, but GitHub issues immutable OIDC
+subjects for repositories created after 2026-07-15 and npm does not support them yet
+([npm/cli#9969](https://github.com/npm/cli/issues/9969)). Until that is fixed, releases
+authenticate with a granular `NPM_TOKEN` repository secret and provenance is disabled. When
+npm supports the new subject format, delete the secret, remove the token step, restore
+`publishConfig.provenance`, and add `id-token: write`.
 
 The alpha line uses the `next` tag. Enter prerelease mode once with
 `pnpm changeset pre enter next`; exit with `pnpm changeset pre exit` before the first stable
 release.
 
-1. Add a changeset with `pnpm changeset`.
-2. Version with `pnpm changeset version`.
-3. Commit the version changes and push.
-4. Run the `release` workflow manually. The workflow only publishes; it does not version.
+1. Add an `NPM_TOKEN` Actions secret with publish access to `@wicklib` and `wicklib`
+   (90-day granular token; rotate it).
+2. Add a changeset with `pnpm changeset`.
+3. Version with `pnpm changeset version`.
+4. Commit the version changes and push.
+5. Run the `release` workflow manually. It only publishes; it does not version.
 
 The initial `0.1.0-dev.0` versions were published manually. `latest` stays on them until a
 stable release; install the alpha with `@next` or an exact version.
