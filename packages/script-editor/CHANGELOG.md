@@ -1,5 +1,13 @@
 # @wicklib/script-editor
 
+## 0.1.0-next.20
+
+### Patch Changes
+
+- 7d23b56: Fix the Monaco TypeScript defaults import so the editor initializes in browsers, and add a real browser smoke page with worker-backed Monaco.
+- @wicklib/core@0.1.0-next.20
+  - @wicklib/script@0.1.0-next.20
+
 ## 0.1.0-next.19
 
 ### Minor Changes

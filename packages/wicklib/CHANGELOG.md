@@ -1,5 +1,12 @@
 # wicklib
 
+## 0.1.0-next.20
+
+### Patch Changes
+
+- @wicklib/core@0.1.0-next.20
+  - @wicklib/indicators@0.1.0-next.20
+
 ## 0.1.0-next.19
 
 ### Patch Changes
