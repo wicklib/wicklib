@@ -1,5 +1,9 @@
 # @wicklib/core
 
+## 0.1.0-next.19
+
+No changes in this release.
+
 ## 0.1.0-next.18
 
 No changes in this release.

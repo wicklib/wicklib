@@ -1,5 +1,16 @@
 # @wicklib/script-editor
 
+## 0.1.0-next.19
+
+### Minor Changes
+
+- 4d37d03: Implement the Monaco WickScript editor with generated core and script declarations, TypeScript diagnostics, default source, and lifecycle management.
+
+### Patch Changes
+
+- @wicklib/core@0.1.0-next.19
+  - @wicklib/script@0.1.0-next.19
+
 ## 0.1.0-next.18
 
 ### Patch Changes
