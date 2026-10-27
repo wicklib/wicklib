@@ -1,5 +1,13 @@
 # wicklib
 
+## 0.1.0-next.5
+
+### Patch Changes
+
+- Updated dependencies [fd8cb35]
+  - @wicklib/core@0.1.0-next.5
+  - @wicklib/indicators@0.1.0-next.5
+
 ## 0.1.0-next.4
 
 ### Patch Changes

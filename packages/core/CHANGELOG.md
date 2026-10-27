@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.5
+
+### Minor Changes
+
+- fd8cb35: Add `timeScale.maxVisibleBars` to cap how many bars can be visible when zooming out.
+
 ## 0.1.0-next.4
 
 ### Patch Changes
