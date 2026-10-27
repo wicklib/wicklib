@@ -1,5 +1,15 @@
 # @wicklib/script
 
+## 0.1.0-next.17
+
+### Minor Changes
+
+- 140a05a: Add the initial free `ta.*` set: SMA, EMA, RSI, ATR, highest, lowest, crossover, and crossunder.
+
+### Patch Changes
+
+- @wicklib/core@0.1.0-next.17
+
 ## 0.1.0-next.16
 
 ### Minor Changes
