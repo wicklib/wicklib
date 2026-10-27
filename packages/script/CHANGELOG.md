@@ -1,5 +1,15 @@
 # @wicklib/script
 
+## 0.1.0-next.15
+
+### Minor Changes
+
+- 5721b21: Add the public worker-backed script runtime with compile, replay, stream, metadata, error reconstruction, and the `@wicklib/script/worker` entry.
+
+### Patch Changes
+
+- @wicklib/core@0.1.0-next.15
+
 ## 0.1.0-next.14
 
 ### Minor Changes
