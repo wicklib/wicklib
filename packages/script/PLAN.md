@@ -116,7 +116,8 @@ functions. The script package never depends on pro. License tier travels in `met
 1. [done] Spec freeze + ADR-0006 (authoring ergonomics).
 2. [done] Transpiler + import and global validation.
 3. [done] QuickJS worker host + message protocol.
-4. [in progress] Per-bar scheduler with replay/stream parity; revision semantics remain.
+4. [done] Per-bar scheduler with replay/stream parity. API v1 rejects in-place bar
+   revisions; a future ADR can add a revision mode.
 5. Per-bar scheduler with replay/stream parity.
 6. Free `ta.*` set.
 7. Editor + `.d.ts` generation.

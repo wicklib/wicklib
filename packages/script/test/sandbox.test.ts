@@ -79,6 +79,22 @@ describe("ScriptSandbox", () => {
     }
   });
 
+  it("rejects partial-bar revisions", async () => {
+    const sandbox = await ScriptSandbox.create(script('ctx.plot("line", ctx.bar.close);'));
+    try {
+      sandbox.run(bars);
+      expect(() => sandbox.run([bars[1]!])).toThrowError(ScriptRuntimeError);
+      try {
+        sandbox.run([bars[1]!]);
+      } catch (error) {
+        expect((error as ScriptRuntimeError).code).toBe("REVISION_UNSUPPORTED");
+      }
+      expect(sandbox.run([{ ...bars[2]!, time: 3 * MINUTE }]).plots.line).toEqual([3]);
+    } finally {
+      sandbox.dispose();
+    }
+  });
+
   it("enforces output caps", async () => {
     const sandbox = await ScriptSandbox.create(
       script('for (let i = 0; i < 20; i += 1) ctx.alert("x");'),

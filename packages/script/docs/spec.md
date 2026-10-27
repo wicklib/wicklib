@@ -73,6 +73,8 @@ interface CompiledScript {
 
 - Compilation and execution MUST happen inside the worker runtime.
 - `replay` and `stream` MUST use the same per-bar state path.
+- In API v1, streaming bar times MUST be strictly increasing. Re-sending or revising an
+  existing bar MUST fail with `REVISION_UNSUPPORTED`; hosts stream closed bars only.
 - `dispose` MUST release the QuickJS context and all worker-owned resources.
 - Execution failures MUST be typed and include the bar index when available.
 

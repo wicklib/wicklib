@@ -43,7 +43,9 @@ await script.dispose();
 runtime.dispose();
 ```
 
-Replay and streaming use the same per-bar state path.
+Replay and streaming use the same per-bar state path. API v1 streams closed bars only:
+sending a bar whose time is not greater than the previous bar fails with
+`REVISION_UNSUPPORTED`. To revise history, create a new session and replay it.
 
 Read, in order:
 

@@ -97,6 +97,20 @@ describe("worker runtime client", () => {
     }
   });
 
+  it("reconstructs revision errors across the worker boundary", async () => {
+    const runtime = createScriptWorkerRuntime(new FakeWorker());
+    try {
+      const script = await runtime.compile(source);
+      await script.replay(bars);
+      await expect(script.stream(bars[2]!)).rejects.toMatchObject({
+        code: "REVISION_UNSUPPORTED",
+      });
+      await script.dispose();
+    } finally {
+      runtime.dispose();
+    }
+  });
+
   it("reconstructs compile failures", async () => {
     const runtime = createScriptWorkerRuntime(new FakeWorker());
     try {

@@ -77,6 +77,7 @@ export class ScriptSandbox {
   private readonly onBar: QuickJSHandle;
   private readonly runBar: QuickJSHandle;
   private readonly host: SandboxHostState;
+  private lastTime: number | null = null;
   private disposed = false;
 
   private constructor(
@@ -266,6 +267,20 @@ export class ScriptSandbox {
    */
   run(bars: readonly OhlcData[]): ScriptSandboxResult {
     this.assertAlive();
+
+    let previous = this.lastTime;
+    for (let index = 0; index < bars.length; index += 1) {
+      const time = bars[index]!.time;
+      if (previous !== null && time <= previous) {
+        throw new ScriptRuntimeError(
+          "REVISION_UNSUPPORTED",
+          "Streaming bars must have strictly increasing times; replay from the start to revise history",
+          index,
+        );
+      }
+      previous = time;
+    }
+
     const plots: Record<string, Array<number | null>> = {};
     for (const item of this.metadata.plots) {
       plots[item.id] = [];
@@ -308,6 +323,7 @@ export class ScriptSandbox {
         plots[item.id]!.push(this.host.currentPlots.get(item.id) ?? null);
       }
       alerts.push(...this.host.currentAlerts);
+      this.lastTime = bar.time;
     }
 
     return { plots, alerts };

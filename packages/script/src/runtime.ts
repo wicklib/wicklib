@@ -238,6 +238,7 @@ const RUNTIME_CODES = new Set<ScriptRuntimeErrorCode>([
   "MEMORY_LIMIT",
   "OUTPUT_LIMIT",
   "INVALID_INPUT",
+  "REVISION_UNSUPPORTED",
 ]);
 
 function deserializeError(error: {

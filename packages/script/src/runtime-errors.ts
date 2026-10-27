@@ -2,7 +2,12 @@
  * Runtime failure codes for a sandboxed script.
  */
 export type ScriptRuntimeErrorCode =
-  "RUNTIME_ERROR" | "TIMEOUT" | "MEMORY_LIMIT" | "OUTPUT_LIMIT" | "INVALID_INPUT";
+  | "RUNTIME_ERROR"
+  | "TIMEOUT"
+  | "MEMORY_LIMIT"
+  | "OUTPUT_LIMIT"
+  | "INVALID_INPUT"
+  | "REVISION_UNSUPPORTED";
 
 /**
  * A failure raised while executing a compiled script.
