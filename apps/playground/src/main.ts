@@ -66,6 +66,10 @@ const byId = <T extends HTMLElement>(id: string): T => {
 };
 
 const chartElement = byId<HTMLDivElement>("chart");
+if (testMode || benchMode) {
+  chartElement.style.height = "640px";
+  chartElement.style.flex = "none";
+}
 const summary = byId<HTMLSpanElement>("summary");
 const readout = byId<HTMLSpanElement>("readout");
 const fps = byId<HTMLSpanElement>("fps");
