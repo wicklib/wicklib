@@ -81,6 +81,8 @@ const TIME_STEPS = [
   12 * 60 * 60_000,
   24 * 60 * 60_000,
   7 * 24 * 60 * 60_000,
+  30 * 24 * 60 * 60_000,
+  90 * 24 * 60 * 60_000,
 ];
 
 /**
@@ -111,16 +113,31 @@ export function generateTimeTicks(from: number, to: number, width: number): numb
   const step = chooseTimeStep(to - from, width);
   let first = Math.ceil(from / step) * step;
 
-  if (step === 7 * 24 * 60 * 60_000) {
-    const day = 24 * 60 * 60_000;
+  const day = 24 * 60 * 60_000;
+  const monthStep = step === 90 * day ? 3 : step === 30 * day ? 1 : 0;
+
+  if (step === 7 * day) {
     let candidate = Math.ceil(from / day) * day;
     while (new Date(candidate).getUTCDay() !== 1) {
       candidate += day;
     }
     first = candidate;
+  } else if (monthStep > 0) {
+    const date = new Date(from);
+    first = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
+    while (first < from) {
+      first = addMonths(first, monthStep);
+    }
   }
 
   const ticks: number[] = [];
+  if (monthStep > 0) {
+    for (let time = first; time <= to && ticks.length < 200; time = addMonths(time, monthStep)) {
+      ticks.push(time);
+    }
+    return ticks;
+  }
+
   for (let time = first; time <= to && ticks.length < 200; time += step) {
     ticks.push(time);
   }
@@ -183,4 +200,9 @@ export function formatCrosshairTime(
     timeFormatters.set(key, formatter);
   }
   return formatter.format(time);
+}
+
+function addMonths(time: number, months: number): number {
+  const date = new Date(time);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1);
 }
