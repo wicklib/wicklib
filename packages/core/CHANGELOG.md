@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.4
+
+### Patch Changes
+
+- b9e2ea5: Avoid duplicate month labels when a chart shows several months of data by aligning wide time-axis ticks to calendar month boundaries.
+
 ## 0.1.0-next.3
 
 ### Minor Changes
