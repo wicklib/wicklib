@@ -533,6 +533,62 @@ function registerTaFunctions(context: QuickJSContext, host: SandboxHostState): v
     return number(extreme(host, series, period, "lowest"));
   });
 
+  register("__wickscript_ta_stdev", (sourceHandle, lengthHandle) => {
+    const series = source(sourceHandle);
+    const period = length(lengthHandle);
+    if (series === null || period === null) return context.null;
+    return number(stdev(host, series, period));
+  });
+
+  const optionalPeriod = (handle: QuickJSHandle | undefined): number | null => {
+    if (!handle) return 1;
+    return length(handle);
+  };
+
+  const taChange = context.newFunction(
+    "__wickscript_ta_change",
+    (_contextHandle, sourceHandle, lengthHandle) => {
+      if (!sourceHandle) {
+        setTaError(host, "ta.change requires a source argument");
+        return context.null;
+      }
+      const series = source(sourceHandle);
+      const period = optionalPeriod(lengthHandle);
+      if (series === null || period === null) return context.null;
+      return number(change(host, series, period));
+    },
+  );
+  context.setProp(context.global, "__wickscript_ta_change", taChange);
+  taChange.dispose();
+
+  const taRoc = context.newFunction(
+    "__wickscript_ta_roc",
+    (_contextHandle, sourceHandle, lengthHandle) => {
+      if (!sourceHandle) {
+        setTaError(host, "ta.roc requires a source argument");
+        return context.null;
+      }
+      const series = source(sourceHandle);
+      const period = optionalPeriod(lengthHandle);
+      if (series === null || period === null) return context.null;
+      return number(roc(host, series, period));
+    },
+  );
+  context.setProp(context.global, "__wickscript_ta_roc", taRoc);
+  taRoc.dispose();
+
+  const taCum = context.newFunction("__wickscript_ta_cum", (_contextHandle, sourceHandle) => {
+    if (!sourceHandle) {
+      setTaError(host, "ta.cum requires a source argument");
+      return context.null;
+    }
+    const series = source(sourceHandle);
+    if (series === null) return context.null;
+    return number(cum(host, series));
+  });
+  context.setProp(context.global, "__wickscript_ta_cum", taCum);
+  taCum.dispose();
+
   const cross = (direction: "crossover" | "crossunder") => {
     return (
       _contextHandle: QuickJSHandle,
@@ -581,6 +637,10 @@ function registerTaFunctions(context: QuickJSContext, host: SandboxHostState): v
           atr: __wickscript_ta_atr,
           highest: __wickscript_ta_highest,
           lowest: __wickscript_ta_lowest,
+          stdev: __wickscript_ta_stdev,
+          change: __wickscript_ta_change,
+          roc: __wickscript_ta_roc,
+          cum: __wickscript_ta_cum,
           crossover: __wickscript_ta_crossover,
           crossunder: __wickscript_ta_crossunder,
         });`,
@@ -758,4 +818,51 @@ function extreme(
     result = direction === "highest" ? Math.max(result, value) : Math.min(result, value);
   }
   return result;
+}
+
+function stdev(
+  host: SandboxHostState,
+  series: PriceSource | number,
+  period: number,
+): number | null {
+  const average = sma(host, series, period);
+  if (average === null) return null;
+  const start = host.currentBarIndex - period + 1;
+  let variance = 0;
+  for (let index = start; index <= host.currentBarIndex; index += 1) {
+    const value = valueAt(host, index, series);
+    if (value === null) return null;
+    variance += (value - average) ** 2;
+  }
+  return Math.sqrt(variance / period);
+}
+
+function change(
+  host: SandboxHostState,
+  series: PriceSource | number,
+  period: number,
+): number | null {
+  const current = valueAt(host, host.currentBarIndex, series);
+  const previous = valueAt(host, host.currentBarIndex - period, series);
+  return current === null || previous === null ? null : current - previous;
+}
+
+function roc(host: SandboxHostState, series: PriceSource | number, period: number): number | null {
+  const current = valueAt(host, host.currentBarIndex, series);
+  const previous = valueAt(host, host.currentBarIndex - period, series);
+  if (current === null || previous === null || previous === 0) return null;
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
+
+function cum(host: SandboxHostState, series: PriceSource | number): number | null {
+  const key = `cum:${String(series)}`;
+  const state = host.taState.get(key) as { index: number; value: number } | undefined;
+  if (state?.index === host.currentBarIndex) {
+    return state.value;
+  }
+  const current = valueAt(host, host.currentBarIndex, series);
+  if (current === null) return null;
+  const value = (state?.value ?? 0) + current;
+  host.taState.set(key, { index: host.currentBarIndex, value });
+  return value;
 }

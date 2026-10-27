@@ -43,8 +43,8 @@ await script.dispose();
 runtime.dispose();
 ```
 
-Free `ta.*` functions: `sma`, `ema`, `rsi`, `atr`, `highest`, `lowest`, `crossover`, and
-`crossunder`. They maintain deterministic per-session state.
+Free `ta.*` functions: `sma`, `ema`, `rsi`, `atr`, `highest`, `lowest`, `stdev`, `change`,
+`roc`, `cum`, `crossover`, and `crossunder`. They maintain deterministic per-session state.
 
 Replay and streaming use the same per-bar state path. API v1 streams closed bars only:
 sending a bar whose time is not greater than the previous bar fails with

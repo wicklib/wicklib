@@ -118,10 +118,10 @@ functions. The script package never depends on pro. License tier travels in `met
 3. [done] QuickJS worker host + message protocol.
 4. [done] Per-bar scheduler with replay/stream parity. API v1 rejects in-place bar
    revisions; a future ADR can add a revision mode.
-5. [in progress] Free `ta.*` set: SMA, EMA, RSI, ATR, highest, lowest, crossover, and
-   crossunder are implemented; broader coverage remains.
+5. [in progress] Free `ta.*` set: SMA, EMA, RSI, ATR, highest, lowest, stdev, change, roc,
+   cum, crossover, and crossunder are implemented; broader coverage remains.
 6. Editor + `.d.ts` generation.
-7. Golden and fuzz test suites.
+7. [done] Golden fixtures, deterministic fuzz tests, and resource-limit tests.
 8. Pro premium functions and strategy engine.
 
 ## 14. Open questions

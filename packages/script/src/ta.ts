@@ -18,6 +18,10 @@ export interface ScriptTa {
   atr(context: ScriptContext, length: number): number | null;
   highest(context: ScriptContext, source: TaSeries, length: number): number | null;
   lowest(context: ScriptContext, source: TaSeries, length: number): number | null;
+  stdev(context: ScriptContext, source: TaSeries, length: number): number | null;
+  change(context: ScriptContext, source: TaSeries, length?: number): number | null;
+  roc(context: ScriptContext, source: TaSeries, length?: number): number | null;
+  cum(context: ScriptContext, source: TaSeries): number | null;
   crossover(context: ScriptContext, first: TaSeries, second: TaSeries): boolean;
   crossunder(context: ScriptContext, first: TaSeries, second: TaSeries): boolean;
 }
@@ -32,6 +36,10 @@ export const ta: ScriptTa = {
   atr: notImplemented("ta.atr"),
   highest: notImplemented("ta.highest"),
   lowest: notImplemented("ta.lowest"),
+  stdev: notImplemented("ta.stdev"),
+  change: notImplemented("ta.change"),
+  roc: notImplemented("ta.roc"),
+  cum: notImplemented("ta.cum"),
   crossover: notImplemented("ta.crossover"),
   crossunder: notImplemented("ta.crossunder"),
 };
