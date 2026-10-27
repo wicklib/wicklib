@@ -1,5 +1,12 @@
 # @wicklib/script
 
+## 0.1.0-next.26
+
+### Patch Changes
+
+- Updated dependencies [4e5282c]
+  - @wicklib/core@0.1.0-next.26
+
 ## 0.1.0-next.25
 
 ### Patch Changes

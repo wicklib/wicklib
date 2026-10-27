@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.26
+
+### Minor Changes
+
+- 4e5282c: Add time-axis drag zoom and automatically size the price axis from its rendered labels.
+
 ## 0.1.0-next.25
 
 ### Minor Changes
