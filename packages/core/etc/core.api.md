@@ -636,6 +636,9 @@ export interface SeriesType<TData extends SeriesData = SeriesData, TOptions exte
 }
 
 // @public
+export type SessionGapMode = "compress" | "show";
+
+// @public
 export interface SessionWindow {
     closeDay: number;
     closeTime: string;
@@ -675,6 +678,8 @@ export interface TimeScaleApi {
 export interface TimeScaleOptions {
     barSpacing?: number;
     calendar?: TradingCalendar | null;
+    gapMode?: SessionGapMode;
+    gapWidth?: number;
     maxBarSpacing?: number;
     maxVisibleBars?: number;
     minBarSpacing?: number;

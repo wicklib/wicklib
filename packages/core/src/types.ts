@@ -241,6 +241,10 @@ export interface TimeScaleOptions {
   maxVisibleBars?: number;
   /** Optional trading calendar for session-aware labels. Use null to clear it. */
   calendar?: TradingCalendar | null;
+  /** Keep closed sessions compressed or show them as fixed-width gaps. */
+  gapMode?: SessionGapMode;
+  /** Width of each shown session gap in CSS pixels. Defaults to 12. */
+  gapWidth?: number;
   /** Show time labels in the time axis. */
   timeVisible?: boolean;
   /** Show seconds in time labels. */
@@ -642,6 +646,11 @@ export interface TradingCalendar {
   /** Closed local dates in YYYY-MM-DD form. */
   holidays?: readonly string[];
 }
+
+/**
+ * How closed sessions are represented on the time axis.
+ */
+export type SessionGapMode = "compress" | "show";
 
 /**
  * Time scale controls.

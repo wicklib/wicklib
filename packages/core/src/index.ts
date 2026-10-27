@@ -67,6 +67,7 @@ export type {
   SeriesOptions,
   SerializedDrawing,
   SeriesType,
+  SessionGapMode,
   SessionWindow,
   SourceValue,
   SubscriptionRequest,

@@ -18,6 +18,8 @@ const DEFAULT_OPTIONS: Required<Omit<TimeScaleOptions, "calendar">> = {
   minBarSpacing: 0.001,
   maxBarSpacing: 200,
   maxVisibleBars: Number.POSITIVE_INFINITY,
+  gapMode: "compress",
+  gapWidth: 12,
   timeVisible: true,
   secondsVisible: false,
 };
@@ -42,6 +44,10 @@ export class TimeScale {
   private maxBarSpacing = DEFAULT_OPTIONS.maxBarSpacing;
   private maxVisibleBars = DEFAULT_OPTIONS.maxVisibleBars;
   private calendar: SessionCalendar | null = null;
+  private gapMode: "compress" | "show" = DEFAULT_OPTIONS.gapMode;
+  private gapWidth = DEFAULT_OPTIONS.gapWidth;
+  private gapPrefix = new Int32Array(0);
+  private totalGaps = 0;
   private timeVisible = DEFAULT_OPTIONS.timeVisible;
   private secondsVisible = DEFAULT_OPTIONS.secondsVisible;
   private explicitRange = false;
@@ -79,6 +85,8 @@ export class TimeScale {
       minBarSpacing: this.minBarSpacing,
       maxBarSpacing: this.maxBarSpacing,
       maxVisibleBars: this.maxVisibleBars,
+      gapMode: this.gapMode,
+      gapWidth: this.gapWidth,
       timeVisible: this.timeVisible,
       secondsVisible: this.secondsVisible,
     };
@@ -90,6 +98,7 @@ export class TimeScale {
   }
 
   onDataChanged(): void {
+    this.rebuildGaps();
     this.clamp();
   }
 
@@ -150,11 +159,26 @@ export class TimeScale {
   }
 
   indexToX(index: number): number {
-    return this.width - (this.rightEdgeIndex() - index) * this.barSpacing;
+    return this.width - (this.rightEdgeLayout() - this.layoutIndex(index)) * this.barSpacing;
   }
 
   xToIndex(x: number): number {
-    return this.rightEdgeIndex() - (this.width - x) / this.barSpacing;
+    return this.layoutToIndex(this.rightEdgeLayout() - (this.width - x) / this.barSpacing);
+  }
+
+  isGapX(x: number): boolean {
+    if (this.gapMode !== "show" || this.totalGaps === 0) {
+      return false;
+    }
+    const layout = this.rightEdgeLayout() - (this.width - x) / this.barSpacing;
+    const index = this.layoutBarIndex(layout);
+    if (index < 0 || index >= this.source.count() - 1) {
+      return false;
+    }
+    const start = this.layoutStart(index);
+    const local = layout - start;
+    const gapUnits = this.gapUnitsAfter(index);
+    return gapUnits > 0 && local > 1 && local < 1 + gapUnits;
   }
 
   timeToX(time: Time): number | null {
@@ -263,7 +287,11 @@ export class TimeScale {
 
     const anchorIndex = this.xToIndex(anchorX);
     this.barSpacing = nextSpacing;
-    this.rightOffset = anchorIndex + (this.width - anchorX) / this.barSpacing - this.lastIndex();
+    this.rightOffset =
+      this.layoutIndex(anchorIndex) +
+      (this.width - anchorX) / this.barSpacing -
+      this.lastIndex() -
+      this.totalGaps * this.gapUnits();
     this.clamp();
   }
 
@@ -277,8 +305,9 @@ export class TimeScale {
     }
 
     const usable = Math.max(1, this.width - paddingPixels * 2);
+    const gapPixels = this.gapMode === "show" ? this.totalGaps * this.gapWidth : 0;
     this.barSpacing = clamp(
-      usable / Math.max(1, count - 1),
+      Math.max(1, usable - gapPixels) / Math.max(1, count - 1),
       this.minimumBarSpacing(),
       this.maxBarSpacing,
     );
@@ -314,8 +343,12 @@ export class TimeScale {
       }
     }
 
+    const gaps =
+      this.gapMode === "show"
+        ? Math.max(0, this.gapPrefix[last]! - this.gapPrefix[first]!) * this.gapWidth
+        : 0;
     this.barSpacing = clamp(
-      this.width / Math.max(1, last - first),
+      Math.max(1, this.width - gaps) / Math.max(1, last - first),
       this.minimumBarSpacing(),
       this.maxBarSpacing,
     );
@@ -331,7 +364,8 @@ export class TimeScale {
     }
 
     const half = this.width / (2 * this.barSpacing);
-    this.rightOffset = index + half - this.lastIndex();
+    this.rightOffset =
+      this.layoutIndex(index) + half - this.lastIndex() - this.totalGaps * this.gapUnits();
     this.clamp();
   }
 
@@ -363,9 +397,17 @@ export class TimeScale {
     if (options.calendar !== undefined) {
       this.calendar = options.calendar ? new SessionCalendar(options.calendar) : null;
     }
+    if (options.gapMode !== undefined) {
+      this.gapMode = options.gapMode;
+    }
+    if (options.gapWidth !== undefined) {
+      assertPositive("gapWidth", options.gapWidth);
+      this.gapWidth = options.gapWidth;
+    }
     if (this.maxBarSpacing < this.minBarSpacing) {
       fail("INVALID_ARGUMENT", "maxBarSpacing must be greater than or equal to minBarSpacing");
     }
+    this.rebuildGaps();
     if (options.timeVisible !== undefined) {
       this.timeVisible = options.timeVisible;
     }
@@ -374,8 +416,131 @@ export class TimeScale {
     }
   }
 
-  private rightEdgeIndex(): number {
-    return this.lastIndex() + this.rightOffset;
+  private rightEdgeLayout(): number {
+    return this.lastIndex() + this.totalGaps * this.gapUnits() + this.rightOffset;
+  }
+
+  private gapUnits(): number {
+    return this.gapMode === "show" ? this.gapWidth / this.barSpacing : 0;
+  }
+
+  private rebuildGaps(): void {
+    const count = this.source.count();
+    this.gapPrefix = new Int32Array(count);
+    this.totalGaps = 0;
+
+    if (this.gapMode !== "show" || !this.calendar || count < 2) {
+      return;
+    }
+
+    const step = this.timeStep();
+    let gaps = 0;
+    for (let index = 0; index < count; index += 1) {
+      this.gapPrefix[index] = gaps;
+      if (index + 1 >= count) {
+        continue;
+      }
+      const time = this.source.timeAt(index);
+      const next = this.source.timeAt(index + 1);
+      if (
+        time !== undefined &&
+        next !== undefined &&
+        next - time > step * 1.5 &&
+        (!this.calendar.isOpen(time + step) || !this.calendar.isOpen(next - step))
+      ) {
+        gaps += 1;
+      }
+    }
+    this.totalGaps = gaps;
+  }
+
+  private layoutStart(index: number): number {
+    const count = this.source.count();
+    const units = this.gapUnits();
+    if (count === 0) {
+      return index;
+    }
+    const clamped = Math.max(0, Math.min(count - 1, index));
+    return clamped + (this.gapPrefix[clamped] ?? 0) * units;
+  }
+
+  private layoutIndex(index: number): number {
+    const count = this.source.count();
+    const units = this.gapUnits();
+    if (count === 0 || this.totalGaps === 0 || units === 0) {
+      return index;
+    }
+    if (index <= 0) {
+      return index;
+    }
+    if (index >= count - 1) {
+      return index + this.totalGaps * units;
+    }
+    const base = Math.floor(index);
+    const fraction = index - base;
+    const gapsBefore = this.gapPrefix[base] ?? 0;
+    const gapAfter = (this.gapPrefix[base + 1] ?? gapsBefore) - gapsBefore;
+    return base + gapsBefore * units + fraction * (1 + gapAfter * units);
+  }
+
+  private layoutToIndex(layout: number): number {
+    const count = this.source.count();
+    const units = this.gapUnits();
+    if (count === 0 || this.totalGaps === 0 || units === 0 || layout <= 0) {
+      return layout;
+    }
+    const last = count - 1;
+    if (layout >= this.layoutStart(last)) {
+      return last + (layout - this.layoutStart(last));
+    }
+
+    let low = 0;
+    let high = last;
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      if (this.layoutStart(middle) <= layout) {
+        low = middle;
+      } else {
+        high = middle - 1;
+      }
+    }
+
+    const start = this.layoutStart(low);
+    const local = layout - start;
+    const gapUnits = this.gapUnitsAfter(low);
+    return gapUnits > 0 && local > 1 ? low + local / (1 + gapUnits) : low + local;
+  }
+
+  private layoutBarIndex(layout: number): number {
+    const count = this.source.count();
+    if (count === 0) {
+      return -1;
+    }
+    if (this.totalGaps === 0 || this.gapUnits() === 0) {
+      return Math.floor(layout);
+    }
+    const last = count - 1;
+    if (layout >= this.layoutStart(last)) {
+      return last;
+    }
+    let low = 0;
+    let high = last;
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      if (this.layoutStart(middle) <= layout) {
+        low = middle;
+      } else {
+        high = middle - 1;
+      }
+    }
+    return low;
+  }
+
+  private gapUnitsAfter(index: number): number {
+    if (index < 0 || index >= this.source.count() - 1) {
+      return 0;
+    }
+    return ((this.gapPrefix[index + 1] ?? 0) - (this.gapPrefix[index] ?? 0)) * this.gapUnits();
   }
 
   private timeStep(): number {

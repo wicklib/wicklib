@@ -32,6 +32,8 @@ const chart = createChart(document.getElementById("chart")!, {
         closeDay: day,
         closeTime: "16:00",
       })),
+      gapMode: "show",
+      gapWidth: 12,
     },
   },
 });
@@ -71,7 +73,7 @@ chart.loadDrawings(document);
 - Time-axis labels and drawings can extend into empty space after the last bar, using the last
   observed interval.
 - Host-supplied trading calendars with IANA time zones, DST-correct session boundaries,
-  holidays, and session-aware intraday labels.
+  holidays, session-aware intraday labels, and optional fixed-width session gaps.
 - Keyboard pan/zoom/fit, and two-pointer pinch zoom on touch devices.
 - Series datafeed: initial count load, debounced range loads with prefetch, abort on stale
   requests, prepend anchoring, realtime revision, loading and error events.

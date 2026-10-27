@@ -70,6 +70,43 @@ describe("session-aware time ticks", () => {
     expect(scale.getCalendarTimezone()).toBeNull();
   });
 
+  it("shows fixed-width gaps between sessions", () => {
+    const tradingCalendar = {
+      timezone: "America/New_York",
+      sessions: [1, 2, 3, 4, 5].map((day) => ({
+        openDay: day,
+        openTime: "09:30",
+        closeDay: day,
+        closeTime: "16:00",
+      })),
+    };
+    const scale = new TimeScale(sessionSource(), {
+      calendar: tradingCalendar,
+      gapMode: "show",
+      gapWidth: 40,
+    });
+    scale.setWidth(1136);
+    scale.fitContent();
+
+    const first = scale.indexToX(389);
+    const second = scale.indexToX(390);
+    expect(second - first).toBeGreaterThan(40);
+    expect(scale.isGapX((first + second) / 2)).toBe(true);
+
+    const compressed = new TimeScale(sessionSource(), {
+      calendar: tradingCalendar,
+      gapMode: "compress",
+    });
+    compressed.setWidth(1136);
+    compressed.fitContent();
+    expect(compressed.indexToX(390) - compressed.indexToX(389)).toBeLessThan(10);
+
+    const anchorX = scale.indexToX(100);
+    const anchorIndex = scale.xToIndex(anchorX);
+    scale.zoomAt(anchorX, -120);
+    expect(scale.xToIndex(anchorX)).toBeCloseTo(anchorIndex, 1);
+  });
+
   it("prefers an open over a close at a compressed session boundary", () => {
     const tradingCalendar = {
       timezone: "America/New_York",

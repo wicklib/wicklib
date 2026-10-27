@@ -404,6 +404,9 @@ export class ChartRenderer {
     const columns = Math.ceil(plot.width);
 
     for (let column = 0; column < columns; column += 1) {
+      if (this.timeScale.isGapX(column)) {
+        continue;
+      }
       const start = Math.max(from, Math.floor(this.timeScale.xToIndex(column)));
       const end = Math.min(to, Math.floor(this.timeScale.xToIndex(column + 1)));
       if (start > end) {
