@@ -1,5 +1,15 @@
 # @wicklib/script
 
+## 0.1.0-next.16
+
+### Minor Changes
+
+- 9d82f9f: Define API v1 streaming semantics: bar times must be strictly increasing, and partial-bar revisions fail with `REVISION_UNSUPPORTED`.
+
+### Patch Changes
+
+- @wicklib/core@0.1.0-next.16
+
 ## 0.1.0-next.15
 
 ### Minor Changes
