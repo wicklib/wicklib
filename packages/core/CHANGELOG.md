@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.10
+
+### Patch Changes
+
+- 1ae98ba: Allow clearing a chart trading calendar with `timeScale.setOptions({ calendar: null })` and prefer session-open labels when compressed session boundaries collide.
+
 ## 0.1.0-next.9
 
 ### Minor Changes
