@@ -29,7 +29,7 @@ zoom, `Home` fits. Pinch zoom works on touch. Core edits hot-reload.
 | `@wicklib/core`          | alpha   | Canvas2D scales, series, panes, indicators, drawings |
 | `@wicklib/indicators`    | alpha   | Built-in indicator catalog                           |
 | `@wicklib/react`         | alpha   | Thin React mount wrapper and `useChart`              |
-| `@wicklib/script`        | alpha   | WickScript API v1, compiler, sandbox, and runtime    |
+| `@wicklib/script`        | alpha   | WickScript API v1, compiler, worker runtime          |
 | `@wicklib/script-editor` | planned | Monaco integration                                   |
 | `wicklib`                | alpha   | Umbrella package: core + indicators                  |
 

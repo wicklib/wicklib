@@ -55,6 +55,27 @@ export default defineScript({
 - Module-level mutable state MUST NOT be used; use `ctx.state`.
 - Plot ids are inferred from the declared `plots` array.
 
+## 3B. Host runtime API
+
+```ts
+interface ScriptRuntime {
+  compile(source: string, options?: ScriptCompileOptions): Promise<CompiledScript>;
+  dispose(): void;
+}
+
+interface CompiledScript {
+  readonly metadata: ScriptMetadata;
+  replay(bars: readonly OhlcData[]): Promise<ScriptResult>;
+  stream(bar: OhlcData): Promise<ScriptResult>;
+  dispose(): Promise<void>;
+}
+```
+
+- Compilation and execution MUST happen inside the worker runtime.
+- `replay` and `stream` MUST use the same per-bar state path.
+- `dispose` MUST release the QuickJS context and all worker-owned resources.
+- Execution failures MUST be typed and include the bar index when available.
+
 ## 4. Context
 
 The context object MUST expose:

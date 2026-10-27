@@ -1,7 +1,7 @@
 import type { OhlcData, WickExtension } from "@wicklib/core";
 
 import { SCRIPT_NOT_IMPLEMENTED, WICKSCRIPT_API_VERSION } from "./constants";
-import type { ScriptContext } from "./authoring";
+import type { ScriptRuntime } from "./runtime";
 
 export { defineScript } from "./authoring";
 export { ScriptError } from "./errors";
@@ -22,30 +22,18 @@ export type {
 } from "./authoring";
 export type { ScriptErrorCode } from "./errors";
 export type { ScriptRuntimeErrorCode } from "./runtime-errors";
+export { createScriptWorkerRuntime } from "./runtime";
 export { SCRIPT_NOT_IMPLEMENTED, WICKSCRIPT_API_VERSION };
-
-/**
- * Output of a completed replay.
- */
-export interface ScriptResult {
-  plots: Readonly<Record<string, ReadonlyArray<number | null>>>;
-  alerts: ReadonlyArray<string>;
-}
-
-/**
- * A compiled script, ready for replay and streaming.
- */
-export interface CompiledScript {
-  run(context: ScriptContext): void;
-  dispose(): void;
-}
-
-/**
- * Compiles and executes WickScript sources.
- */
-export interface ScriptRuntime {
-  compile(source: string): Promise<CompiledScript>;
-}
+export type {
+  CompiledScript,
+  ScriptCompileOptions,
+  ScriptInputs,
+  ScriptLimits,
+  ScriptMetadata,
+  ScriptResult,
+  ScriptRuntime,
+  ScriptWorkerPort,
+} from "./runtime";
 
 /**
  * Extension descriptor used to register a runtime with the core.

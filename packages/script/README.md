@@ -2,10 +2,10 @@
 
 WickScript — TypeScript for charts.
 
-**Status: API v1 authoring + compiler + sandbox core.** `defineScript`, typed inputs/plots,
+**Status: API v1 authoring + compiler + worker runtime.** `defineScript`, typed inputs/plots,
 source-faithful TypeScript transpilation, import/sandbox-boundary validation, a QuickJS
-executor with limits, and a transport-independent worker protocol are implemented. The Web
-Worker transport, replay/stream scheduler, and editor remain.
+worker runtime with limits, and replay/stream execution are implemented. Free `ta.*`
+functions and the editor remain.
 
 Scripts are plain TypeScript against a fixed API. Wicklib does not invent syntax and does
 not fork TypeScript.
@@ -23,6 +23,27 @@ export default defineScript({
   },
 });
 ```
+
+Host-side execution requires a worker built from the `@wicklib/script/worker` entry. With
+Vite:
+
+```ts
+import ScriptWorker from "@wicklib/script/worker?worker";
+import { createScriptWorkerRuntime } from "@wicklib/script";
+
+const runtime = createScriptWorkerRuntime(new ScriptWorker());
+const script = await runtime.compile(source, {
+  inputs: { period: 50 },
+});
+
+const history = await script.replay(bars);
+const next = await script.stream(nextBar);
+
+await script.dispose();
+runtime.dispose();
+```
+
+Replay and streaming use the same per-bar state path.
 
 Read, in order:
 
