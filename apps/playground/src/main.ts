@@ -10,7 +10,7 @@ import {
 } from "@wicklib/core";
 import { ATR, BollingerBands, EMA, MACD, RSI, SMA, VWAP } from "@wicklib/indicators";
 
-import { generateOhlc } from "./data";
+import { US_EQUITIES_RTH, generateOhlc, generateSessionOhlc } from "./data";
 import { createMockFeed } from "./mock-feed";
 import "./style.css";
 
@@ -33,6 +33,8 @@ const TIMEFRAME_MINUTES: Record<Timeframe, number> = {
 };
 
 const RIGHT_MARGIN_BARS = 30;
+const MAX_VISIBLE_BARS = 720;
+const SESSION_VISIBLE_BARS = 900;
 
 interface BinanceSnapshot {
   version: number;
@@ -165,7 +167,7 @@ const chart = createChart(chartElement, {
   timeScale: {
     rightOffset: 4,
     barSpacing: 6,
-    maxVisibleBars: 720,
+    maxVisibleBars: MAX_VISIBLE_BARS,
   },
   priceScale: {
     scaleMargins: { top: 0.12, bottom: 0.12 },
@@ -195,6 +197,21 @@ const timeFormatter = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
+const newYorkDayFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
+
+const newYorkTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  month: "short",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
 let count = 100_000;
 let seed = 7;
 let timeframe: Timeframe = "1m";
@@ -202,6 +219,8 @@ let baseData: OhlcData[] = [];
 let data: OhlcData[] = [];
 let feedActive = false;
 let fitAfterFeedLoad = false;
+let instrumentLabel = "BTC/USDT";
+let summaryTimezone = "UTC";
 let binanceLabel: string | null = null;
 
 interface IndicatorHandle {
@@ -238,7 +257,15 @@ function findBar(time: number): OhlcData | null {
 
 function updateSummary(): void {
   const range = chart.timeScale().getVisibleRange();
-  const formatter = range.to - range.from <= 2 * 86_400_000 ? timeFormatter : dayFormatter;
+  const shortRange = range.to - range.from <= 2 * 86_400_000;
+  const formatter =
+    summaryTimezone === "America/New_York"
+      ? shortRange
+        ? newYorkTimeFormatter
+        : newYorkDayFormatter
+      : shortRange
+        ? timeFormatter
+        : dayFormatter;
   const from = range.from > 0 ? formatter.format(range.from) : "—";
   const to = range.to > 0 ? formatter.format(range.to) : "—";
 
@@ -246,7 +273,7 @@ function updateSummary(): void {
     ? "live feed"
     : (binanceLabel ?? `${data.length.toLocaleString("en-US")} bars`);
   const interval = feedActive ? "1m" : timeframe;
-  summary.textContent = `BTC/USDT · ${interval} · ${label} · ${from} → ${to}`;
+  summary.textContent = `${instrumentLabel} · ${interval} · ${label} · ${from} → ${to}`;
 }
 
 function stopFeed(): void {
@@ -260,6 +287,13 @@ function stopFeed(): void {
 }
 
 function startFeed(): void {
+  instrumentLabel = "BTC/USDT";
+  summaryTimezone = "UTC";
+  series.setOptions({ title: "BTC/USD" });
+  chart.timeScale().setOptions({
+    calendar: null,
+    maxVisibleBars: MAX_VISIBLE_BARS,
+  });
   if (timeframe !== "1m") {
     timeframe = "1m";
     timeframeSelect.value = "1m";
@@ -338,7 +372,14 @@ function load(): void {
     stopFeed();
   }
   binanceLabel = null;
+  instrumentLabel = "BTC/USDT";
+  summaryTimezone = "UTC";
+  series.setOptions({ title: "BTC/USD" });
   binanceButton.classList.remove("active");
+  chart.timeScale().setOptions({
+    calendar: null,
+    maxVisibleBars: MAX_VISIBLE_BARS,
+  });
   baseData = generateOhlc(count, seed);
 
   if (wasFeed) {
@@ -393,6 +434,27 @@ function aggregateOhlc(source: readonly OhlcData[], minutes: number): OhlcData[]
   return result;
 }
 
+function loadSessions(): void {
+  if (feedActive) {
+    stopFeed();
+  }
+  binanceLabel = "US equities RTH";
+  instrumentLabel = "SPX";
+  summaryTimezone = "America/New_York";
+  series.setOptions({ title: "SPX" });
+  binanceButton.classList.remove("active");
+  timeframe = "1m";
+  timeframeSelect.value = "1m";
+  timeframeSelect.disabled = false;
+  chart.timeScale().setOptions({
+    calendar: US_EQUITIES_RTH,
+    maxVisibleBars: SESSION_VISIBLE_BARS,
+  });
+  baseData = generateSessionOhlc(2, 390, seed);
+  applyTimeframe();
+  feedStatus.textContent = `${data.length.toLocaleString("en-US")} 1m bars`;
+}
+
 async function loadBinance(): Promise<void> {
   if (feedActive) {
     stopFeed();
@@ -409,7 +471,14 @@ async function loadBinance(): Promise<void> {
     }
 
     const snapshot = (await response.json()) as BinanceSnapshot;
+    chart.timeScale().setOptions({
+      calendar: null,
+      maxVisibleBars: MAX_VISIBLE_BARS,
+    });
     baseData = parseBinanceSnapshot(snapshot);
+    instrumentLabel = "BTC/USDT";
+    summaryTimezone = "UTC";
+    series.setOptions({ title: "BTC/USD" });
     binanceLabel = `Binance ${snapshot.market} ${snapshot.symbol} ${snapshot.year}`;
     binanceButton.classList.add("active");
     applyTimeframe();
@@ -741,7 +810,11 @@ if (requestedTimeframe && isTimeframe(requestedTimeframe)) {
 }
 
 document.body.dataset.theme = "dark";
-load();
+if (params.has("sessions")) {
+  loadSessions();
+} else {
+  load();
+}
 
 if (params.has("feed")) {
   startFeed();

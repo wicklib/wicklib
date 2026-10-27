@@ -18,6 +18,7 @@ Never published. Not part of the Changesets group.
 - Regenerate: new deterministic dataset (seed increments).
 - Use feed: simulated async feed with latency, live bars, loading state, and range loads.
 - Binance 2025: load the local one-year BTCUSDT 1m snapshot (525,600 bars).
+- Sessions: a deterministic US equities regular-hours fixture with a DST-aware calendar.
 - SMA / RSI / MACD toggles: overlays and separate indicator panes.
 - Trend, H-Line, Rect, Fib, and Clear: interactive drawing tools.
 - Fit: reset the time scale, capped at 720 bars.
@@ -35,12 +36,20 @@ Never published. Not part of the Changesets group.
 
 - `?feed` — start in datafeed mode.
 - `?binance` — load the local Binance 2025 BTCUSDT 1m snapshot.
+- `?sessions` — load the US equities regular-hours fixture and session calendar.
 - `?timeframe=15m` — start on a derived timeframe; accepts `1m`, `5m`, `15m`, `1h`, `4h`, `1d`.
 - `?indicators` — enable SMA, RSI, and MACD.
 - `?drawings` — add a deterministic set of demo drawings.
 - `?test` — deterministic static chart, animation/FPS loop disabled, sets
   `window.__wicklibReady` for Playwright.
 - `?bench` — runs a 180-frame 100k-bar pan benchmark and exposes `window.__wicklibBench`.
+
+## Session fixture
+
+`?sessions` generates two deterministic US equities regular-hours sessions. The chart uses
+`America/New_York`, Monday–Friday 09:30–16:00, so the time axis demonstrates session-aware
+labels without requiring external data. The fixture is synthetic and private to the
+playground.
 
 ## Binance snapshot
 

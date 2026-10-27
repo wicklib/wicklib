@@ -90,6 +90,29 @@ test("derives a timeframe from 1m bars", async ({ page }) => {
   await expect(page.locator("#summary")).toContainText("20,000 bars");
 });
 
+test("session calendar", async ({ page }) => {
+  await page.goto("/?test&sessions");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+  await page.waitForTimeout(150);
+
+  const box = await page.locator("#chart").boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) {
+    return;
+  }
+
+  await expect(page.locator("#summary")).toContainText("US equities RTH");
+  await expect(page).toHaveScreenshot("session-hours.png", {
+    clip: {
+      x: Math.floor(box.x + 12),
+      y: Math.floor(box.y + 64),
+      width: Math.floor(box.width - 80),
+      height: Math.floor(box.height - 110),
+    },
+    animations: "disabled",
+  });
+});
+
 test("100k bar pan benchmark", async ({ page }) => {
   await page.goto("/?bench");
   await page.waitForFunction(() => Boolean(window.__wicklibBench), null, {
