@@ -10,11 +10,12 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "dev": "turbo run dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "api": "turbo run api",
-    "lint": "eslint packages",
+    "lint": "eslint packages apps",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "depcruise": "depcruise packages --config dependency-cruiser.cjs",

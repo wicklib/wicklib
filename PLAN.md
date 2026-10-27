@@ -1,27 +1,104 @@
 # Wicklib — Implementation Plan
 
-Status: Phase 1 complete. Phase 2 not started.
+Status: Phase 1 complete. Phase 2 in progress: RFC-0001 accepted; playground and candlestick
+vertical slice implemented.
 
 Phase 1 froze the contract: packages, toolchain, CI, release pipeline, API report, extension
 seams, and the normative WickScript plan. No rendering exists yet.
 
 ## Phase 2 — rendering vertical slice
 
+Status: in progress. Steps 0–5 are implemented; datafeed (Step 6) and visual regression
+(Step 7) are pending.
+
+Decisions:
+
+- Continuous time first (crypto/forex). No sessions, holidays, or DST yet; session logic is
+  deferred behind a time-scale policy seam.
+- The dev harness is a private playground in this repo. The site is never used as a dev loop.
+- The Phase 1 types are placeholders. Replacing them is expected and must be a reviewed API
+  report diff, not an accident.
+
 Goal: a usable candlestick chart with real data, no indicators.
 
-1. `Renderer` interface + Canvas2D implementation; layered surfaces (grid, series, overlays,
-   crosshair, UI).
-2. Data model: `Float64Array`-backed bars, time index, stable series identity.
-3. Time scale: sessions, gaps, timezone display, DST. Start equity/forex aware.
-4. Price scale: linear, log-ready, autoscale, padding, nice ticks.
-5. Candlestick series through `addSeries`; axis rendering.
-6. Interactions: crosshair, wheel zoom, drag pan, keyboard, touch.
-7. `Datafeed` adapters: static array and HTTP range loader.
-8. `destroy()` lifecycle with zero leaks; resize observer.
-9. Performance baseline: 100k bars, 60fps pan/zoom on a mid-range laptop.
+### Step 0 — API design pass (done)
 
-Exit criteria: a demo page renders 100k bars from an HTTP datafeed with crosshair,
-zoom, pan, and correct teardown; no public API change against the Phase 1 report.
+RFC-0001 is accepted. The types and API report were updated from it.
+
+- series definition, options, and data attachment;
+- chart lifecycle, subscription, and event payloads;
+- error model and typed error codes;
+- how extensions, license metadata, and multiple charts fit together;
+- datafeed deferred to RFC-0002.
+
+### Step 0.5 — playground (done)
+
+`apps/playground`: private Vite + vanilla TypeScript app wired to the workspace.
+
+- `pnpm dev` from the repo root.
+- Synthetic OHLC generator, bar-count and theme controls, FPS counter.
+- Never published, never part of the Changesets group.
+- Playwright visual tests run against it in Phase 3.
+
+### Step 1 — data and scales (done)
+
+- `Float64Array`-backed bars, stable series identity, immutable snapshots.
+- Continuous time scale: index ↔ time, gaps handled by the policy seam later.
+- Price scale: linear, log-ready, autoscale, padding, nice ticks.
+- Pure functions, no DOM, fully unit-tested.
+
+### Step 2 — renderer (done)
+
+- `Renderer` interface and Canvas2D implementation.
+- Layered surfaces: grid, series, overlays, crosshair, UI.
+- Device-pixel-ratio handling; offscreen canvas where it pays.
+
+### Step 3 — lifecycle (done)
+
+- Container mount, `ResizeObserver`, visibility handling, `destroy()` with zero leaks.
+- No global state; multiple charts on one page must be independent.
+
+### Step 4 — candlestick vertical slice (done)
+
+- Candlestick series through the real series pipeline.
+- Price axis and time axis with correct tick selection.
+- Empty state, loading state, and error state.
+
+### Step 5 — interactions (partial)
+
+- Crosshair with snapping and a shared event payload.
+- Wheel zoom anchored at the pointer; drag pan; keyboard; touch.
+- Range clamping and inertia decisions documented.
+
+### Step 6 — datafeed (pending)
+
+Requires RFC-0002 before implementation.
+
+- Static array adapter, then async range loader with abort support.
+- Realtime subscription with revision semantics.
+- Errors surfaced to the host, never swallowed.
+
+### Step 7 — performance and regression (partial)
+
+- Playground FPS meter exists; a recorded baseline is pending.
+- Visual regression snapshots and a small determinism fixture set are pending.
+
+- 100k bars, 60fps pan/zoom on a mid-range laptop.
+- Visual regression snapshots and a small determinism fixture set.
+
+Exit criteria:
+
+- [x] Playground renders 100k synthetic bars with crosshair, zoom, pan, and clean teardown.
+- [ ] 60fps interaction baseline recorded.
+- [x] API report diff reviewed and documented.
+- [x] Unit tests for scales and data lifecycle.
+- [ ] Visual tests for rendering.
+- [x] No sessions/DST, no WebGL, no indicators, no script, no pro in this phase.
+
+Implemented in this phase: continuous time scale, linear price scale, layered Canvas2D
+renderer, candlestick series, price/time axes, grid, legend, last-value line, crosshair
+(normal and magnet), click events, drag pan, wheel zoom, resize, dispose, strict validation,
+typed errors, per-chart extension validation, and the private playground.
 
 ## Phase 3 — indicators and structure
 

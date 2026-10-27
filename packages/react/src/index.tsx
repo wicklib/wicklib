@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { Chart, ChartOptions } from "@wicklib/core";
+import type { ChartApi, ChartOptions } from "@wicklib/core";
 
 /**
  * Props for {@link WickChart}.
@@ -24,6 +24,6 @@ export function WickChart({ className }: WickChartProps) {
 /**
  * Returns the chart owned by the nearest {@link WickChart}, once implemented.
  */
-export function useChart(_options?: ChartOptions): Chart | null {
+export function useChart(_options?: ChartOptions): ChartApi | null {
   return null;
 }

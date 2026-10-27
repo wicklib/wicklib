@@ -1,4 +1,4 @@
-import type { Bar, WickExtension } from "@wicklib/core";
+import type { OhlcData, WickExtension } from "@wicklib/core";
 
 /**
  * Version of the WickScript API surface. Scripts declare the version they target.
@@ -24,7 +24,7 @@ export interface ScriptInput {
  */
 export interface ScriptContext {
   /** The bar currently being evaluated. */
-  readonly bar: Bar;
+  readonly bar: OhlcData;
   /** Zero-based index of the bar in the replay. */
   readonly index: number;
   /** Resolved user inputs. */

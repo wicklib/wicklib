@@ -8,71 +8,137 @@
 export function assertFeature(context: LicenseContext, feature: Feature): void;
 
 // @public
-export interface Bar {
+export const CandlestickSeries: SeriesType<OhlcData, CandlestickSeriesOptions>;
+
+// @public
+export interface CandlestickSeriesOptions extends SeriesOptions {
+    borderVisible?: boolean;
     // (undocumented)
-    close: number;
+    downColor?: string;
     // (undocumented)
-    high: number;
+    upColor?: string;
     // (undocumented)
-    low: number;
+    wickDownColor?: string;
     // (undocumented)
-    open: number;
-    // (undocumented)
-    time: Time;
-    // (undocumented)
-    volume?: number;
+    wickUpColor?: string;
 }
 
 // @public
-export interface BarsRequest {
+export interface ChartApi {
     // (undocumented)
-    from: Time;
+    addPane(options?: PaneOptions): PaneApi;
     // (undocumented)
-    interval: string;
+    addSeries<TData extends SeriesData, TOptions extends SeriesOptions>(type: SeriesType<TData, TOptions>, options?: TOptions): SeriesApi<TData, TOptions>;
     // (undocumented)
-    symbol: string;
-    // (undocumented)
-    to: Time;
-}
-
-// @public
-export interface BarsResponse {
-    // (undocumented)
-    bars: Bar[];
-    noData?: boolean;
-}
-
-// @public
-export interface Chart {
-    addPane(): string;
-    addSeries(extension: WickExtension): string;
     destroy(): void;
-    removeSeries(id: string): void;
-    setDatafeed(datafeed: Datafeed): void;
-    subscribe(event: ChartEvent, listener: (payload: unknown) => void): () => void;
+    // (undocumented)
+    on<K extends keyof ChartEventMap>(event: K, handler: (payload: ChartEventMap[K]) => void): Unsubscribe;
+    // (undocumented)
+    resize(): void;
+    // (undocumented)
+    setOptions(options: Partial<ChartOptions>): void;
+    // (undocumented)
+    timeScale(): TimeScaleApi;
 }
 
 // @public
-export type ChartEvent = "crosshair" | "visible-range" | "click" | "ready";
+export interface ChartClickEvent {
+    // (undocumented)
+    button: "left" | "middle" | "right";
+    // (undocumented)
+    paneId: string;
+    // (undocumented)
+    point: Point;
+    // (undocumented)
+    price: number | null;
+    // (undocumented)
+    time: Time | null;
+}
+
+// @public
+export interface ChartErrorEvent {
+    // (undocumented)
+    error: WickError;
+    // (undocumented)
+    source: "chart" | "series" | "extension" | "datafeed";
+}
+
+// @public
+export interface ChartEventMap {
+    // (undocumented)
+    "visible-range": VisibleRangeEvent;
+    // (undocumented)
+    click: ChartClickEvent;
+    // (undocumented)
+    crosshair: CrosshairEvent;
+    // (undocumented)
+    error: ChartErrorEvent;
+    // (undocumented)
+    ready: ReadyEvent;
+}
 
 // @public
 export interface ChartOptions {
-    crosshair?: boolean;
-    interval?: string;
-    symbol?: string;
+    autoSize?: boolean;
+    // (undocumented)
+    crosshair?: CrosshairOptions;
+    extensions?: readonly WickExtension[];
+    // (undocumented)
+    grid?: GridOptions;
+    height?: number;
+    // (undocumented)
+    layout?: LayoutOptions;
+    locale?: string;
+    // (undocumented)
+    priceScale?: PriceScaleOptions;
+    // (undocumented)
+    timeScale?: TimeScaleOptions;
+    timezone?: string;
+    width?: number;
 }
 
 // @public
-export function createChart(container: HTMLElement, options?: ChartOptions): Chart;
+export function createChart(container: HTMLElement, options?: ChartOptions): ChartApi;
 
 // @public
-export interface Datafeed {
-    getBars(request: BarsRequest): Promise<BarsResponse>;
-    subscribeBars?(request: BarsRequest, onBar: (bar: Bar) => void): () => void;
+export interface CrosshairEvent {
+    // (undocumented)
+    paneId: string;
+    // (undocumented)
+    point: Point | null;
+    // (undocumented)
+    price: number | null;
+    // (undocumented)
+    time: Time | null;
 }
 
 // @public
-export type ExtensionKind = "series" | "indicator" | "drawing" | "script-runtime";
+export interface CrosshairLineOptions {
+    // (undocumented)
+    color?: string;
+    // (undocumented)
+    style?: "solid" | "dotted" | "dashed";
+    // (undocumented)
+    visible?: boolean;
+    // (undocumented)
+    width?: number;
+}
+
+// @public
+export interface CrosshairOptions {
+    // (undocumented)
+    color?: string;
+    // (undocumented)
+    horzLine?: CrosshairLineOptions;
+    // (undocumented)
+    labelBackground?: string;
+    mode?: "normal" | "magnet" | "hidden";
+    // (undocumented)
+    vertLine?: CrosshairLineOptions;
+}
+
+// @public
+export type ExtensionKind = "series" | "indicator" | "drawing" | "script-runtime" | "feature";
 
 // @public
 export interface ExtensionMeta {
@@ -83,13 +149,38 @@ export interface ExtensionMeta {
 }
 
 // @public
-export type ExtensionRegistration = Omit<WickExtension, "kind">;
-
-// @public
 export type Feature = "orderflow" | "volume-profile" | "panes" | "layouts" | "strategy" | "alerts" | "script-functions";
 
 // @public
+export interface GridLineOptions {
+    color?: string;
+    visible?: boolean;
+}
+
+// @public
+export interface GridOptions {
+    // (undocumented)
+    horzLines?: GridLineOptions;
+    // (undocumented)
+    vertLines?: GridLineOptions;
+}
+
+// @public
+export type Interval = string;
+
+// @public
+export function isWickError(value: unknown): value is WickError;
+
+// @public
+export interface LayoutOptions {
+    background?: string;
+    fontSize?: number;
+    textColor?: string;
+}
+
+// @public
 export interface LicenseContext {
+    // (undocumented)
     hasFeature(feature: Feature): boolean;
 }
 
@@ -97,35 +188,201 @@ export interface LicenseContext {
 export type LicenseTier = "free" | "pro";
 
 // @public
-export const NOT_IMPLEMENTED = "WICKLIB_NOT_IMPLEMENTED";
+export interface LineData extends SeriesData {
+    // (undocumented)
+    value: number;
+}
 
 // @public
-export function registerDrawingTool(registration: ExtensionRegistration): void;
+export interface LineSeriesOptions extends SeriesOptions {
+    // (undocumented)
+    color?: string;
+    // (undocumented)
+    lineStyle?: "solid" | "dotted" | "dashed";
+    // (undocumented)
+    lineWidth?: number;
+}
 
 // @public
-export function registerExtension(extension: WickExtension): void;
+export interface OhlcData extends SeriesData {
+    // (undocumented)
+    close: number;
+    // (undocumented)
+    high: number;
+    // (undocumented)
+    low: number;
+    // (undocumented)
+    open: number;
+}
 
 // @public
-export function registerIndicator(registration: ExtensionRegistration): void;
+export interface PaneApi {
+    // (undocumented)
+    readonly id: string;
+    // (undocumented)
+    remove(): void;
+    // (undocumented)
+    setHeight(height: number): void;
+}
 
 // @public
-export function registerScriptRuntime(registration: ExtensionRegistration): void;
+export interface PaneOptions {
+    // (undocumented)
+    height?: number;
+}
 
 // @public
-export function registerSeriesType(registration: ExtensionRegistration): void;
+export interface Point {
+    // (undocumented)
+    x: number;
+    // (undocumented)
+    y: number;
+}
+
+// @public
+export interface PriceRange {
+    // (undocumented)
+    max: number;
+    // (undocumented)
+    min: number;
+}
+
+// @public
+export interface PriceScaleApi {
+    // (undocumented)
+    getVisibleRange(): PriceRange;
+    // (undocumented)
+    setAutoScale(enabled: boolean): void;
+    // (undocumented)
+    setVisibleRange(range: PriceRange): void;
+}
+
+// @public
+export interface PriceScaleOptions {
+    autoScale?: boolean;
+    borderVisible?: boolean;
+    invertScale?: boolean;
+    mode?: "normal" | "logarithmic";
+    scaleMargins?: {
+        top: number;
+        bottom: number;
+    };
+}
+
+// @public
+export type ReadyEvent = void;
+
+// @public
+export interface SeriesApi<TData extends SeriesData = SeriesData, TOptions extends SeriesOptions = SeriesOptions> {
+    // (undocumented)
+    readonly id: string;
+    // (undocumented)
+    readonly paneId: string;
+    // (undocumented)
+    priceScale(): PriceScaleApi;
+    // (undocumented)
+    remove(): void;
+    // (undocumented)
+    setData(data: readonly TData[]): void;
+    // (undocumented)
+    setOptions(options: Partial<TOptions>): void;
+    // (undocumented)
+    update(data: TData): void;
+}
+
+// @public
+export interface SeriesData {
+    // (undocumented)
+    time: Time;
+}
+
+// @public
+export interface SeriesOptions {
+    lastValueVisible?: boolean;
+    paneId?: string;
+    priceLineVisible?: boolean;
+    priceScaleId?: string;
+    title?: string;
+    visible?: boolean;
+}
+
+// @public
+export interface SeriesType<TData extends SeriesData = SeriesData, TOptions extends SeriesOptions = SeriesOptions> {
+    // (undocumented)
+    readonly id: string;
+    // (undocumented)
+    readonly meta: ExtensionMeta;
+}
 
 // @public
 export type Time = number;
 
 // @public
+export interface TimeScaleApi {
+    // (undocumented)
+    fitContent(): void;
+    // (undocumented)
+    getVisibleRange(): VisibleRange;
+    // (undocumented)
+    scrollToTime(time: Time): void;
+    // (undocumented)
+    setOptions(options: Partial<TimeScaleOptions>): void;
+    // (undocumented)
+    setVisibleRange(range: VisibleRange): void;
+}
+
+// @public
+export interface TimeScaleOptions {
+    barSpacing?: number;
+    maxBarSpacing?: number;
+    minBarSpacing?: number;
+    rightOffset?: number;
+    secondsVisible?: boolean;
+    timeVisible?: boolean;
+}
+
+// @public
+export type Unsubscribe = () => void;
+
+// @public
 export const VERSION = "0.1.0-dev.0";
+
+// @public
+export interface VisibleRange {
+    // (undocumented)
+    from: Time;
+    // (undocumented)
+    to: Time;
+}
+
+// @public
+export interface VisibleRangeEvent {
+    // (undocumented)
+    from: Time;
+    // (undocumented)
+    paneId: string;
+    // (undocumented)
+    to: Time;
+}
+
+// @public
+export class WickError extends Error {
+    constructor(code: WickErrorCode, message: string, details?: Record<string, unknown>);
+    // (undocumented)
+    readonly code: WickErrorCode;
+    // (undocumented)
+    readonly details?: Readonly<Record<string, unknown>>;
+}
+
+// @public
+export type WickErrorCode = "INVALID_ARGUMENT" | "INVALID_DATA" | "NOT_IMPLEMENTED" | "LICENSE_REQUIRED" | "DUPLICATE_SERIES" | "DUPLICATE_EXTENSION" | "UNKNOWN_SERIES_TYPE" | "DATAFEED_ERROR" | "DISPOSED";
 
 // @public
 export interface WickExtension {
     // (undocumented)
-    kind: ExtensionKind;
+    readonly kind: ExtensionKind;
     // (undocumented)
-    meta: ExtensionMeta;
+    readonly meta: ExtensionMeta;
 }
 
 // (No @packageDocumentation comment for this package)
