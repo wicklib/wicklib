@@ -665,6 +665,7 @@ export interface TimeScaleApi {
 export interface TimeScaleOptions {
     barSpacing?: number;
     maxBarSpacing?: number;
+    maxVisibleBars?: number;
     minBarSpacing?: number;
     rightOffset?: number;
     secondsVisible?: boolean;

@@ -237,6 +237,8 @@ export interface TimeScaleOptions {
   minBarSpacing?: number;
   /** Upper bound for `barSpacing`. */
   maxBarSpacing?: number;
+  /** Maximum number of bars visible when zoomed out. Defaults to unlimited. */
+  maxVisibleBars?: number;
   /** Show time labels in the time axis. */
   timeVisible?: boolean;
   /** Show seconds in time labels. */

@@ -15,6 +15,7 @@ const DEFAULT_OPTIONS: Required<TimeScaleOptions> = {
   rightOffset: 2,
   minBarSpacing: 0.001,
   maxBarSpacing: 200,
+  maxVisibleBars: Number.POSITIVE_INFINITY,
   timeVisible: true,
   secondsVisible: false,
 };
@@ -37,6 +38,7 @@ export class TimeScale {
   private rightOffset = DEFAULT_OPTIONS.rightOffset;
   private minBarSpacing = DEFAULT_OPTIONS.minBarSpacing;
   private maxBarSpacing = DEFAULT_OPTIONS.maxBarSpacing;
+  private maxVisibleBars = DEFAULT_OPTIONS.maxVisibleBars;
   private timeVisible = DEFAULT_OPTIONS.timeVisible;
   private secondsVisible = DEFAULT_OPTIONS.secondsVisible;
   private explicitRange = false;
@@ -73,6 +75,7 @@ export class TimeScale {
       rightOffset: this.rightOffset,
       minBarSpacing: this.minBarSpacing,
       maxBarSpacing: this.maxBarSpacing,
+      maxVisibleBars: this.maxVisibleBars,
       timeVisible: this.timeVisible,
       secondsVisible: this.secondsVisible,
     };
@@ -169,7 +172,11 @@ export class TimeScale {
     this.explicitRange = true;
 
     const factor = Math.exp(-deltaY * 0.0015);
-    const nextSpacing = clamp(this.barSpacing * factor, this.minBarSpacing, this.maxBarSpacing);
+    const nextSpacing = clamp(
+      this.barSpacing * factor,
+      this.minimumBarSpacing(),
+      this.maxBarSpacing,
+    );
     if (nextSpacing === this.barSpacing) {
       return;
     }
@@ -192,7 +199,7 @@ export class TimeScale {
     const usable = Math.max(1, this.width - paddingPixels * 2);
     this.barSpacing = clamp(
       usable / Math.max(1, count - 1),
-      this.minBarSpacing,
+      this.minimumBarSpacing(),
       this.maxBarSpacing,
     );
     this.rightOffset = paddingPixels / this.barSpacing;
@@ -229,7 +236,7 @@ export class TimeScale {
 
     this.barSpacing = clamp(
       this.width / Math.max(1, last - first),
-      this.minBarSpacing,
+      this.minimumBarSpacing(),
       this.maxBarSpacing,
     );
     this.rightOffset = last - this.lastIndex();
@@ -267,6 +274,12 @@ export class TimeScale {
       assertPositive("maxBarSpacing", options.maxBarSpacing);
       this.maxBarSpacing = options.maxBarSpacing;
     }
+    if (options.maxVisibleBars !== undefined) {
+      if (!Number.isInteger(options.maxVisibleBars) || options.maxVisibleBars <= 0) {
+        fail("INVALID_ARGUMENT", "maxVisibleBars must be a positive integer");
+      }
+      this.maxVisibleBars = options.maxVisibleBars;
+    }
     if (this.maxBarSpacing < this.minBarSpacing) {
       fail("INVALID_ARGUMENT", "maxBarSpacing must be greater than or equal to minBarSpacing");
     }
@@ -286,8 +299,18 @@ export class TimeScale {
     return this.source.count() - 1;
   }
 
+  private minimumBarSpacing(): number {
+    if (!Number.isFinite(this.maxVisibleBars)) {
+      return this.minBarSpacing;
+    }
+    return Math.min(
+      this.maxBarSpacing,
+      Math.max(this.minBarSpacing, this.width / Math.max(1, this.maxVisibleBars - 1)),
+    );
+  }
+
   private clamp(): void {
-    this.barSpacing = clamp(this.barSpacing, this.minBarSpacing, this.maxBarSpacing);
+    this.barSpacing = clamp(this.barSpacing, this.minimumBarSpacing(), this.maxBarSpacing);
 
     const count = this.source.count();
     if (count === 0) {

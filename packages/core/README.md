@@ -47,7 +47,7 @@ chart.loadDrawings(document);
 
 ## What is implemented
 
-- Continuous index-based time scale and linear price scale.
+- Continuous index-based time scale and linear price scale, with optional zoom-out limits.
 - Candlestick series with layered canvas rendering.
 - Price and time axes, grid, last-value line and label, series legend.
 - Crosshair (normal and magnet), click, drag pan, wheel zoom, resize, clean teardown.

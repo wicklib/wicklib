@@ -68,6 +68,38 @@ describe("TimeScale", () => {
     expect(scale.getBarSpacing()).toBeGreaterThan(0);
   });
 
+  it("caps zoom-out at maxVisibleBars", () => {
+    const scale = new TimeScale(source(1_000), { maxVisibleBars: 100 });
+    scale.setWidth(800);
+    scale.fitContent();
+
+    expect(scale.getOptions().maxVisibleBars).toBe(100);
+    expect(visibleBars(scale)).toBeLessThanOrEqual(100);
+
+    scale.zoomAt(400, 10_000);
+    expect(visibleBars(scale)).toBeLessThanOrEqual(100);
+
+    scale.setWidth(1_600);
+    expect(visibleBars(scale)).toBeLessThanOrEqual(100);
+  });
+
+  it("applies a zoom-out cap to explicit ranges and option changes", () => {
+    const scale = new TimeScale(source(1_000), { maxVisibleBars: 100 });
+    scale.setWidth(800);
+
+    scale.setVisibleRange({ from: 0, to: 500 * MINUTE });
+    expect(visibleBars(scale)).toBeLessThanOrEqual(100);
+
+    scale.setOptions({ maxVisibleBars: 40 });
+    expect(scale.getOptions().maxVisibleBars).toBe(40);
+    expect(visibleBars(scale)).toBeLessThanOrEqual(40);
+  });
+
+  it("rejects invalid maxVisibleBars", () => {
+    expect(() => new TimeScale(source(10), { maxVisibleBars: 0 })).toThrow(/positive integer/);
+    expect(() => new TimeScale(source(10), { maxVisibleBars: 1.5 })).toThrow(/positive integer/);
+  });
+
   it("sets a visible range from times", () => {
     const scale = new TimeScale(source(100));
     scale.setWidth(800);
@@ -104,3 +136,8 @@ describe("TimeScale", () => {
     );
   });
 });
+
+function visibleBars(scale: TimeScale): number {
+  const range = scale.visibleIndexRange();
+  return range.last - range.first + 1;
+}
