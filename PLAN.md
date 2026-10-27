@@ -123,10 +123,10 @@ the internal line/histogram/area renderers; standalone line/area/histogram serie
 deferred until a generic data store exists. The React wrapper is client-only: `WickChart`
 creates the core chart in an effect, patches option updates, recreates on extension changes,
 and exposes the chart through `useChart`. Sessions/DST remain deferred behind the time-scale
-policy seam. RFC-0005 is accepted; compressed session labels and DST resolution are
-implemented, with explicit closed-period gaps pending. Real exchange data is a playground-only
-static snapshot: the Binance importer validates and compacts monthly Binance ZIPs; no live feed
-or core datafeed changes are involved.
+policy seam. RFC-0005 is accepted; compressed session labels, DST resolution, and explicit
+closed-period gaps are implemented. Real exchange data is a playground-only static snapshot:
+the Binance importer validates and compacts monthly Binance ZIPs; no live feed or core datafeed
+changes are involved.
 
 ## Phase 4 — WickScript
 

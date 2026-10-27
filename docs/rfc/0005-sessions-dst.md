@@ -1,6 +1,6 @@
 # RFC-0005: Session-aware time scale
 
-- Status: **Accepted** — compressed session labels implemented; explicit gaps pending
+- Status: **Accepted** — compressed labels and explicit gaps implemented
 - Date: 2026-10-27
 - Depends on: RFC-0001 (accepted), RFC-0003 (accepted)
 
@@ -140,8 +140,10 @@ The first compressed-mode slice is implemented:
 - Calendar times resolve through IANA time zones, including DST transitions.
 - Intraday views up to two days skip closed-period ticks and add session open/close ticks.
 - Labels and crosshair times use the calendar timezone.
-- Wider views keep date-level ticks; explicit closed-period gaps are still pending.
-- Visual gap rendering, holidays UI, and bundled exchange calendars remain out of scope.
+- `gapMode: "show"` inserts fixed-width gaps for closed sessions and keeps pan, zoom, fit,
+  drawings, and aggregated candles aligned to the same layout mapping.
+- Wider views keep date-level ticks. Holidays UI and bundled exchange calendars remain out of
+  scope.
 
 ## 12. Acceptance criteria
 
