@@ -2,9 +2,10 @@
 
 WickScript — TypeScript for charts.
 
-**Status: API v1 authoring + compiler.** `defineScript`, typed inputs/plots, source-faithful
-TypeScript transpilation, and import/sandbox-boundary validation are implemented. The QuickJS
-runtime and editor remain.
+**Status: API v1 authoring + compiler + sandbox core.** `defineScript`, typed inputs/plots,
+source-faithful TypeScript transpilation, import/sandbox-boundary validation, a QuickJS
+executor with limits, and a transport-independent worker protocol are implemented. The Web
+Worker transport, replay/stream scheduler, and editor remain.
 
 Scripts are plain TypeScript against a fixed API. Wicklib does not invent syntax and does
 not fork TypeScript.

@@ -5,6 +5,7 @@ import type { ScriptContext } from "./authoring";
 
 export { defineScript } from "./authoring";
 export { ScriptError } from "./errors";
+export { ScriptRuntimeError } from "./runtime-errors";
 export type {
   BooleanScriptInput,
   NumberScriptInput,
@@ -20,6 +21,7 @@ export type {
   StringScriptInput,
 } from "./authoring";
 export type { ScriptErrorCode } from "./errors";
+export type { ScriptRuntimeErrorCode } from "./runtime-errors";
 export { SCRIPT_NOT_IMPLEMENTED, WICKSCRIPT_API_VERSION };
 
 /**
