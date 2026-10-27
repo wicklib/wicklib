@@ -232,19 +232,23 @@ export class ChartRenderer {
         context.stroke();
       }
 
-      context.strokeStyle = model.grid.vertColor;
-      context.beginPath();
-      context.moveTo(plot.left, crisp(plot.bottom));
-      context.lineTo(plot.right, crisp(plot.bottom));
-      context.stroke();
+      if (this.timeScale.getOptions().borderVisible) {
+        context.strokeStyle = model.grid.vertColor;
+        context.beginPath();
+        context.moveTo(plot.left, crisp(plot.bottom));
+        context.lineTo(plot.right, crisp(plot.bottom));
+        context.stroke();
+      }
     }
 
     context.fillStyle = model.layout.textColor;
     context.strokeStyle = model.grid.vertColor;
-    context.beginPath();
-    context.moveTo(bottomPane.plot.left, crisp(bottomPane.plot.bottom));
-    context.lineTo(bottomPane.plot.right, crisp(bottomPane.plot.bottom));
-    context.stroke();
+    if (this.timeScale.getOptions().borderVisible) {
+      context.beginPath();
+      context.moveTo(bottomPane.plot.left, crisp(bottomPane.plot.bottom));
+      context.lineTo(bottomPane.plot.right, crisp(bottomPane.plot.bottom));
+      context.stroke();
+    }
 
     context.textAlign = "center";
     let lastTimeX = Number.NEGATIVE_INFINITY;

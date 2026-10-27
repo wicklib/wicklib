@@ -150,6 +150,8 @@ export interface ChartOptions {
     grid?: GridOptions;
     height?: number;
     // (undocumented)
+    interaction?: InteractionOptions;
+    // (undocumented)
     layout?: LayoutOptions;
     locale?: string;
     // (undocumented)
@@ -478,6 +480,15 @@ export interface IndicatorPlotOptions {
 }
 
 // @public
+export interface InteractionOptions {
+    axisDoubleClickReset?: boolean;
+    axisDrag?: boolean;
+    drag?: boolean;
+    pinch?: boolean;
+    wheel?: boolean;
+}
+
+// @public
 export type Interval = string;
 
 // @public
@@ -500,6 +511,79 @@ export interface LicenseContext {
 export type LicenseTier = "free" | "pro";
 
 // @public
+export interface LightweightChartOptions {
+    // (undocumented)
+    [key: string]: unknown;
+    // (undocumented)
+    autoSize?: boolean;
+    // (undocumented)
+    crosshair?: {
+        mode?: 0 | 1 | 2 | "normal" | "magnet" | "hidden";
+        vertLine?: LightweightLineOptions;
+        horzLine?: LightweightLineOptions;
+    };
+    // (undocumented)
+    grid?: {
+        vertLines?: {
+            color?: string;
+        };
+        horzLines?: {
+            color?: string;
+        };
+    };
+    // (undocumented)
+    handleScale?: {
+        mouseWheel?: boolean;
+        pinch?: boolean;
+        axisPressedMouseMove?: boolean;
+        axisDoubleClickReset?: boolean;
+    };
+    // (undocumented)
+    handleScroll?: {
+        mouseWheel?: boolean;
+        pressedMouseMove?: boolean;
+        horzTouchDrag?: boolean;
+        vertTouchDrag?: boolean;
+    };
+    // (undocumented)
+    height?: number;
+    // (undocumented)
+    layout?: {
+        background?: string | LightweightBackground;
+        textColor?: string;
+        fontSize?: number;
+        fontFamily?: string;
+    };
+    // (undocumented)
+    localization?: {
+        locale?: string;
+    };
+    // (undocumented)
+    rightPriceScale?: {
+        borderVisible?: boolean;
+        autoScale?: boolean;
+        invertScale?: boolean;
+        scaleMargins?: {
+            top?: number;
+            bottom?: number;
+        };
+        mode?: 0 | 1 | 2 | 3 | "normal" | "logarithmic" | "percentage" | "indexedTo100";
+    };
+    // (undocumented)
+    timeScale?: {
+        barSpacing?: number;
+        rightOffset?: number;
+        minBarSpacing?: number;
+        maxBarSpacing?: number;
+        timeVisible?: boolean;
+        secondsVisible?: boolean;
+        borderVisible?: boolean;
+    };
+    // (undocumented)
+    width?: number;
+}
+
+// @public
 export interface LineData extends SeriesData {
     // (undocumented)
     value: number;
@@ -514,6 +598,9 @@ export interface LineSeriesOptions extends SeriesOptions {
     // (undocumented)
     lineWidth?: number;
 }
+
+// @public
+export function mapLightweightChartOptions(options: LightweightChartOptions): ChartOptions;
 
 // @public (undocumented)
 export const Measure: DrawingToolDefinition;
@@ -785,6 +872,7 @@ export interface TimeScaleApi {
 // @public
 export interface TimeScaleOptions {
     barSpacing?: number;
+    borderVisible?: boolean;
     calendar?: TradingCalendar | null;
     gapMode?: SessionGapMode;
     gapWidth?: number;
@@ -849,6 +937,11 @@ export interface WickExtension {
     // (undocumented)
     readonly meta: ExtensionMeta;
 }
+
+// Warnings were encountered during analysis:
+//
+// dist/index.d.ts:833:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:848:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

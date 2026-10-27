@@ -22,6 +22,7 @@ const DEFAULT_OPTIONS: Required<Omit<TimeScaleOptions, "calendar">> = {
   gapWidth: 12,
   timeVisible: true,
   secondsVisible: false,
+  borderVisible: true,
 };
 
 interface IndexRange {
@@ -50,6 +51,7 @@ export class TimeScale {
   private totalGaps = 0;
   private timeVisible = DEFAULT_OPTIONS.timeVisible;
   private secondsVisible = DEFAULT_OPTIONS.secondsVisible;
+  private borderVisible = DEFAULT_OPTIONS.borderVisible;
   private explicitRange = false;
 
   constructor(source: TimeScaleSource, options: TimeScaleOptions = {}) {
@@ -89,6 +91,7 @@ export class TimeScale {
       gapWidth: this.gapWidth,
       timeVisible: this.timeVisible,
       secondsVisible: this.secondsVisible,
+      borderVisible: this.borderVisible,
     };
   }
 
@@ -426,6 +429,9 @@ export class TimeScale {
     }
     if (options.secondsVisible !== undefined) {
       this.secondsVisible = options.secondsVisible;
+    }
+    if (options.borderVisible !== undefined) {
+      this.borderVisible = options.borderVisible;
     }
   }
 

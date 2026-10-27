@@ -45,6 +45,7 @@ import type {
   IndicatorApi,
   IndicatorDefinition,
   IndicatorInputs,
+  InteractionOptions,
   LayoutOptions,
   PaneApi,
   PaneOptions,
@@ -76,6 +77,7 @@ interface ResolvedOptions {
   layout: ResolvedLayout;
   grid: ResolvedGrid;
   crosshair: ResolvedCrosshair;
+  interaction: Required<InteractionOptions>;
   timeScale: TimeScaleOptions;
   priceScale: PriceScaleOptions;
   extensions: readonly WickExtension[];
@@ -1218,6 +1220,9 @@ class Chart implements ChartApi, SeriesHost {
     const point = this.localPoint(event);
     const axisPane = this.priceAxisPaneAtPoint(point);
     if (axisPane) {
+      if (!this.options.interaction.axisDrag) {
+        return;
+      }
       if (event.cancelable) {
         event.preventDefault();
       }
@@ -1270,7 +1275,7 @@ class Chart implements ChartApi, SeriesHost {
     if (this.activePointers.size === 2) {
       this.dragging = false;
       this.pointerId = null;
-      this.pinchDistance = this.currentPinchDistance();
+      this.pinchDistance = this.options.interaction.pinch ? this.currentPinchDistance() : null;
       this.resetDrawingDrag();
       this.clearCrosshair();
       return;
@@ -1278,6 +1283,14 @@ class Chart implements ChartApi, SeriesHost {
 
     if (this.tryStartDrawingDrag(pane, point, event)) {
       this.dragging = false;
+      return;
+    }
+
+    if (!this.options.interaction.drag) {
+      this.dragging = false;
+      this.pointerId = null;
+      this.dragPane = null;
+      this.updateCrosshair(point.x, point.y);
       return;
     }
 
@@ -1467,6 +1480,9 @@ class Chart implements ChartApi, SeriesHost {
   };
 
   private readonly onDoubleClick = (event: MouseEvent): void => {
+    if (!this.options.interaction.axisDoubleClickReset) {
+      return;
+    }
     const point = this.localPoint(event);
     const pane = this.priceAxisPaneAtPoint(point);
     if (!pane) {
@@ -1562,6 +1578,9 @@ class Chart implements ChartApi, SeriesHost {
   }
 
   private readonly onWheel = (event: WheelEvent): void => {
+    if (!this.options.interaction.wheel) {
+      return;
+    }
     const point = this.localPoint(event);
     if (!this.paneAtPoint(point)) {
       return;
@@ -2005,6 +2024,13 @@ function resolveOptions(options: ChartOptions): ResolvedOptions {
     },
     grid: resolveGrid(options.grid),
     crosshair: resolveCrosshair(options.crosshair),
+    interaction: {
+      wheel: options.interaction?.wheel ?? true,
+      drag: options.interaction?.drag ?? true,
+      pinch: options.interaction?.pinch ?? true,
+      axisDrag: options.interaction?.axisDrag ?? true,
+      axisDoubleClickReset: options.interaction?.axisDoubleClickReset ?? true,
+    },
     timeScale: options.timeScale ?? {},
     priceScale: options.priceScale ?? {},
     extensions: validateExtensions(options.extensions ?? []),
@@ -2032,6 +2058,7 @@ function mergeChartOptions(base: ChartOptions, patch: Partial<ChartOptions>): Ch
     );
   }
 
+  merged.interaction = mergeDefined<InteractionOptions>(base.interaction ?? {}, patch.interaction);
   merged.timeScale = mergeDefined<TimeScaleOptions>(base.timeScale ?? {}, patch.timeScale);
   merged.priceScale = mergeDefined<PriceScaleOptions>(base.priceScale ?? {}, patch.priceScale);
   merged.extensions = base.extensions ?? [];

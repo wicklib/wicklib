@@ -3,6 +3,8 @@
  */
 
 export { createChart } from "./chart";
+export { mapLightweightChartOptions } from "./compat/lightweight-charts";
+export type { LightweightChartOptions } from "./compat/lightweight-charts";
 export { isWickError, WickError } from "./errors";
 export type { WickErrorCode } from "./errors";
 export { assertFeature } from "./license";
@@ -49,6 +51,7 @@ export type {
   IndicatorOutput,
   IndicatorPlotDefinition,
   IndicatorPlotOptions,
+  InteractionOptions,
   Interval,
   LayoutOptions,
   LicenseContext,

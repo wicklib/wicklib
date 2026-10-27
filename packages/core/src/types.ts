@@ -204,6 +204,22 @@ export interface GridOptions {
 }
 
 /**
+ * Pointer and wheel interaction controls.
+ */
+export interface InteractionOptions {
+  /** Wheel pans and zooms. Defaults to true. */
+  wheel?: boolean;
+  /** Pointer drag pans the time scale and a manual price scale. Defaults to true. */
+  drag?: boolean;
+  /** Two-pointer pinch zooms. Defaults to true. */
+  pinch?: boolean;
+  /** Dragging the price axis changes its range. Defaults to true. */
+  axisDrag?: boolean;
+  /** Double-clicking the price axis restores auto-scale. Defaults to true. */
+  axisDoubleClickReset?: boolean;
+}
+
+/**
  * Crosshair line options.
  */
 export interface CrosshairLineOptions {
@@ -249,6 +265,8 @@ export interface TimeScaleOptions {
   timeVisible?: boolean;
   /** Show seconds in time labels. */
   secondsVisible?: boolean;
+  /** Draw the bottom border of the time axis. Defaults to true. */
+  borderVisible?: boolean;
 }
 
 /**
@@ -297,6 +315,7 @@ export interface ChartOptions {
   layout?: LayoutOptions;
   grid?: GridOptions;
   crosshair?: CrosshairOptions;
+  interaction?: InteractionOptions;
   timeScale?: TimeScaleOptions;
   priceScale?: PriceScaleOptions;
   /** Extensions snapshotted at creation. Cannot be changed later. */
