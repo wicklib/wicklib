@@ -24,14 +24,14 @@ zoom, `Home` fits. Pinch zoom works on touch. Core edits hot-reload.
 
 ## Packages
 
-| Package                  | Status | Description                                          |
-| ------------------------ | ------ | ---------------------------------------------------- |
-| `@wicklib/core`          | alpha  | Canvas2D scales, series, panes, indicators, drawings |
-| `@wicklib/indicators`    | alpha  | Built-in indicator catalog                           |
-| `@wicklib/react`         | alpha  | Thin React mount wrapper and `useChart`              |
-| `@wicklib/script`        | alpha  | WickScript API v1, compiler, worker runtime          |
-| `@wicklib/script-editor` | alpha  | Monaco editor with generated WickScript types        |
-| `wicklib`                | alpha  | Umbrella package: core + indicators                  |
+| Package                  | Status | Description                                                               |
+| ------------------------ | ------ | ------------------------------------------------------------------------- |
+| `@wicklib/core`          | alpha  | Canvas2D scales, series, panes, indicators, drawings, annotations, export |
+| `@wicklib/indicators`    | alpha  | Built-in indicator catalog                                                |
+| `@wicklib/react`         | alpha  | Thin React mount wrapper and `useChart`                                   |
+| `@wicklib/script`        | alpha  | WickScript API v1, compiler, worker runtime                               |
+| `@wicklib/script-editor` | alpha  | Monaco editor with generated WickScript types                             |
+| `wicklib`                | alpha  | Umbrella package: core + indicators                                       |
 
 The commercial add-on (`@wicklib/pro`) lives in a separate private repository and consumes
 `@wicklib/core` through its published entrypoint only.
@@ -64,7 +64,7 @@ are required.
   reviewed like code.
 - The site consumes published packages only; `apps/playground` is the local dev harness.
 
-See `docs/rfc/` for the accepted public API, datafeed, indicator/pane, and drawing contracts,
+See `docs/rfc/` for the accepted public API, datafeed, indicator/pane, drawing, overlay, and export contracts,
 `apps/playground/BENCHMARK.md` for the rendering baseline, and `packages/script/PLAN.md`
 plus its ADRs for the scripting design that is frozen but not yet implemented.
 

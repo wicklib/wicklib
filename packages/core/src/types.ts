@@ -304,6 +304,63 @@ export interface ChartOptions {
 }
 
 /**
+ * A horizontal price line drawn by a series.
+ */
+export type PriceLineStyle = "solid" | "dotted" | "dashed";
+
+/**
+ * Options for a series price line. The line is rendered across the series pane and can
+ * optionally show a label on the price axis.
+ */
+export interface PriceLineOptions {
+  price: number;
+  color?: string;
+  lineWidth?: number;
+  lineStyle?: PriceLineStyle;
+  /** Draw the horizontal line. Defaults to true. */
+  lineVisible?: boolean;
+  /** Draw the value label on the price axis. Defaults to true. */
+  axisLabelVisible?: boolean;
+  /** Optional label prefix shown before the price. */
+  title?: string;
+}
+
+/**
+ * A live price line.
+ */
+export interface PriceLineApi {
+  applyOptions(options: Partial<PriceLineOptions>): void;
+  remove(): void;
+}
+
+/**
+ * Marker placement relative to a bar or an explicit price.
+ */
+export type SeriesMarkerPosition =
+  "aboveBar" | "belowBar" | "inBar" | "atPriceTop" | "atPriceBottom" | "atPriceMiddle";
+
+/**
+ * Marker shape.
+ */
+export type SeriesMarkerShape = "circle" | "square" | "arrowUp" | "arrowDown";
+
+/**
+ * A marker attached to a series.
+ *
+ * `price` is required for `atPriceTop`, `atPriceBottom`, and `atPriceMiddle`.
+ */
+export interface SeriesMarker {
+  time: Time;
+  position: SeriesMarkerPosition;
+  shape?: SeriesMarkerShape;
+  color?: string;
+  text?: string;
+  /** Relative shape size. Defaults to 1. */
+  size?: number;
+  price?: number;
+}
+
+/**
  * Options shared by every series type.
  */
 export interface SeriesOptions {
@@ -745,6 +802,10 @@ export interface SeriesApi<
   clearDatafeed(): void;
   /** True while initial or range loads are in flight. */
   isLoading(): boolean;
+  /** Adds a horizontal price line to this series. */
+  createPriceLine(options: PriceLineOptions): PriceLineApi;
+  /** Replaces all markers on this series. Pass an empty array to clear them. */
+  setMarkers(markers: readonly SeriesMarker[]): void;
   priceScale(): PriceScaleApi;
   remove(): void;
 }
@@ -779,6 +840,10 @@ export interface ChartApi {
     handler: (payload: ChartEventMap[K]) => void,
   ): Unsubscribe;
   resize(): void;
+  /** Composites the current chart into a new canvas at backing-store resolution. */
+  takeScreenshot(): HTMLCanvasElement;
+  /** Composites the chart and returns a data URL. */
+  exportImage(type?: string, quality?: number): string;
   destroy(): void;
 }
 

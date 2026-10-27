@@ -3,14 +3,15 @@
 Design proposals that must be accepted before implementation. An accepted RFC is normative;
 changing its decisions requires a new RFC or an ADR.
 
-| RFC  | Title                       | Status   |
-| ---- | --------------------------- | -------- |
-| 0001 | Public chart and series API | Accepted |
-| 0002 | Datafeed contract           | Accepted |
-| 0003 | Indicators and panes        | Accepted |
-| 0004 | Drawings                    | Accepted |
-| 0005 | Session-aware time scale    | Accepted |
-| 0006 | Extension overlays          | Accepted |
+| RFC  | Title                         | Status   |
+| ---- | ----------------------------- | -------- |
+| 0001 | Public chart and series API   | Accepted |
+| 0002 | Datafeed contract             | Accepted |
+| 0003 | Indicators and panes          | Accepted |
+| 0004 | Drawings                      | Accepted |
+| 0005 | Session-aware time scale      | Accepted |
+| 0006 | Extension overlays            | Accepted |
+| 0007 | Series annotations and export | Accepted |
 
 Rules:
 

@@ -883,6 +883,27 @@ class Chart implements ChartApi, SeriesHost {
     return this.bus.on(event, handler);
   }
 
+  takeScreenshot(): HTMLCanvasElement {
+    this.assertAlive();
+    if (this.frame !== null) {
+      cancelFrame(this.frame);
+      this.frame = null;
+      this.render();
+    }
+    return this.stack.compose();
+  }
+
+  exportImage(type = "image/png", quality?: number): string {
+    const screenshot = this.takeScreenshot();
+    if (quality === undefined) {
+      return screenshot.toDataURL(type);
+    }
+    if (!Number.isFinite(quality) || quality < 0 || quality > 1) {
+      fail("INVALID_ARGUMENT", "Image quality must be in [0, 1]");
+    }
+    return screenshot.toDataURL(type, quality);
+  }
+
   resize(): void {
     if (this.disposed) {
       return;

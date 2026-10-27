@@ -832,3 +832,57 @@ describe("createChart", () => {
     scale.setAutoScale(true);
   });
 });
+
+describe("series price lines and markers", () => {
+  it("creates, updates, and removes price lines", async () => {
+    const chart = track(createChart(mount()));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(20));
+
+    const line = series.createPriceLine({
+      price: 100,
+      color: "#ff0000",
+      lineStyle: "dashed",
+      title: "Entry",
+    });
+    await settle();
+    line.applyOptions({ price: 105, axisLabelVisible: false });
+    await settle();
+    expect(() => line.applyOptions({ price: Number.NaN })).toThrow(/price line/);
+
+    line.remove();
+    await settle();
+    expect(() => line.applyOptions({ price: 110 })).not.toThrow();
+  });
+
+  it("sets and clears markers", async () => {
+    const chart = track(createChart(mount()));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(20));
+
+    series.setMarkers([
+      { time: 5 * MINUTE, position: "belowBar", shape: "arrowUp", text: "Buy" },
+      { time: 10 * MINUTE, position: "atPriceTop", price: 101, shape: "circle" },
+    ]);
+    await settle();
+    series.setMarkers([]);
+    await settle();
+
+    expect(() => series.setMarkers([{ time: 0, position: "atPriceTop" }])).toThrow(
+      /require a finite price/,
+    );
+  });
+});
+
+describe("chart screenshots", () => {
+  it("composites all canvas layers", async () => {
+    const chart = track(createChart(mount()));
+    chart.addSeries(CandlestickSeries).setData(bars(20));
+    await settle();
+
+    const screenshot = chart.takeScreenshot();
+    expect(screenshot).toBeInstanceOf(HTMLCanvasElement);
+    expect(screenshot.width).toBeGreaterThan(0);
+    expect(screenshot.height).toBeGreaterThan(0);
+  });
+});

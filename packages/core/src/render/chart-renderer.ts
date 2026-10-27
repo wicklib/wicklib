@@ -4,7 +4,14 @@ import type { IndicatorRenderData, IndicatorPlotRenderData } from "../indicator"
 import type { PriceScale } from "../scale/price-scale";
 import type { TimeScale } from "../scale/time-scale";
 import { formatCrosshairTime, formatTimeLabel } from "../scale/ticks";
-import type { ChartOverlay, DrawingAnchor, OverlayRenderFrame, Point } from "../types";
+import type {
+  ChartOverlay,
+  DrawingAnchor,
+  OverlayRenderFrame,
+  Point,
+  PriceLineOptions,
+  SeriesMarker,
+} from "../types";
 import type { CanvasStack } from "./canvas-stack";
 
 export interface PlotRect {
@@ -43,6 +50,8 @@ export interface ResolvedCrosshair {
   horzStyle: "solid" | "dotted" | "dashed";
 }
 
+export type PriceLineRenderData = Required<PriceLineOptions>;
+
 export interface SeriesRenderData {
   bars: OhlcStore;
   visible: boolean;
@@ -54,6 +63,8 @@ export interface SeriesRenderData {
   borderVisible: boolean;
   lastValueVisible: boolean;
   priceLineVisible: boolean;
+  priceLines: readonly PriceLineRenderData[];
+  markers: readonly SeriesMarker[];
 }
 
 export interface DrawingRenderData {
@@ -291,6 +302,13 @@ export class ChartRenderer {
         rendered = true;
       }
 
+      for (const series of pane.series) {
+        if (series.visible && series.markers.length > 0) {
+          this.drawMarkers(context, model, pane, series, range.first, range.last);
+          rendered = true;
+        }
+      }
+
       context.restore();
 
       let legendOffset = 0;
@@ -302,6 +320,7 @@ export class ChartRenderer {
         if (lastIndex < 0) {
           continue;
         }
+        this.drawPriceLines(context, model, pane, series);
         this.drawLastValue(context, model, pane, series, lastIndex);
         this.drawLegend(context, model, pane, series, lastIndex, legendOffset);
         legendOffset += model.layout.fontSize + 4;
@@ -600,6 +619,128 @@ export class ChartRenderer {
       const height = Math.max(1, Math.abs(zeroY - y));
       context.fillRect(x - width / 2, top, width, height);
     }
+  }
+
+  private drawPriceLines(
+    context: CanvasRenderingContext2D,
+    model: ChartRenderModel,
+    pane: PaneRenderModel,
+    series: SeriesRenderData,
+  ): void {
+    const { plot } = pane;
+
+    for (const line of series.priceLines) {
+      const y = pane.priceScale.priceToY(line.price, plot.top, plot.height);
+      if (y < plot.top || y > plot.bottom) {
+        continue;
+      }
+
+      if (line.lineVisible) {
+        context.save();
+        context.strokeStyle = line.color;
+        context.lineWidth = line.lineWidth;
+        context.setLineDash(dash(line.lineStyle));
+        context.beginPath();
+        context.moveTo(plot.left, crisp(y));
+        context.lineTo(plot.right, crisp(y));
+        context.stroke();
+        context.restore();
+      }
+
+      if (!line.axisLabelVisible) {
+        continue;
+      }
+
+      const boxHeight = model.layout.fontSize + 6;
+      const top = Math.max(plot.top, Math.min(plot.bottom - boxHeight, y - boxHeight / 2));
+      const value = pane.priceScale.formatValue(line.price, model.locale);
+      const label = line.title ? `${line.title} ${value}` : value;
+
+      context.fillStyle = line.color;
+      context.fillRect(plot.right, top, model.axisWidth, boxHeight);
+      context.fillStyle = "#ffffff";
+      context.font = this.font(model);
+      context.textAlign = "left";
+      context.textBaseline = "middle";
+      context.fillText(label, plot.right + 8, top + boxHeight / 2);
+    }
+  }
+
+  private drawMarkers(
+    context: CanvasRenderingContext2D,
+    model: ChartRenderModel,
+    pane: PaneRenderModel,
+    series: SeriesRenderData,
+    first: number,
+    last: number,
+  ): void {
+    const { plot } = pane;
+    const yOf = (price: number): number => pane.priceScale.priceToY(price, plot.top, plot.height);
+    context.font = `11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+
+    for (const marker of series.markers) {
+      const index = series.bars.nearestIndex(marker.time);
+      if (index < first || index > last) {
+        continue;
+      }
+
+      const x = this.timeScale.indexToX(index);
+      const size = marker.size ?? 1;
+      const radius = 5 * size;
+      let y: number;
+      let textAbove = true;
+
+      if (marker.position === "aboveBar") {
+        y = yOf(series.bars.highAt(index)) - radius - 3;
+      } else if (marker.position === "belowBar") {
+        y = yOf(series.bars.lowAt(index)) + radius + 3;
+        textAbove = false;
+      } else if (marker.position === "inBar") {
+        y = yOf((series.bars.openAt(index) + series.bars.closeAt(index)) / 2);
+      } else if (marker.position === "atPriceTop") {
+        y = yOf(marker.price!) - radius - 3;
+      } else if (marker.position === "atPriceBottom") {
+        y = yOf(marker.price!) + radius + 3;
+        textAbove = false;
+      } else {
+        y = yOf(marker.price!);
+      }
+
+      const color = marker.color ?? "#2196f3";
+      context.fillStyle = color;
+      context.strokeStyle = color;
+      const shape = marker.shape ?? "circle";
+
+      if (shape === "circle") {
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        context.fill();
+      } else if (shape === "square") {
+        context.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+      } else {
+        const direction = shape === "arrowUp" ? -1 : 1;
+        const tip = y + direction * radius * 1.4;
+        const base = y - direction * radius;
+        context.beginPath();
+        context.moveTo(x, tip);
+        context.lineTo(x - radius, base);
+        context.lineTo(x + radius, base);
+        context.closePath();
+        context.fill();
+      }
+
+      if (!marker.text) {
+        continue;
+      }
+      const textY = textAbove ? y - radius - 8 : y + radius + 8;
+      context.fillStyle = color;
+      context.fillText(marker.text, x, textY);
+    }
+
+    context.textAlign = "left";
+    context.textBaseline = "alphabetic";
   }
 
   private drawLastValue(

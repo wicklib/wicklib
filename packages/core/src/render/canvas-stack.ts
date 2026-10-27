@@ -94,6 +94,23 @@ export class CanvasStack {
     return this.contexts[layer];
   }
 
+  /**
+   * Composites every layer into a new canvas at the current backing-store resolution.
+   */
+  compose(): HTMLCanvasElement {
+    const canvas = this.root.ownerDocument.createElement("canvas");
+    canvas.width = this.canvases.grid.width;
+    canvas.height = this.canvases.grid.height;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      fail("INVALID_ARGUMENT", "Canvas 2D context is not available");
+    }
+    for (const layer of ["grid", "series", "extensions", "drawings", "overlay"] as const) {
+      context.drawImage(this.canvases[layer], 0, 0);
+    }
+    return canvas;
+  }
+
   clear(layer: Layer): void {
     const context = this.contexts[layer];
     context.clearRect(0, 0, this.width, this.height);

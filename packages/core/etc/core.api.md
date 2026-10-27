@@ -56,6 +56,7 @@ export interface ChartApi {
     cancelDrawing(): void;
     // (undocumented)
     destroy(): void;
+    exportImage(type?: string, quality?: number): string;
     // (undocumented)
     loadDrawings(document: DrawingDocument): void;
     // (undocumented)
@@ -73,6 +74,7 @@ export interface ChartApi {
     setOptions(options: Partial<ChartOptions>): void;
     // (undocumented)
     startDrawing(tool: DrawingToolDefinition, options?: Partial<AddDrawingOptions>): void;
+    takeScreenshot(): HTMLCanvasElement;
     // (undocumented)
     timeScale(): TimeScaleApi;
 }
@@ -586,6 +588,32 @@ export interface Point {
 }
 
 // @public
+export interface PriceLineApi {
+    // (undocumented)
+    applyOptions(options: Partial<PriceLineOptions>): void;
+    // (undocumented)
+    remove(): void;
+}
+
+// @public
+export interface PriceLineOptions {
+    axisLabelVisible?: boolean;
+    // (undocumented)
+    color?: string;
+    // (undocumented)
+    lineStyle?: PriceLineStyle;
+    lineVisible?: boolean;
+    // (undocumented)
+    lineWidth?: number;
+    // (undocumented)
+    price: number;
+    title?: string;
+}
+
+// @public
+export type PriceLineStyle = "solid" | "dotted" | "dashed";
+
+// @public
 export interface PriceRange {
     // (undocumented)
     max: number;
@@ -639,6 +667,7 @@ export interface SerializedDrawing {
 // @public
 export interface SeriesApi<TData extends SeriesData = SeriesData, TOptions extends SeriesOptions = SeriesOptions> {
     clearDatafeed(): void;
+    createPriceLine(options: PriceLineOptions): PriceLineApi;
     // (undocumented)
     readonly id: string;
     isLoading(): boolean;
@@ -651,6 +680,7 @@ export interface SeriesApi<TData extends SeriesData = SeriesData, TOptions exten
     // (undocumented)
     setData(data: readonly TData[]): void;
     setDatafeed(feed: Datafeed<TData>, options: SeriesDatafeedOptions): void;
+    setMarkers(markers: readonly SeriesMarker[]): void;
     // (undocumented)
     setOptions(options: Partial<TOptions>): void;
     // (undocumented)
@@ -671,6 +701,29 @@ export interface SeriesDatafeedOptions {
     // (undocumented)
     symbol: string;
 }
+
+// @public
+export interface SeriesMarker {
+    // (undocumented)
+    color?: string;
+    // (undocumented)
+    position: SeriesMarkerPosition;
+    // (undocumented)
+    price?: number;
+    // (undocumented)
+    shape?: SeriesMarkerShape;
+    size?: number;
+    // (undocumented)
+    text?: string;
+    // (undocumented)
+    time: Time;
+}
+
+// @public
+export type SeriesMarkerPosition = "aboveBar" | "belowBar" | "inBar" | "atPriceTop" | "atPriceBottom" | "atPriceMiddle";
+
+// @public
+export type SeriesMarkerShape = "circle" | "square" | "arrowUp" | "arrowDown";
 
 // @public
 export interface SeriesOptions {

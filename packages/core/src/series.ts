@@ -6,9 +6,12 @@ import type {
   CandlestickSeriesOptions,
   Datafeed,
   OhlcData,
+  PriceLineApi,
+  PriceLineOptions,
   PriceScaleApi,
   SeriesApi,
   SeriesDatafeedOptions,
+  SeriesMarker,
   SeriesType,
   VisibleRange,
 } from "./types";
@@ -27,6 +30,30 @@ export const CandlestickSeries: SeriesType<OhlcData, CandlestickSeriesOptions> =
     license: "free" as const,
   }),
 });
+
+interface PriceLineEntry {
+  options: Required<PriceLineOptions>;
+}
+
+const PRICE_LINE_DEFAULTS: Omit<Required<PriceLineOptions>, "price"> = {
+  color: "#2962ff",
+  lineWidth: 1,
+  lineStyle: "solid",
+  lineVisible: true,
+  axisLabelVisible: true,
+  title: "",
+};
+
+const MARKER_POSITIONS = new Set([
+  "aboveBar",
+  "belowBar",
+  "inBar",
+  "atPriceTop",
+  "atPriceBottom",
+  "atPriceMiddle",
+]);
+const MARKER_SHAPES = new Set(["circle", "square", "arrowUp", "arrowDown"]);
+const PRICE_LINE_STYLES = new Set(["solid", "dotted", "dashed"]);
 
 const DEFAULT_OPTIONS: Required<CandlestickSeriesOptions> = {
   title: "",
@@ -68,6 +95,9 @@ export class Series implements SeriesApi<OhlcData, CandlestickSeriesOptions> {
   private options: Required<CandlestickSeriesOptions>;
   private removed = false;
   private datafeedController: DatafeedController<OhlcData> | null = null;
+  private readonly priceLines = new Map<string, PriceLineEntry>();
+  private priceLineCounter = 0;
+  private markers: readonly SeriesMarker[] = [];
 
   constructor(
     host: SeriesHost,
@@ -159,6 +189,41 @@ export class Series implements SeriesApi<OhlcData, CandlestickSeriesOptions> {
     return this.datafeedController?.isLoading() ?? false;
   }
 
+  createPriceLine(options: PriceLineOptions): PriceLineApi {
+    this.assertAlive();
+    const resolved = resolvePriceLine(options, PRICE_LINE_DEFAULTS);
+    this.priceLineCounter += 1;
+    const id = `price-line-${this.priceLineCounter}`;
+    this.priceLines.set(id, { options: resolved });
+    this.host.requestRender();
+
+    return {
+      applyOptions: (patch) => {
+        this.assertAlive();
+        const entry = this.priceLines.get(id);
+        if (!entry) {
+          return;
+        }
+        entry.options = resolvePriceLine({ ...entry.options, ...patch }, PRICE_LINE_DEFAULTS);
+        this.host.requestRender();
+      },
+      remove: () => {
+        if (this.priceLines.delete(id)) {
+          this.host.requestRender();
+        }
+      },
+    };
+  }
+
+  setMarkers(markers: readonly SeriesMarker[]): void {
+    this.assertAlive();
+    if (!Array.isArray(markers)) {
+      fail("INVALID_ARGUMENT", "Markers must be an array");
+    }
+    this.markers = markers.map((marker, index) => validateMarker(marker, index));
+    this.host.requestRender();
+  }
+
   priceScale(): PriceScaleApi {
     this.assertAlive();
     return this.host.priceScaleApi(this.paneId);
@@ -204,6 +269,8 @@ export class Series implements SeriesApi<OhlcData, CandlestickSeriesOptions> {
       borderVisible: this.options.borderVisible,
       lastValueVisible: this.options.lastValueVisible,
       priceLineVisible: this.options.priceLineVisible,
+      priceLines: Array.from(this.priceLines.values(), (entry) => entry.options),
+      markers: this.markers,
     };
   }
 
@@ -219,4 +286,49 @@ export class Series implements SeriesApi<OhlcData, CandlestickSeriesOptions> {
       fail("INVALID_ARGUMENT", `Series is driven by a datafeed; ${method} is not allowed`);
     }
   }
+}
+
+function resolvePriceLine(
+  options: PriceLineOptions,
+  defaults: Omit<Required<PriceLineOptions>, "price">,
+): Required<PriceLineOptions> {
+  if (
+    !options ||
+    !Number.isFinite(options.price) ||
+    !PRICE_LINE_STYLES.has(options.lineStyle ?? defaults.lineStyle) ||
+    !Number.isFinite(options.lineWidth ?? defaults.lineWidth) ||
+    (options.lineWidth ?? defaults.lineWidth) <= 0
+  ) {
+    fail("INVALID_ARGUMENT", "Invalid price line options");
+  }
+  return {
+    price: options.price,
+    color: options.color ?? defaults.color,
+    lineWidth: options.lineWidth ?? defaults.lineWidth,
+    lineStyle: options.lineStyle ?? defaults.lineStyle,
+    lineVisible: options.lineVisible ?? defaults.lineVisible,
+    axisLabelVisible: options.axisLabelVisible ?? defaults.axisLabelVisible,
+    title: options.title ?? defaults.title,
+  };
+}
+
+function validateMarker(marker: SeriesMarker, index: number): SeriesMarker {
+  if (
+    !marker ||
+    !Number.isFinite(marker.time) ||
+    !MARKER_POSITIONS.has(marker.position) ||
+    (marker.shape !== undefined && !MARKER_SHAPES.has(marker.shape)) ||
+    (marker.size !== undefined && (!Number.isFinite(marker.size) || marker.size <= 0))
+  ) {
+    fail("INVALID_ARGUMENT", "Invalid series marker", { index });
+  }
+  if (
+    (marker.position === "atPriceTop" ||
+      marker.position === "atPriceBottom" ||
+      marker.position === "atPriceMiddle") &&
+    !Number.isFinite(marker.price)
+  ) {
+    fail("INVALID_ARGUMENT", "Price markers require a finite price", { index });
+  }
+  return { ...marker };
 }
