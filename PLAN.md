@@ -107,7 +107,7 @@ interactions, visual regression, the performance baseline, and the private playg
 
 ## Phase 3 — indicators and structure
 
-Start with RFC-0003 for indicators, drawings, and panes.
+Start with RFC-0003 for indicators and panes, then RFC-0004 for drawings.
 
 1. `@wicklib/indicators` free catalog (SMA, EMA, RSI, MACD, Bollinger, VWAP, ATR).
 2. `registerIndicator` with parameter schema and pane assignment.
