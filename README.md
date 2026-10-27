@@ -68,17 +68,18 @@ implemented.
 
 ## Releasing
 
-Publishing is **manual**: run the `release` workflow from the Actions tab. It uses npm
-trusted publishing (OIDC) with provenance; no `NPM_TOKEN` is stored.
+Publishing is **manual** and publish-only: run the `release` workflow from the Actions tab
+after versioning locally. It uses npm trusted publishing (OIDC) with provenance; no
+`NPM_TOKEN` is stored.
 
 The alpha line uses the `next` tag. Enter prerelease mode once with
 `pnpm changeset pre enter next`; exit with `pnpm changeset pre exit` before the first stable
 release.
 
 1. Add a changeset with `pnpm changeset`.
-2. Version with `pnpm changeset version`, or merge the Changesets version PR.
+2. Version with `pnpm changeset version`.
 3. Commit the version changes and push.
-4. Run the `release` workflow manually.
+4. Run the `release` workflow manually. The workflow only publishes; it does not version.
 
 The initial `0.1.0-dev.0` versions were published manually. `latest` stays on them until a
 stable release; install the alpha with `@next` or an exact version.
