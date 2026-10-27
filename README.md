@@ -3,10 +3,10 @@
 Open-source charting engine for web applications. Canvas-first, framework-agnostic, and
 designed for a clean separation between the free engine and the commercial add-on.
 
-**Status: Phase 3 — indicators, panes, and drawings.** A candlestick chart renders real
-data with axes, crosshair, pan, zoom, keyboard and pinch interactions, an async series-level
-datafeed, multiple panes, seven built-in indicators, and five drawing tools. The React
-wrapper and WickTS come next.
+**Status: Phase 3 complete — core chart, indicators, panes, drawings, and React.**
+A candlestick chart renders real data with axes, crosshair, pan, zoom, keyboard and pinch
+interactions, an async series-level datafeed, multiple panes, seven built-in indicators, five
+drawing tools, and a React wrapper. Sessions/DST and WickTS come next.
 
 ## Try it
 
@@ -17,19 +17,20 @@ pnpm dev
 
 Opens the private playground at `localhost:5173` with 5k / 25k / 100k synthetic 1m bars, a
 crosshair OHLC readout, a theme toggle, an FPS meter, SMA/RSI/MACD toggles, drawing tools,
-and a "Use feed" mode with a simulated async feed and live bars. Keyboard: arrows pan,
+and a "Use feed" mode with a simulated async feed and live bars. A local Binance 2025
+snapshot can be generated for the playground without any live connection. Keyboard: arrows pan,
 `+`/`-` zoom, `Home` fits. Pinch zoom works on touch. Core edits hot-reload.
 
 ## Packages
 
-| Package                  | Status         | Description                                                     |
-| ------------------------ | -------------- | --------------------------------------------------------------- |
-| `@wicklib/core`          | vertical slice | Canvas2D scales, candlestick series, axes, crosshair, pan, zoom |
-| `@wicklib/indicators`    | planned        | Built-in indicator catalog                                      |
-| `@wicklib/react`         | stubbed        | Thin React wrapper                                              |
-| `@wicklib/script`        | planned        | WickScript (TypeScript for charts) runtime                      |
-| `@wicklib/script-editor` | planned        | Monaco integration                                              |
-| `wicklib`                | stubbed        | Umbrella package: core + indicators                             |
+| Package                  | Status  | Description                                          |
+| ------------------------ | ------- | ---------------------------------------------------- |
+| `@wicklib/core`          | alpha   | Canvas2D scales, series, panes, indicators, drawings |
+| `@wicklib/indicators`    | alpha   | Built-in indicator catalog                           |
+| `@wicklib/react`         | alpha   | Thin React mount wrapper and `useChart`              |
+| `@wicklib/script`        | planned | WickScript (TypeScript for charts) runtime           |
+| `@wicklib/script-editor` | planned | Monaco integration                                   |
+| `wicklib`                | alpha   | Umbrella package: core + indicators                  |
 
 The commercial add-on (`@wicklib/pro`) lives in a separate private repository and consumes
 `@wicklib/core` through its published entrypoint only.

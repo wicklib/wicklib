@@ -1,7 +1,8 @@
 # Wicklib — Implementation Plan
 
-Status: Phase 1 complete. Phase 2 complete. Phase 3 in progress: RFC-0003 and RFC-0004
-accepted; indicators, panes, and drawings implemented. The React wrapper remains.
+Status: Phase 1 complete. Phase 2 complete. Phase 3 complete: RFC-0003 and RFC-0004
+accepted; indicators, panes, drawings, and the React wrapper implemented. Sessions/DST and
+WickScript remain.
 
 Phase 1 froze the contract: packages, toolchain, CI, release pipeline, API report, extension
 seams, and the normative WickScript plan. No rendering exists yet.
@@ -107,19 +108,23 @@ interactions, visual regression, the performance baseline, and the private playg
 
 ## Phase 3 — indicators and panes
 
-Status: in progress. RFC-0003 and RFC-0004 accepted; indicators, panes, and drawings
-implemented. The React wrapper remains.
+Status: complete. RFC-0003 and RFC-0004 accepted; indicators, panes, drawings, and the React
+wrapper implemented.
 
 1. [done] `@wicklib/indicators` free catalog: SMA, EMA, RSI, MACD, Bollinger Bands, VWAP, ATR.
 2. [done] `chart.addIndicator` with typed inputs, plot definitions, and pane assignment.
 3. [done] Drawing tools: trendline, horizontal, rectangle, fib retracement, measure.
 4. [done] Multi-pane support: per-pane price scales, shared time axis, pane crosshair.
-5. [pending] `@wicklib/react` real wrapper plus `useChart`.
+5. [done] `@wicklib/react` real wrapper plus `useChart`.
 6. [done] Visual regression with indicator panes and a 7-indicator benchmark.
 
 Implementation notes: `OhlcData` now carries optional volume for VWAP; indicator plots use
 the internal line/histogram/area renderers; standalone line/area/histogram series remain
-deferred until a generic data store exists.
+deferred until a generic data store exists. The React wrapper is client-only: `WickChart`
+creates the core chart in an effect, patches option updates, recreates on extension changes,
+and exposes the chart through `useChart`. Sessions/DST remain deferred behind the time-scale
+policy seam. Real exchange data is a playground-only static snapshot: the Binance importer
+validates and compacts monthly Binance ZIPs; no live feed or core datafeed changes are involved.
 
 ## Phase 4 — WickScript
 
