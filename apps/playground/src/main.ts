@@ -21,6 +21,17 @@ interface BenchResult {
   fps: number;
 }
 
+type Timeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
+
+const TIMEFRAME_MINUTES: Record<Timeframe, number> = {
+  "1m": 1,
+  "5m": 5,
+  "15m": 15,
+  "1h": 60,
+  "4h": 240,
+  "1d": 1_440,
+};
+
 interface BinanceSnapshot {
   version: number;
   source: string;
@@ -58,10 +69,21 @@ app.innerHTML = `
           <option value="100000" selected>100,000</option>
         </select>
       </label>
+      <label>TF
+        <select id="timeframe">
+          <option value="1m" selected>1m</option>
+          <option value="5m">5m</option>
+          <option value="15m">15m</option>
+          <option value="1h">1h</option>
+          <option value="4h">4h</option>
+          <option value="1d">1d</option>
+        </select>
+      </label>
       <button id="regenerate" type="button">Regenerate</button>
       <button id="feed" type="button">Use feed</button>
       <button id="binance" type="button">Binance 2025</button>
       <button id="fit" type="button">Fit</button>
+      <button id="reset" type="button">Reset</button>
       <label class="toggle"><input id="sma" type="checkbox" /> SMA</label>
       <label class="toggle"><input id="rsi" type="checkbox" /> RSI</label>
       <label class="toggle"><input id="macd" type="checkbox" /> MACD</label>
@@ -100,11 +122,13 @@ const summary = byId<HTMLSpanElement>("summary");
 const readout = byId<HTMLSpanElement>("readout");
 const fps = byId<HTMLSpanElement>("fps");
 const countSelect = byId<HTMLSelectElement>("count");
+const timeframeSelect = byId<HTMLSelectElement>("timeframe");
 const regenerateButton = byId<HTMLButtonElement>("regenerate");
 const feedButton = byId<HTMLButtonElement>("feed");
 const binanceButton = byId<HTMLButtonElement>("binance");
 const feedStatus = byId<HTMLSpanElement>("feed-status");
 const fitButton = byId<HTMLButtonElement>("fit");
+const resetButton = byId<HTMLButtonElement>("reset");
 const smaToggle = byId<HTMLInputElement>("sma");
 const rsiToggle = byId<HTMLInputElement>("rsi");
 const macdToggle = byId<HTMLInputElement>("macd");
@@ -171,6 +195,8 @@ const timeFormatter = new Intl.DateTimeFormat("en-US", {
 
 let count = 100_000;
 let seed = 7;
+let timeframe: Timeframe = "1m";
+let baseData: OhlcData[] = [];
 let data: OhlcData[] = [];
 let feedActive = false;
 let fitAfterFeedLoad = false;
@@ -217,7 +243,8 @@ function updateSummary(): void {
   const label = feedActive
     ? "live feed"
     : (binanceLabel ?? `${data.length.toLocaleString("en-US")} bars`);
-  summary.textContent = `BTC/USDT · 1m · ${label} · ${from} → ${to}`;
+  const interval = feedActive ? "1m" : timeframe;
+  summary.textContent = `BTC/USDT · ${interval} · ${label} · ${from} → ${to}`;
 }
 
 function stopFeed(): void {
@@ -225,11 +252,18 @@ function stopFeed(): void {
     return;
   }
   feedActive = false;
+  timeframeSelect.disabled = false;
   series.clearDatafeed();
   feedStatus.textContent = "";
 }
 
 function startFeed(): void {
+  if (timeframe !== "1m") {
+    timeframe = "1m";
+    timeframeSelect.value = "1m";
+    applyTimeframe();
+  }
+  timeframeSelect.disabled = true;
   binanceButton.classList.remove("active");
   feedActive = true;
   fitAfterFeedLoad = true;
@@ -303,17 +337,53 @@ function load(): void {
   }
   binanceLabel = null;
   binanceButton.classList.remove("active");
-
-  data = generateOhlc(count, seed);
+  baseData = generateOhlc(count, seed);
 
   if (wasFeed) {
     startFeed();
   } else {
-    series.setData(data);
-    chart.timeScale().fitContent();
+    applyTimeframe();
+  }
+}
+
+function applyTimeframe(): void {
+  data = aggregateOhlc(baseData, TIMEFRAME_MINUTES[timeframe]);
+  series.setData(data);
+  chart.timeScale().fitContent();
+  updateSummary();
+}
+
+function aggregateOhlc(source: readonly OhlcData[], minutes: number): OhlcData[] {
+  if (minutes <= 1) {
+    return [...source];
   }
 
-  updateSummary();
+  const bucketMs = minutes * 60_000;
+  const result: OhlcData[] = [];
+
+  for (const bar of source) {
+    const bucketTime = Math.floor(bar.time / bucketMs) * bucketMs;
+    const current = result[result.length - 1];
+
+    if (!current || current.time !== bucketTime) {
+      result.push({
+        time: bucketTime,
+        open: bar.open,
+        high: bar.high,
+        low: bar.low,
+        close: bar.close,
+        volume: bar.volume ?? 0,
+      });
+      continue;
+    }
+
+    current.high = Math.max(current.high, bar.high);
+    current.low = Math.min(current.low, bar.low);
+    current.close = bar.close;
+    current.volume = (current.volume ?? 0) + (bar.volume ?? 0);
+  }
+
+  return result;
 }
 
 async function loadBinance(): Promise<void> {
@@ -332,14 +402,11 @@ async function loadBinance(): Promise<void> {
     }
 
     const snapshot = (await response.json()) as BinanceSnapshot;
-    const bars = parseBinanceSnapshot(snapshot);
-    data = bars;
-    binanceLabel = `Binance ${snapshot.market} ${snapshot.symbol} ${snapshot.year} · ${snapshot.interval}`;
+    baseData = parseBinanceSnapshot(snapshot);
+    binanceLabel = `Binance ${snapshot.market} ${snapshot.symbol} ${snapshot.year}`;
     binanceButton.classList.add("active");
-    series.setData(data);
-    chart.timeScale().fitContent();
-    updateSummary();
-    feedStatus.textContent = `${bars.length.toLocaleString("en-US")} bars`;
+    applyTimeframe();
+    feedStatus.textContent = `${data.length.toLocaleString("en-US")} ${timeframe} bars`;
   } catch (error) {
     console.error("Could not load the local Binance snapshot", error);
     feedStatus.textContent = "Binance snapshot missing — run data:binance";
@@ -492,6 +559,14 @@ countSelect.addEventListener("change", () => {
   load();
 });
 
+timeframeSelect.addEventListener("change", () => {
+  if (feedActive) {
+    return;
+  }
+  timeframe = timeframeSelect.value as Timeframe;
+  applyTimeframe();
+});
+
 regenerateButton.addEventListener("click", () => {
   seed += 1;
   load();
@@ -529,6 +604,10 @@ binanceButton.addEventListener("click", () => {
 
 fitButton.addEventListener("click", () => {
   chart.timeScale().fitContent();
+});
+
+resetButton.addEventListener("click", () => {
+  chart.resetView();
 });
 
 for (const button of drawingButtons) {
@@ -646,6 +725,12 @@ function addDemoDrawings(): void {
   chart.selectDrawing(rectangle.id);
 }
 
+const requestedTimeframe = params.get("timeframe");
+if (requestedTimeframe && isTimeframe(requestedTimeframe)) {
+  timeframe = requestedTimeframe;
+  timeframeSelect.value = requestedTimeframe;
+}
+
 document.body.dataset.theme = "dark";
 load();
 
@@ -673,4 +758,8 @@ if (testMode) {
 
 if (benchMode) {
   void runBenchmark();
+}
+
+function isTimeframe(value: string): value is Timeframe {
+  return value in TIMEFRAME_MINUTES;
 }

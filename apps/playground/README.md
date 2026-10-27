@@ -13,13 +13,18 @@ Never published. Not part of the Changesets group.
 
 ## Controls
 
-- Dataset size: 5k, 25k, 100k synthetic 1m bars. Zooming out is capped at 12 hours.
+- Dataset size: 5k, 25k, 100k synthetic 1m bars. Zooming out is capped at 720 bars.
+- Timeframe: 1m, 5m, 15m, 1h, 4h, or 1d, aggregated from the selected 1m source.
 - Regenerate: new deterministic dataset (seed increments).
 - Use feed: simulated async feed with latency, live bars, loading state, and range loads.
 - Binance 2025: load the local one-year BTCUSDT 1m snapshot (525,600 bars).
 - SMA / RSI / MACD toggles: overlays and separate indicator panes.
 - Trend, H-Line, Rect, Fib, and Clear: interactive drawing tools.
-- Fit: reset the time scale, capped at 720 bars (12 hours of 1m data).
+- Fit: reset the time scale, capped at 720 bars.
+- Reset: fit the time scale and restore auto-scale on every pane.
+- Price axis: drag vertically to scale the price range and leave auto-scale; double-click to
+  restore auto-scale. While manual, chart dragging pans both horizontally and vertically.
+- Trackpad: horizontal swipe pans time; vertical scroll or pinch zooms.
 - Theme: dark/light chart options.
 - FPS meter and crosshair OHLC readout.
 - Keyboard: arrows pan, `+`/`-` zoom, `Home` fits, `Escape` clears the crosshair.
@@ -29,6 +34,7 @@ Never published. Not part of the Changesets group.
 
 - `?feed` — start in datafeed mode.
 - `?binance` — load the local Binance 2025 BTCUSDT 1m snapshot.
+- `?timeframe=15m` — start on a derived timeframe; accepts `1m`, `5m`, `15m`, `1h`, `4h`, `1d`.
 - `?indicators` — enable SMA, RSI, and MACD.
 - `?drawings` — add a deterministic set of demo drawings.
 - `?test` — deterministic static chart, animation/FPS loop disabled, sets
@@ -66,9 +72,8 @@ pnpm test:visual
 ```
 
 The suite captures text-free plot crops for the static chart, indicator panes, and drawing
-tools, and
-asserts the 100k-bar pan benchmark, with all seven built-in indicators loaded, stays under
-the CI threshold. The recorded baseline is in
+tools, verifies derived timeframe aggregation, and asserts the 100k-bar pan benchmark stays
+under the CI threshold with all seven built-in indicators loaded. The recorded baseline is in
 [BENCHMARK.md](./BENCHMARK.md).
 
 To regenerate the snapshot after an intentional rendering change:

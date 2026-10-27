@@ -78,6 +78,18 @@ test("drawing tools", async ({ page }) => {
   });
 });
 
+test("derives a timeframe from 1m bars", async ({ page }) => {
+  await page.goto("/?test&timeframe=15m");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+
+  await expect(page.locator("#summary")).toContainText("15m");
+  await expect(page.locator("#summary")).toContainText("6,667 bars");
+
+  await page.selectOption("#timeframe", "5m");
+  await expect(page.locator("#summary")).toContainText("5m");
+  await expect(page.locator("#summary")).toContainText("20,000 bars");
+});
+
 test("100k bar pan benchmark", async ({ page }) => {
   await page.goto("/?bench");
   await page.waitForFunction(() => Boolean(window.__wicklibBench), null, {
