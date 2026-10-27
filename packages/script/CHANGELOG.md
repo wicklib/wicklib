@@ -1,5 +1,15 @@
 # @wicklib/script
 
+## 0.1.0-next.21
+
+### Minor Changes
+
+- 1a8c237: Add `validateScript()` for non-executing contract checks and surface compiler failures as Monaco diagnostics.
+
+### Patch Changes
+
+- @wicklib/core@0.1.0-next.21
+
 ## 0.1.0-next.20
 
 ### Patch Changes
