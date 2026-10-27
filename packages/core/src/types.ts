@@ -239,8 +239,8 @@ export interface TimeScaleOptions {
   maxBarSpacing?: number;
   /** Maximum number of bars visible when zoomed out. Defaults to unlimited. */
   maxVisibleBars?: number;
-  /** Optional trading calendar for session-aware labels. */
-  calendar?: TradingCalendar;
+  /** Optional trading calendar for session-aware labels. Use null to clear it. */
+  calendar?: TradingCalendar | null;
   /** Show time labels in the time axis. */
   timeVisible?: boolean;
   /** Show seconds in time labels. */

@@ -105,28 +105,44 @@ export class TimeScale {
       return ticks;
     }
 
-    const minimumGap = (span * 80) / Math.max(1, width);
     const intervals = this.calendar.sessionsBetween(visible.from, visible.to);
+    const opens: number[] = [];
+    const closes: number[] = [];
     const selected: number[] = [];
 
     for (const interval of intervals) {
-      for (const time of [interval.start, interval.end]) {
-        if (
-          time >= visible.from &&
-          time <= visible.to &&
-          !selected.some((candidate) => Math.abs(candidate - time) < 1)
-        ) {
-          selected.push(time);
-        }
+      if (interval.start >= visible.from && interval.start <= visible.to) {
+        opens.push(interval.start);
+      }
+      if (interval.end >= visible.from && interval.end <= visible.to) {
+        closes.push(interval.end);
       }
     }
 
-    for (const tick of ticks) {
-      if (!this.calendar.isOpen(tick)) {
-        continue;
+    const add = (time: number): void => {
+      const x = this.timeToX(time);
+      if (x === null) {
+        return;
       }
-      if (selected.every((candidate) => Math.abs(candidate - tick) >= minimumGap)) {
-        selected.push(tick);
+      if (
+        selected.every((candidate) => {
+          const candidateX = this.timeToX(candidate);
+          return candidateX === null || Math.abs(candidateX - x) >= 80;
+        })
+      ) {
+        selected.push(time);
+      }
+    };
+
+    for (const open of opens) {
+      add(open);
+    }
+    for (const close of closes) {
+      add(close);
+    }
+    for (const tick of ticks) {
+      if (this.calendar.isOpen(tick)) {
+        add(tick);
       }
     }
 
@@ -345,7 +361,7 @@ export class TimeScale {
       this.maxVisibleBars = options.maxVisibleBars;
     }
     if (options.calendar !== undefined) {
-      this.calendar = new SessionCalendar(options.calendar);
+      this.calendar = options.calendar ? new SessionCalendar(options.calendar) : null;
     }
     if (this.maxBarSpacing < this.minBarSpacing) {
       fail("INVALID_ARGUMENT", "maxBarSpacing must be greater than or equal to minBarSpacing");

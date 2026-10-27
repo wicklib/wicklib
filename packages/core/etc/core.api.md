@@ -674,7 +674,7 @@ export interface TimeScaleApi {
 // @public
 export interface TimeScaleOptions {
     barSpacing?: number;
-    calendar?: TradingCalendar;
+    calendar?: TradingCalendar | null;
     maxBarSpacing?: number;
     maxVisibleBars?: number;
     minBarSpacing?: number;
