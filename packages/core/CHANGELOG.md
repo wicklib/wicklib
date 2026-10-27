@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.7
+
+### Patch Changes
+
+- ad75744: Place drawing anchors at the pointer position instead of snapping the price to the crosshair magnet.
+
 ## 0.1.0-next.6
 
 ### Minor Changes
