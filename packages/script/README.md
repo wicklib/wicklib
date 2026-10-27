@@ -4,14 +4,14 @@ WickScript — TypeScript for charts.
 
 **Status: API v1 authoring + compiler + worker runtime.** `defineScript`, typed inputs/plots,
 source-faithful TypeScript transpilation, import/sandbox-boundary validation, a QuickJS
-worker runtime with limits, and replay/stream execution are implemented. Free `ta.*`
-functions and the editor remain.
+worker runtime with limits, replay/stream execution, and the initial free `ta.*` set are
+implemented. The editor remains.
 
 Scripts are plain TypeScript against a fixed API. Wicklib does not invent syntax and does
 not fork TypeScript.
 
 ```ts
-import { defineScript } from "@wicklib/script";
+import { defineScript, ta } from "@wicklib/script";
 
 export default defineScript({
   inputs: {
@@ -19,7 +19,7 @@ export default defineScript({
   },
   plots: [{ id: "sma", title: "SMA", type: "line" }],
   onBar(ctx) {
-    ctx.plot("sma", ctx.bar.close);
+    ctx.plot("sma", ta.sma(ctx, "close", ctx.inputs.period));
   },
 });
 ```
@@ -42,6 +42,9 @@ const next = await script.stream(nextBar);
 await script.dispose();
 runtime.dispose();
 ```
+
+Free `ta.*` functions: `sma`, `ema`, `rsi`, `atr`, `highest`, `lowest`, `crossover`, and
+`crossunder`. They maintain deterministic per-session state.
 
 Replay and streaming use the same per-bar state path. API v1 streams closed bars only:
 sending a bar whose time is not greater than the previous bar fails with

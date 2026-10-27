@@ -1,9 +1,9 @@
 # WickScript — Plan
 
 Status: **normative**. Phase 4 is in progress: ADR-0006 is accepted, API v1 authoring is
-frozen, and the transpiler with import/global rejection is implemented. A QuickJS worker
-runtime with resource limits and replay/stream execution is implemented; the scheduler's
-streaming revision semantics, free `ta.*`, and editor remain.
+frozen, and the transpiler with import/global rejection is implemented. The QuickJS worker
+runtime, strict streaming semantics, and the initial free `ta.*` set are implemented; broader
+`ta.*` coverage, golden/fuzz tests, and the editor remain.
 Changing a decision in this document requires a new ADR in `docs/adr/`.
 
 ## 1. What WickScript is
@@ -118,16 +118,14 @@ functions. The script package never depends on pro. License tier travels in `met
 3. [done] QuickJS worker host + message protocol.
 4. [done] Per-bar scheduler with replay/stream parity. API v1 rejects in-place bar
    revisions; a future ADR can add a revision mode.
-5. Per-bar scheduler with replay/stream parity.
-6. Free `ta.*` set.
-7. Editor + `.d.ts` generation.
-8. Golden and fuzz test suites.
-9. Pro premium functions and strategy engine.
+5. [in progress] Free `ta.*` set: SMA, EMA, RSI, ATR, highest, lowest, crossover, and
+   crossunder are implemented; broader coverage remains.
+6. Editor + `.d.ts` generation.
+7. Golden and fuzz test suites.
+8. Pro premium functions and strategy engine.
 
 ## 14. Open questions
 
-- Entry ergonomics: default export vs `defineScript`.
 - Whether history lookback is explicit (`ctx.history`) or owned entirely by built-ins.
-- Streaming revisions (partial bar updates) semantics.
 - Multi-symbol and multi-timeframe scripts.
 - Import whitelist expansion, if any.

@@ -58,6 +58,9 @@ interface SandboxHostState {
   currentAlerts: string[];
   currentBarIndex: number;
   outputError: ScriptRuntimeError | null;
+  taError: ScriptRuntimeError | null;
+  history: OhlcData[];
+  taState: Map<string, unknown>;
   timedOut: boolean;
   deadline: number;
   interrupts: number;
@@ -119,6 +122,9 @@ export class ScriptSandbox {
       currentAlerts: [],
       currentBarIndex: -1,
       outputError: null,
+      taError: null,
+      history: [],
+      taState: new Map(),
       timedOut: false,
       deadline: Number.POSITIVE_INFINITY,
       interrupts: 0,
@@ -152,12 +158,12 @@ export class ScriptSandbox {
         );
         return context.undefined;
       }
-      if (context.typeof(valueHandle) === "null") {
+      const value = context.dump(valueHandle);
+      if (value === null) {
         host.currentPlots.set(id, null);
         return context.undefined;
       }
-      const value = context.getNumber(valueHandle);
-      if (!Number.isFinite(value)) {
+      if (typeof value !== "number" || !Number.isFinite(value)) {
         host.outputError = new ScriptRuntimeError(
           "OUTPUT_LIMIT",
           `Plot value must be finite or null: ${id}`,
@@ -194,6 +200,8 @@ export class ScriptSandbox {
     });
     context.setProp(context.global, "__wickscript_alert", alert);
     alert.dispose();
+
+    registerTaFunctions(context, host);
 
     host.deadline = Date.now() + resolved.timeLimitMs;
     try {
@@ -289,16 +297,19 @@ export class ScriptSandbox {
 
     for (let index = 0; index < bars.length; index += 1) {
       const bar = bars[index]!;
-      this.host.currentBarIndex = index;
+      const globalIndex = this.host.history.length;
+      this.host.currentBarIndex = globalIndex;
       this.host.currentPlots = new Map();
       this.host.currentAlerts = [];
       this.host.outputError = null;
+      this.host.taError = null;
+      this.host.history.push(bar);
       this.host.deadline = Date.now() + this.options.timeLimitMs;
       this.host.interrupts = 0;
       this.host.timedOut = false;
 
       const barHandle = this.context.newString(JSON.stringify(bar));
-      const indexHandle = this.context.newNumber(index);
+      const indexHandle = this.context.newNumber(globalIndex);
       try {
         const result = this.context.callFunction(
           this.runBar,
@@ -315,6 +326,9 @@ export class ScriptSandbox {
         this.host.deadline = Number.POSITIVE_INFINITY;
       }
 
+      if (this.host.taError) {
+        throw this.host.taError;
+      }
       if (this.host.outputError) {
         throw this.host.outputError;
       }
@@ -357,7 +371,10 @@ function moduleWrapper(code: string): string {
       const module = { exports: {} };
       const require = (name) => {
         if (name === "@wicklib/script") {
-          return { defineScript: (definition) => definition };
+          return {
+            defineScript: (definition) => definition,
+            ta: globalThis.__wickscript_ta,
+          };
         }
         throw new Error("Module import is not allowed: " + name);
       };
@@ -414,4 +431,331 @@ function toRuntimeError(error: unknown, timedOut: boolean, barIndex: number): Sc
     return new ScriptRuntimeError("MEMORY_LIMIT", message, barIndex);
   }
   return new ScriptRuntimeError("RUNTIME_ERROR", message, barIndex);
+}
+
+type PriceSource = "open" | "high" | "low" | "close" | "hl2" | "hlc3" | "ohlc4";
+
+const SOURCES = new Set<string>(["open", "high", "low", "close", "hl2", "hlc3", "ohlc4"]);
+
+function registerTaFunctions(context: QuickJSContext, host: SandboxHostState): void {
+  const register = (
+    name: string,
+    callback: (sourceHandle: QuickJSHandle, lengthHandle: QuickJSHandle) => QuickJSHandle,
+  ): void => {
+    const handle = context.newFunction(name, (_contextHandle, sourceHandle, lengthHandle) => {
+      if (!sourceHandle || !lengthHandle) {
+        setTaError(host, "ta.* requires source and length arguments");
+        return context.null;
+      }
+      return callback(sourceHandle, lengthHandle);
+    });
+    context.setProp(context.global, name, handle);
+    handle.dispose();
+  };
+
+  const source = (handle: QuickJSHandle): PriceSource | number | null => {
+    if (context.typeof(handle) === "number") {
+      const value = context.getNumber(handle);
+      if (!Number.isFinite(value)) {
+        setTaError(host, "ta.* source must be a finite number");
+        return null;
+      }
+      return value;
+    }
+    if (context.typeof(handle) === "string") {
+      const value = context.getString(handle);
+      if (!SOURCES.has(value)) {
+        setTaError(host, `Unknown ta.* source: ${value}`);
+        return null;
+      }
+      return value as PriceSource;
+    }
+    setTaError(host, "ta.* source must be a source name or a number");
+    return null;
+  };
+
+  const length = (handle: QuickJSHandle): number | null => {
+    const value = context.getNumber(handle);
+    if (!Number.isInteger(value) || value <= 0) {
+      setTaError(host, "ta.* length must be a positive integer");
+      return null;
+    }
+    return value;
+  };
+
+  const number = (value: number | null): QuickJSHandle =>
+    value === null ? context.null : context.newNumber(value);
+
+  register("__wickscript_ta_sma", (sourceHandle, lengthHandle) => {
+    const series = source(sourceHandle);
+    const period = length(lengthHandle);
+    if (series === null || period === null) return context.null;
+    return number(sma(host, series, period));
+  });
+
+  register("__wickscript_ta_ema", (sourceHandle, lengthHandle) => {
+    const series = source(sourceHandle);
+    const period = length(lengthHandle);
+    if (series === null || period === null) return context.null;
+    return number(ema(host, series, period));
+  });
+
+  register("__wickscript_ta_rsi", (sourceHandle, lengthHandle) => {
+    const series = source(sourceHandle);
+    const period = length(lengthHandle);
+    if (series === null || period === null) return context.null;
+    return number(rsi(host, series, period));
+  });
+
+  const taAtr = context.newFunction("__wickscript_ta_atr", (_contextHandle, lengthHandle) => {
+    if (!lengthHandle) {
+      setTaError(host, "ta.atr requires a length argument");
+      return context.null;
+    }
+    const period = length(lengthHandle);
+    if (period === null) return context.null;
+    return number(atr(host, period));
+  });
+  context.setProp(context.global, "__wickscript_ta_atr", taAtr);
+  taAtr.dispose();
+
+  register("__wickscript_ta_highest", (sourceHandle, lengthHandle) => {
+    const series = source(sourceHandle);
+    const period = length(lengthHandle);
+    if (series === null || period === null) return context.null;
+    return number(extreme(host, series, period, "highest"));
+  });
+
+  register("__wickscript_ta_lowest", (sourceHandle, lengthHandle) => {
+    const series = source(sourceHandle);
+    const period = length(lengthHandle);
+    if (series === null || period === null) return context.null;
+    return number(extreme(host, series, period, "lowest"));
+  });
+
+  const cross = (direction: "crossover" | "crossunder") => {
+    return (
+      _contextHandle: QuickJSHandle,
+      firstHandle: QuickJSHandle,
+      secondHandle: QuickJSHandle,
+    ): QuickJSHandle => {
+      const first = source(firstHandle);
+      const second = source(secondHandle);
+      if (first === null || second === null) return context.false;
+      const currentFirst = valueAt(host, host.currentBarIndex, first);
+      const currentSecond = valueAt(host, host.currentBarIndex, second);
+      const previousFirst = valueAt(host, host.currentBarIndex - 1, first);
+      const previousSecond = valueAt(host, host.currentBarIndex - 1, second);
+      if (
+        currentFirst === null ||
+        currentSecond === null ||
+        previousFirst === null ||
+        previousSecond === null
+      ) {
+        return context.false;
+      }
+      return direction === "crossover"
+        ? previousFirst <= previousSecond && currentFirst > currentSecond
+          ? context.true
+          : context.false
+        : previousFirst >= previousSecond && currentFirst < currentSecond
+          ? context.true
+          : context.false;
+    };
+  };
+
+  const crossover = context.newFunction("__wickscript_ta_crossover", cross("crossover"));
+  context.setProp(context.global, "__wickscript_ta_crossover", crossover);
+  crossover.dispose();
+  const crossunder = context.newFunction("__wickscript_ta_crossunder", cross("crossunder"));
+  context.setProp(context.global, "__wickscript_ta_crossunder", crossunder);
+  crossunder.dispose();
+
+  context
+    .unwrapResult(
+      context.evalCode(
+        `globalThis.__wickscript_ta = Object.freeze({
+          sma: __wickscript_ta_sma,
+          ema: __wickscript_ta_ema,
+          rsi: __wickscript_ta_rsi,
+          atr: __wickscript_ta_atr,
+          highest: __wickscript_ta_highest,
+          lowest: __wickscript_ta_lowest,
+          crossover: __wickscript_ta_crossover,
+          crossunder: __wickscript_ta_crossunder,
+        });`,
+        "ta.js",
+      ),
+    )
+    .dispose();
+}
+
+function setTaError(host: SandboxHostState, message: string): void {
+  host.taError = new ScriptRuntimeError("INVALID_INPUT", message, host.currentBarIndex);
+}
+
+function valueAt(
+  host: SandboxHostState,
+  index: number,
+  series: PriceSource | number,
+): number | null {
+  if (typeof series === "number") {
+    return index < 0 ? null : series;
+  }
+  const bar = host.history[index];
+  if (!bar) {
+    return null;
+  }
+  switch (series) {
+    case "open":
+      return bar.open;
+    case "high":
+      return bar.high;
+    case "low":
+      return bar.low;
+    case "close":
+      return bar.close;
+    case "hl2":
+      return (bar.high + bar.low) / 2;
+    case "hlc3":
+      return (bar.high + bar.low + bar.close) / 3;
+    case "ohlc4":
+      return (bar.open + bar.high + bar.low + bar.close) / 4;
+  }
+}
+
+function sma(host: SandboxHostState, series: PriceSource | number, period: number): number | null {
+  const start = host.currentBarIndex - period + 1;
+  if (start < 0) {
+    return null;
+  }
+  let sum = 0;
+  for (let index = start; index <= host.currentBarIndex; index += 1) {
+    const value = valueAt(host, index, series);
+    if (value === null) return null;
+    sum += value;
+  }
+  return sum / period;
+}
+
+function ema(host: SandboxHostState, series: PriceSource | number, period: number): number | null {
+  const key = `ema:${String(series)}:${period}`;
+  const state = host.taState.get(key) as { index: number; value: number } | undefined;
+  if (state?.index === host.currentBarIndex) {
+    return state.value;
+  }
+  if (host.currentBarIndex < period - 1) {
+    return null;
+  }
+  const current = valueAt(host, host.currentBarIndex, series);
+  if (current === null) {
+    return null;
+  }
+  const value =
+    state && state.index < host.currentBarIndex
+      ? (current - state.value) * (2 / (period + 1)) + state.value
+      : sma(host, series, period);
+  if (value === null) {
+    return null;
+  }
+  host.taState.set(key, { index: host.currentBarIndex, value });
+  return value;
+}
+
+function rsi(host: SandboxHostState, series: PriceSource | number, period: number): number | null {
+  const key = `rsi:${String(series)}:${period}`;
+  const state = host.taState.get(key) as { index: number; gain: number; loss: number } | undefined;
+  if (state?.index === host.currentBarIndex) {
+    return rsiValue(state.gain, state.loss);
+  }
+  if (host.currentBarIndex < period) {
+    return null;
+  }
+
+  if (!state || state.index > host.currentBarIndex) {
+    let gain = 0;
+    let loss = 0;
+    for (let index = host.currentBarIndex - period + 1; index <= host.currentBarIndex; index += 1) {
+      const previous = valueAt(host, index - 1, series);
+      const current = valueAt(host, index, series);
+      if (previous === null || current === null) return null;
+      const change = current - previous;
+      if (change >= 0) gain += change;
+      else loss -= change;
+    }
+    gain /= period;
+    loss /= period;
+    host.taState.set(key, { index: host.currentBarIndex, gain, loss });
+    return rsiValue(gain, loss);
+  }
+
+  const previous = valueAt(host, host.currentBarIndex - 1, series);
+  const current = valueAt(host, host.currentBarIndex, series);
+  if (previous === null || current === null) return null;
+  const change = current - previous;
+  const gain = (state.gain * (period - 1) + Math.max(change, 0)) / period;
+  const loss = (state.loss * (period - 1) + Math.max(-change, 0)) / period;
+  host.taState.set(key, { index: host.currentBarIndex, gain, loss });
+  return rsiValue(gain, loss);
+}
+
+function rsiValue(gain: number, loss: number): number {
+  if (loss === 0) return 100;
+  if (gain === 0) return 0;
+  return 100 - 100 / (1 + gain / loss);
+}
+
+function atr(host: SandboxHostState, period: number): number | null {
+  const key = `atr:${period}`;
+  const state = host.taState.get(key) as { index: number; value: number } | undefined;
+  if (state?.index === host.currentBarIndex) {
+    return state.value;
+  }
+  const current = trueRange(host, host.currentBarIndex);
+  if (current === null || host.currentBarIndex < period - 1) {
+    return null;
+  }
+  let value: number;
+  if (!state || state.index > host.currentBarIndex) {
+    value = 0;
+    for (let index = host.currentBarIndex - period + 1; index <= host.currentBarIndex; index += 1) {
+      const range = trueRange(host, index);
+      if (range === null) return null;
+      value += range;
+    }
+    value /= period;
+  } else {
+    value = (state.value * (period - 1) + current) / period;
+  }
+  host.taState.set(key, { index: host.currentBarIndex, value });
+  return value;
+}
+
+function trueRange(host: SandboxHostState, index: number): number | null {
+  const bar = host.history[index];
+  if (!bar) return null;
+  const previous = host.history[index - 1];
+  if (!previous) return bar.high - bar.low;
+  return Math.max(
+    bar.high - bar.low,
+    Math.abs(bar.high - previous.close),
+    Math.abs(bar.low - previous.close),
+  );
+}
+
+function extreme(
+  host: SandboxHostState,
+  series: PriceSource | number,
+  period: number,
+  direction: "highest" | "lowest",
+): number | null {
+  const start = host.currentBarIndex - period + 1;
+  if (start < 0) return null;
+  let result = direction === "highest" ? -Infinity : Infinity;
+  for (let index = start; index <= host.currentBarIndex; index += 1) {
+    const value = valueAt(host, index, series);
+    if (value === null) return null;
+    result = direction === "highest" ? Math.max(result, value) : Math.min(result, value);
+  }
+  return result;
 }

@@ -97,7 +97,7 @@ export interface ScriptContext<
 > {
   /** Current OHLCV bar. */
   readonly bar: Readonly<OhlcData>;
-  /** Zero-based index in the replay. */
+  /** Zero-based index across the replay and subsequent streamed bars. */
   readonly index: number;
   /** Resolved, immutable inputs. */
   readonly inputs: ScriptInputValues<TInputs>;

@@ -23,6 +23,8 @@ export type {
 export type { ScriptErrorCode } from "./errors";
 export type { ScriptRuntimeErrorCode } from "./runtime-errors";
 export { createScriptWorkerRuntime } from "./runtime";
+export { ta } from "./ta";
+export type { ScriptTa, TaSeries } from "./ta";
 export { SCRIPT_NOT_IMPLEMENTED, WICKSCRIPT_API_VERSION };
 export type {
   CompiledScript,
