@@ -1,5 +1,6 @@
 import type { OhlcData, WickExtension } from "@wicklib/core";
 
+import { compileSource } from "./compiler";
 import { SCRIPT_NOT_IMPLEMENTED, WICKSCRIPT_API_VERSION } from "./constants";
 import type { ScriptRuntime } from "./runtime";
 
@@ -26,6 +27,16 @@ export { createScriptWorkerRuntime } from "./runtime";
 export { ta } from "./ta";
 export type { ScriptTa, TaSeries } from "./ta";
 export { SCRIPT_NOT_IMPLEMENTED, WICKSCRIPT_API_VERSION };
+
+/**
+ * Validates a WickScript source without executing it.
+ *
+ * Throws {@link ScriptError} when the API header, imports, globals, syntax, or entry shape
+ * violate the WickScript contract.
+ */
+export function validateScript(source: string): void {
+  compileSource(source);
+}
 export type {
   CompiledScript,
   ScriptCompileOptions,

@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => {
     onDidChangeModelContent: vi.fn((_listener: () => void) => ({ dispose: vi.fn() })),
     dispose: vi.fn(),
   };
-  const model = { dispose: vi.fn() };
+  const model = { getValue: vi.fn(() => "// script"), dispose: vi.fn() };
   const typescriptDefaults = {
     setCompilerOptions: vi.fn(),
     setDiagnosticsOptions: vi.fn(),
@@ -18,7 +18,8 @@ const mocks = vi.hoisted(() => {
       return disposable;
     }),
   };
-  return { disposables, editor, model, typescriptDefaults };
+  const setModelMarkers = vi.fn();
+  return { disposables, editor, model, typescriptDefaults, setModelMarkers };
 });
 
 vi.mock("monaco-editor/languages/features/typescript/register", () => ({
@@ -32,7 +33,9 @@ vi.mock("monaco-editor", () => ({
   editor: {
     createModel: vi.fn(() => mocks.model),
     create: vi.fn(() => mocks.editor),
+    setModelMarkers: mocks.setModelMarkers,
   },
+  MarkerSeverity: { Error: 8 },
   Uri: { parse: vi.fn((value: string) => value) },
 }));
 
@@ -53,6 +56,7 @@ describe("@wicklib/script-editor", () => {
     });
 
     expect(mocks.typescriptDefaults.addExtraLib).toHaveBeenCalledTimes(4);
+    expect(mocks.setModelMarkers).toHaveBeenCalled();
     expect(mocks.editor.getValue()).toBe("source");
     expect(scriptEditor.getValue()).toBe("source");
 

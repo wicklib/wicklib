@@ -45,7 +45,9 @@ editor.dispose();
 ```
 
 The editor adds `@wicklib/core` and `@wicklib/script` declarations from generated package
-types. `pnpm build` regenerates those declarations before bundling.
+types. `pnpm build` regenerates those declarations before bundling. It also runs
+`validateScript()` on every edit and publishes compiler failures as Monaco markers, alongside
+normal TypeScript diagnostics.
 
 ## License
 

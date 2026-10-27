@@ -1,4 +1,5 @@
 import * as monaco from "monaco-editor";
+import { ScriptError, validateScript } from "@wicklib/script";
 import {
   ModuleKind,
   ModuleResolutionKind,
@@ -61,7 +62,31 @@ export function createScriptEditor(options: ScriptEditorOptions): ScriptEditor {
     padding: { top: 8, bottom: 8 },
   });
 
+  const validate = (): void => {
+    try {
+      validateScript(model.getValue());
+      monaco.editor.setModelMarkers(model, "wicklib", []);
+    } catch (error) {
+      if (error instanceof ScriptError) {
+        const line = error.line ?? 1;
+        const column = error.column ?? 0;
+        monaco.editor.setModelMarkers(model, "wicklib", [
+          {
+            severity: monaco.MarkerSeverity.Error,
+            message: error.message,
+            startLineNumber: line,
+            startColumn: column + 1,
+            endLineNumber: line,
+            endColumn: column + 2,
+          },
+        ]);
+      }
+    }
+  };
+
+  validate();
   const change = editor.onDidChangeModelContent(() => {
+    validate();
     options.onChange?.(editor.getValue());
   });
 

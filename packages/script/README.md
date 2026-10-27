@@ -46,6 +46,9 @@ runtime.dispose();
 Free `ta.*` functions: `sma`, `ema`, `rsi`, `atr`, `highest`, `lowest`, `stdev`, `change`,
 `roc`, `cum`, `crossover`, and `crossunder`. They maintain deterministic per-session state.
 
+`validateScript(source)` runs the same header/import/global/syntax validation as compilation
+without executing code. The editor uses it for inline diagnostics.
+
 Replay and streaming use the same per-bar state path. API v1 streams closed bars only:
 sending a bar whose time is not greater than the previous bar fails with
 `REVISION_UNSUPPORTED`. To revise history, create a new session and replay it.
