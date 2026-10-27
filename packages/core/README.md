@@ -1,12 +1,20 @@
 # @wicklib/core
 
-Canvas2D charting engine: scales, candlestick rendering, axes, crosshair, and interactions.
+Canvas2D charting engine: scales, candlestick rendering, axes, crosshair, interactions,
+indicators, panes, and drawings.
 
-**Status: Phase 3 — indicators and panes.** Candlestick charts render real data, can be
-driven by an async series-level datafeed, and support multiple panes and indicators.
+**Status: Phase 3 — indicators, panes, and drawings.** Candlestick charts render real data,
+can be driven by an async series-level datafeed, and support multiple panes, indicators, and
+drawing tools.
 
 ```ts
-import { CandlestickSeries, createChart, type Datafeed, type OhlcData } from "@wicklib/core";
+import {
+  CandlestickSeries,
+  createChart,
+  TrendLine,
+  type Datafeed,
+  type OhlcData,
+} from "@wicklib/core";
 import { SMA } from "@wicklib/indicators";
 
 // A host-provided feed; see docs/rfc/0002-datafeed.md for the full contract.
@@ -24,6 +32,17 @@ chart.on("data-loading", ({ loading }) => console.log("loading", loading));
 
 // Indicators come from the companion package:
 chart.addIndicator(SMA, { inputs: { period: 50, source: "close" } });
+
+// Drawings use data-space anchors; the host owns persistence.
+chart.addDrawing(TrendLine, {
+  anchors: [
+    { time: Date.UTC(2024, 0, 1), price: 100 },
+    { time: Date.UTC(2024, 0, 2), price: 108 },
+  ],
+});
+chart.startDrawing(TrendLine); // or let the user place the anchors
+const document = chart.serializeDrawings();
+chart.loadDrawings(document);
 ```
 
 ## What is implemented
@@ -37,12 +56,15 @@ chart.addIndicator(SMA, { inputs: { period: 50, source: "close" } });
   requests, prepend anchoring, realtime revision, loading and error events.
 - Panes with independent price scales and a shared time axis.
 - Indicator engine: typed inputs, pure compute, coalesced recompute, line/histogram/area plots.
+- Drawing tools: trend line, horizontal line, rectangle, Fibonacci retracement, measure.
+- Versioned drawing documents, selection, movement, anchor editing, and pane cascade.
 - Optional OHLC volume, used by VWAP.
 - Typed errors, strict data validation, per-chart extensions snapshot.
 
 ## What is not
 
-- Drawings, standalone line/area/histogram series, WickScript, sessions/DST.
+- Host persistence and undo/redo for drawings, custom drawing renderers.
+- Standalone line/area/histogram series, WickScript, sessions/DST.
 - Logarithmic price scale (accepted option, throws `NOT_IMPLEMENTED`).
 
 ## Rules

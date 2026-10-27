@@ -3,9 +3,10 @@
 Open-source charting engine for web applications. Canvas-first, framework-agnostic, and
 designed for a clean separation between the free engine and the commercial add-on.
 
-**Status: Phase 3 — indicators and panes.** A candlestick chart renders real data with axes,
-crosshair, pan, zoom, keyboard and pinch interactions, an async series-level datafeed,
-multiple panes, and seven built-in indicators. Drawings and WickTS come later.
+**Status: Phase 3 — indicators, panes, and drawings.** A candlestick chart renders real
+data with axes, crosshair, pan, zoom, keyboard and pinch interactions, an async series-level
+datafeed, multiple panes, seven built-in indicators, and five drawing tools. The React
+wrapper and WickTS come next.
 
 ## Try it
 
@@ -15,9 +16,9 @@ pnpm dev
 ```
 
 Opens the private playground at `localhost:5173` with 5k / 25k / 100k synthetic 1m bars, a
-crosshair OHLC readout, a theme toggle, an FPS meter, SMA/RSI/MACD toggles, and a "Use feed"
-mode with a simulated async feed and live bars. Keyboard: arrows pan, `+`/`-` zoom, `Home`
-fits. Pinch zoom works on touch. Core edits hot-reload.
+crosshair OHLC readout, a theme toggle, an FPS meter, SMA/RSI/MACD toggles, drawing tools,
+and a "Use feed" mode with a simulated async feed and live bars. Keyboard: arrows pan,
+`+`/`-` zoom, `Home` fits. Pinch zoom works on touch. Core edits hot-reload.
 
 ## Packages
 
@@ -61,7 +62,7 @@ are required.
   reviewed like code.
 - The site consumes published packages only; `apps/playground` is the local dev harness.
 
-See `docs/rfc/` for the accepted public API, datafeed, and indicator/pane contracts,
+See `docs/rfc/` for the accepted public API, datafeed, indicator/pane, and drawing contracts,
 `apps/playground/BENCHMARK.md` for the rendering baseline, and `packages/script/PLAN.md`
 plus its ADRs for the scripting design that is frozen but not yet implemented.
 

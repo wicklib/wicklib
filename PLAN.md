@@ -1,7 +1,7 @@
 # Wicklib — Implementation Plan
 
-Status: Phase 1 complete. Phase 2 complete. Phase 3 in progress: RFC-0003 accepted;
-indicators and panes implemented.
+Status: Phase 1 complete. Phase 2 complete. Phase 3 in progress: RFC-0003 and RFC-0004
+accepted; indicators, panes, and drawings implemented. The React wrapper remains.
 
 Phase 1 froze the contract: packages, toolchain, CI, release pipeline, API report, extension
 seams, and the normative WickScript plan. No rendering exists yet.
@@ -107,12 +107,12 @@ interactions, visual regression, the performance baseline, and the private playg
 
 ## Phase 3 — indicators and panes
 
-Status: in progress. RFC-0003 accepted; indicators and panes implemented. Drawings (RFC-0004)
-and the React wrapper remain.
+Status: in progress. RFC-0003 and RFC-0004 accepted; indicators, panes, and drawings
+implemented. The React wrapper remains.
 
 1. [done] `@wicklib/indicators` free catalog: SMA, EMA, RSI, MACD, Bollinger Bands, VWAP, ATR.
 2. [done] `chart.addIndicator` with typed inputs, plot definitions, and pane assignment.
-3. [pending] Drawing tools: trendline, horizontal, rectangle, fib retracement, measure (RFC-0004).
+3. [done] Drawing tools: trendline, horizontal, rectangle, fib retracement, measure.
 4. [done] Multi-pane support: per-pane price scales, shared time axis, pane crosshair.
 5. [pending] `@wicklib/react` real wrapper plus `useChart`.
 6. [done] Visual regression with indicator panes and a 7-indicator benchmark.
