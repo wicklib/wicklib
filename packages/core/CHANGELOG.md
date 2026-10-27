@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.12
+
+### Patch Changes
+
+- c41b1ce: Prevent aggregated candles from merging across session gaps, which produced tall boundary candles.
+
 ## 0.1.0-next.11
 
 ### Minor Changes
