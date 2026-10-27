@@ -1,8 +1,8 @@
 # Wicklib — Implementation Plan
 
-Status: Phase 1 complete. Phase 2 complete. Phase 3 complete: RFC-0003 and RFC-0004
-accepted; indicators, panes, drawings, and the React wrapper implemented. Sessions/DST and
-WickScript remain.
+Status: Phase 1 complete. Phase 2 complete. Phase 3 complete. Phase 4 in progress:
+ADR-0006 accepted, WickScript API v1 authoring and compiler validation implemented; the
+QuickJS runtime and editor remain.
 
 Phase 1 froze the contract: packages, toolchain, CI, release pipeline, API report, extension
 seams, and the normative WickScript plan. No rendering exists yet.
@@ -130,8 +130,11 @@ changes are involved.
 
 ## Phase 4 — WickScript
 
-Follow `packages/script/PLAN.md` exactly. Accept ADR-0006 before writing the transpiler.
-Ship the runtime, free `ta.*`, then the editor. No core API changes without an ADR.
+Status: in progress. ADR-0006 accepted. `defineScript` and the API v1 type surface are frozen;
+the transpiler validates imports, globals, `any`, API version, and the default entry.
+
+Follow `packages/script/PLAN.md` exactly. Ship the QuickJS runtime, free `ta.*`, then the
+editor. No core API changes without an ADR.
 
 ## Phase 5 — performance
 

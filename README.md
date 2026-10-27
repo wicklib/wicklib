@@ -6,8 +6,8 @@ designed for a clean separation between the free engine and the commercial add-o
 **Status: Phase 3 complete — core chart, indicators, panes, drawings, and React.**
 A candlestick chart renders real data with axes, crosshair, pan, zoom, keyboard and pinch
 interactions, an async series-level datafeed, multiple panes, seven built-in indicators, five
-drawing tools, and a React wrapper. Session-aware labels and explicit gaps are in place;
-WickTS comes next.
+drawing tools, a React wrapper, session-aware labels/gaps, and the first WickScript API v1
+compiler slice. The sandboxed script runtime comes next.
 
 ## Try it
 
@@ -29,7 +29,7 @@ zoom, `Home` fits. Pinch zoom works on touch. Core edits hot-reload.
 | `@wicklib/core`          | alpha   | Canvas2D scales, series, panes, indicators, drawings |
 | `@wicklib/indicators`    | alpha   | Built-in indicator catalog                           |
 | `@wicklib/react`         | alpha   | Thin React mount wrapper and `useChart`              |
-| `@wicklib/script`        | planned | WickScript (TypeScript for charts) runtime           |
+| `@wicklib/script`        | alpha   | WickScript API v1, compiler, and runtime             |
 | `@wicklib/script-editor` | planned | Monaco integration                                   |
 | `wicklib`                | alpha   | Umbrella package: core + indicators                  |
 

@@ -2,11 +2,26 @@
 
 WickScript — TypeScript for charts.
 
-**Status: Phase 1 stub.** Only the typed contract exists. The language, transpiler,
-sandboxed runtime, and editor are deferred.
+**Status: API v1 authoring + compiler.** `defineScript`, typed inputs/plots, source-faithful
+TypeScript transpilation, and import/sandbox-boundary validation are implemented. The QuickJS
+runtime and editor remain.
 
 Scripts are plain TypeScript against a fixed API. Wicklib does not invent syntax and does
 not fork TypeScript.
+
+```ts
+import { defineScript } from "@wicklib/script";
+
+export default defineScript({
+  inputs: {
+    period: { type: "number", title: "Period", defaultValue: 20, min: 1 },
+  },
+  plots: [{ id: "sma", title: "SMA", type: "line" }],
+  onBar(ctx) {
+    ctx.plot("sma", ctx.bar.close);
+  },
+});
+```
 
 Read, in order:
 

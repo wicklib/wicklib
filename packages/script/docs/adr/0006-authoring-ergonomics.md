@@ -1,7 +1,7 @@
 # ADR-0006: Authoring ergonomics
 
-- Status: Proposed — must be accepted before implementation starts
-- Date: 2026-10-26
+- Status: Accepted
+- Date: 2026-10-27
 
 ## Context
 
@@ -15,22 +15,40 @@ authoring shape is not: how a script declares its entry, inputs, plots, and stat
    Simple, familiar, zero runtime API. Inputs declared by a separate `meta` export.
 
 2. **`defineScript` helper**
-   `export default defineScript({ inputs, onBar })`
+   `export default defineScript({ inputs, plots, onBar })`
    Explicit metadata, better typing, easier documentation. Adds one import.
 
 3. **Two-phase hooks**
    `init(ctx)` and `onBar(ctx)`.
    Clearer for expensive setup, but more surface and more ways to get state wrong.
 
-## Constraints
-
-- Must be one code path for replay and streaming.
-- Must support typed inputs and stable output series identity.
-- Must remain valid plain TypeScript with no custom syntax.
-- Must be ergonomic for AI authoring: one obvious shape, no cleverness.
-- Must not expose runtime internals or allow module-level mutable state.
-
 ## Decision
 
-Deferred. Accept this ADR before writing the transpiler or runtime. Whichever shape is
-chosen becomes part of API version 1 and cannot change without a major bump.
+Use the `defineScript` helper.
+
+```ts
+import { defineScript } from "@wicklib/script";
+
+export default defineScript({
+  inputs: {
+    period: { type: "number", title: "Period", defaultValue: 20, min: 1 },
+  },
+  plots: [{ id: "sma", title: "SMA", type: "line" }],
+  onBar(ctx) {
+    ctx.plot("sma", ctx.bar.close);
+  },
+});
+```
+
+The default export is the script definition. `onBar` is the only execution hook. Inputs and
+plot ids are inferred from the definition, so invalid ids fail at compile time.
+
+Module-level mutable state is not a supported pattern; per-run state lives in `ctx.state`.
+
+## Consequences
+
+- One obvious authoring shape for humans, editors, and AI tools.
+- Input and plot metadata are colocated with behavior and typed.
+- The runtime and editor consume the same definition type.
+- The API requires one import from the virtual `@wicklib/script` module.
+- The shape is part of API version 1; changing it requires a major version.

@@ -1,7 +1,7 @@
 # WickScript — Normative Spec
 
-Version: draft 0.1
-Status: normative for invariants. Authoring ergonomics are pending ADR-0006.
+Version: API v1
+Status: normative. Authoring ergonomics follow ADR-0006.
 
 The key words MUST, MUST NOT, SHOULD, and MAY are used as in RFC 2119.
 
@@ -30,6 +30,30 @@ The key words MUST, MUST NOT, SHOULD, and MAY are used as in RFC 2119.
 3. A script MUST NOT access unseeded randomness.
 4. A script MUST NOT perform I/O of any kind.
 5. Floating-point arithmetic MUST follow IEEE-754 double semantics.
+
+## 3A. Authoring shape
+
+A script MUST default-export a `defineScript` definition.
+
+```ts
+import { defineScript } from "@wicklib/script";
+
+export default defineScript({
+  inputs: {
+    period: { type: "number", title: "Period", defaultValue: 20, min: 1 },
+  },
+  plots: [{ id: "sma", title: "SMA", type: "line" }],
+  onBar(ctx) {
+    ctx.plot("sma", ctx.bar.close);
+  },
+});
+```
+
+- Inputs MUST be declared as typed descriptors with defaults.
+- Plot ids MUST be stable and unique within the script.
+- `onBar` MUST be synchronous and called once per bar.
+- Module-level mutable state MUST NOT be used; use `ctx.state`.
+- Plot ids are inferred from the declared `plots` array.
 
 ## 4. Context
 

@@ -1,6 +1,8 @@
 # WickScript — Plan
 
-Status: **normative**. Phase 1 commits this plan without implementing it.
+Status: **normative**. Phase 4 is in progress: ADR-0006 is accepted, API v1 authoring is
+frozen, and the transpiler with import/global rejection is implemented. The QuickJS worker,
+replay/stream scheduler, and editor remain.
 Changing a decision in this document requires a new ADR in `docs/adr/`.
 
 ## 1. What WickScript is
@@ -110,8 +112,8 @@ functions. The script package never depends on pro. License tier travels in `met
 
 ## 13. Milestones (deferred)
 
-1. Spec freeze + ADR-0006 (authoring ergonomics).
-2. Transpiler + import validation.
+1. [done] Spec freeze + ADR-0006 (authoring ergonomics).
+2. [done] Transpiler + import and global validation.
 3. QuickJS worker host + message protocol.
 4. Per-bar scheduler with replay/stream parity.
 5. Free `ta.*` set.

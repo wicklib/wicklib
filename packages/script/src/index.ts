@@ -1,41 +1,26 @@
 import type { OhlcData, WickExtension } from "@wicklib/core";
 
-/**
- * Version of the WickScript API surface. Scripts declare the version they target.
- */
-export const WICKSCRIPT_API_VERSION = 1;
+import { SCRIPT_NOT_IMPLEMENTED, WICKSCRIPT_API_VERSION } from "./constants";
+import type { ScriptContext } from "./authoring";
 
-/**
- * Error code used by Phase 1 stubs.
- */
-export const SCRIPT_NOT_IMPLEMENTED = "WICKLIB_NOT_IMPLEMENTED";
-
-/**
- * A user-declared input.
- */
-export interface ScriptInput {
-  name: string;
-  type: "number" | "boolean" | "string" | "source";
-  defaultValue?: number | boolean | string;
-}
-
-/**
- * Per-bar execution context handed to a compiled script.
- */
-export interface ScriptContext {
-  /** The bar currently being evaluated. */
-  readonly bar: OhlcData;
-  /** Zero-based index of the bar in the replay. */
-  readonly index: number;
-  /** Resolved user inputs. */
-  readonly inputs: Readonly<Record<string, number | boolean | string>>;
-  /** Persistent per-script state that survives across bars. */
-  readonly state: Map<string, unknown>;
-  /** Emits a plot value for the current bar. */
-  plot(seriesId: string, value: number | null): void;
-  /** Emits an alert for the current bar. */
-  alert(message: string): void;
-}
+export { defineScript } from "./authoring";
+export { ScriptError } from "./errors";
+export type {
+  BooleanScriptInput,
+  NumberScriptInput,
+  ScriptContext,
+  ScriptDefinition,
+  ScriptInputDefinition,
+  ScriptInputMap,
+  ScriptInputValues,
+  ScriptPlotDefinition,
+  ScriptPlotId,
+  ScriptPlotType,
+  SourceScriptInput,
+  StringScriptInput,
+} from "./authoring";
+export type { ScriptErrorCode } from "./errors";
+export { SCRIPT_NOT_IMPLEMENTED, WICKSCRIPT_API_VERSION };
 
 /**
  * Output of a completed replay.
@@ -69,11 +54,16 @@ export interface ScriptRuntimeExtension extends WickExtension {
 }
 
 /**
+ * Whether a script-callable function is free or requires a commercial license.
+ */
+export type ScriptFunctionLicense = "free" | "pro";
+
+/**
  * Metadata for a script-callable function.
  */
 export interface ScriptFunctionMeta {
   name: string;
-  license: "free" | "pro";
+  license: ScriptFunctionLicense;
 }
 
 /**
@@ -92,3 +82,8 @@ export function registerScriptFunction(
 ): void {
   throw new Error(`${SCRIPT_NOT_IMPLEMENTED}: registerScriptFunction`);
 }
+
+/**
+ * A bar accepted by the script runtime.
+ */
+export type ScriptBar = OhlcData;
