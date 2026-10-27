@@ -1,5 +1,12 @@
 # @wicklib/core
 
+## 0.1.0-next.23
+
+### Minor Changes
+
+- ea119c7: Add public per-pane Canvas2D chart overlays with typed geometry, lifecycle, and pane cascade.
+- 9979430: Add series price lines, replaceable series markers, and composited chart screenshot/data-URL export.
+
 ## 0.1.0-next.22
 
 No changes in this release.
