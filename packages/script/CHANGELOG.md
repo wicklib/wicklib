@@ -1,5 +1,15 @@
 # @wicklib/script
 
+## 0.1.0-next.14
+
+### Minor Changes
+
+- d69925d: Add a QuickJS-backed sandbox with memory, wall-clock, interrupt, alert, and plot limits, plus a transport-independent worker protocol and `ScriptRuntimeError`.
+
+### Patch Changes
+
+- @wicklib/core@0.1.0-next.14
+
 ## 0.1.0-next.13
 
 ### Minor Changes
