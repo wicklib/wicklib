@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.11
+
+### Minor Changes
+
+- 93cf6b0: Add explicit session gaps with `timeScale.gapMode: "show"` and `gapWidth`, including gap-aware pan, zoom, fitting, drawings, and aggregated candle rendering.
+
 ## 0.1.0-next.10
 
 ### Patch Changes
