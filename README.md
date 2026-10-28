@@ -3,10 +3,10 @@
 Open-source charting engine for web applications. Canvas-first, framework-agnostic, and
 designed for a clean separation between the free engine and the commercial add-on.
 
-**Status: pre-1.0.** The free core is feature-complete for the initial stable release:
+**Status: 0.1.0.** The free core is feature-complete for the initial stable release:
 candlestick/line/area/histogram series, panes, indicators, drawings, annotations, themes,
 export, session-aware axes, and WickScript with a documented `ta.*` set and Monaco editor.
-The next phase is stabilization, documentation, and a stable `0.1.0` release.
+The public API remains 0.x until it stabilizes for 1.0.
 
 ## Try it
 
@@ -27,12 +27,12 @@ selected drawing. Pinch zoom works on touch. Core edits hot-reload.
 
 | Package                  | Status | Description                                                                                                       |
 | ------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------- |
-| `@wicklib/core`          | alpha  | Canvas2D scales, candlestick/line/area/histogram series, panes, indicators, drawings, annotations, export, themes |
-| `@wicklib/indicators`    | alpha  | Built-in indicator catalog                                                                                        |
-| `@wicklib/react`         | alpha  | Thin React mount wrapper and `useChart`                                                                           |
-| `@wicklib/script`        | alpha  | WickScript API v1, compiler, worker runtime                                                                       |
-| `@wicklib/script-editor` | alpha  | Monaco editor with generated WickScript types                                                                     |
-| `wicklib`                | alpha  | Umbrella package: core + indicators                                                                               |
+| `@wicklib/core`          | 0.1.0  | Canvas2D scales, candlestick/line/area/histogram series, panes, indicators, drawings, annotations, export, themes |
+| `@wicklib/indicators`    | 0.1.0  | Built-in indicator catalog                                                                                        |
+| `@wicklib/react`         | 0.1.0  | Thin React mount wrapper and `useChart`                                                                           |
+| `@wicklib/script`        | 0.1.0  | WickScript API v1, compiler, worker runtime                                                                       |
+| `@wicklib/script-editor` | 0.1.0  | Monaco editor with generated WickScript types                                                                     |
+| `wicklib`                | 0.1.0  | Umbrella package: core + indicators                                                                               |
 
 The commercial add-on (`@wicklib/pro`) lives in a separate private repository and consumes
 `@wicklib/core` through its published entrypoint only.
@@ -89,9 +89,9 @@ authenticate with a granular `NPM_TOKEN` repository secret and provenance is dis
 npm supports the new subject format, delete the secret, remove the token step, restore
 `publishConfig.provenance`, and add `id-token: write`.
 
-The alpha line uses the `next` tag. The stable line is published after
-`pnpm changeset pre exit` and a final versioning pass. See [docs/RELEASE.md](./docs/RELEASE.md)
-for the full checklist.
+The stable line uses the default `latest` tag. Prereleases use `next`; graduate a line with
+`pnpm changeset pre exit` and a final versioning pass. See
+[docs/RELEASE.md](./docs/RELEASE.md) for the full checklist.
 
 1. Add an `NPM_TOKEN` Actions secret with publish access to `@wicklib` and `wicklib`
    (90-day granular token; rotate it).
@@ -100,8 +100,8 @@ for the full checklist.
 4. Commit the version changes and push.
 5. Run the `release` workflow manually. It only publishes; it does not version.
 
-The initial `0.1.0-dev.0` versions were published manually. `latest` stays on them until a
-stable release; install the alpha with `@next` or an exact version.
+The initial `0.1.0-dev.0` versions were published manually. `0.1.0` is the first stable
+latest release; prerelease builds use `@next` or an exact version.
 
 ## License
 

@@ -3,7 +3,7 @@
 Monaco-based editor for WickScript. It configures the TypeScript language service with
 generated Wicklib types, including `defineScript`, inputs, plots, and `ta.*`.
 
-**Status: alpha.** The host configures Monaco workers.
+**Status: 0.1.0.** The host configures Monaco workers.
 
 ## Install
 

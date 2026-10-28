@@ -3,11 +3,11 @@
 Canvas2D charting engine: scales, series, axes, crosshair, interactions, panes, indicators,
 drawings, annotations, themes, and export.
 
-**Status: pre-1.0.** The free core feature set is implemented and published on the `next`
-tag while the public API is stabilized.
+**Status: 0.1.0.** The public API remains 0.x until 1.0, but the package is on the stable
+release channel.
 
 ```sh
-pnpm add @wicklib/core@next
+pnpm add @wicklib/core
 ```
 
 ## Quick start

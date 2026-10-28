@@ -2,7 +2,7 @@
 
 WickScript — TypeScript for charts.
 
-**Status: API v1 authoring + compiler + worker runtime.** `defineScript`, typed inputs/plots,
+**Status: 0.1.0 — API v1 authoring + compiler + worker runtime.** `defineScript`, typed inputs/plots,
 source-faithful TypeScript transpilation, import/sandbox-boundary validation, a QuickJS
 worker runtime with limits, replay/stream execution, the free `ta.*` set, and the Monaco
 editor are implemented.

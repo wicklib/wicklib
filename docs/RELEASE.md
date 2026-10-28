@@ -21,8 +21,8 @@ The alpha line publishes under the `next` tag:
 5. Push and run the **release** workflow from the Actions tab.
 6. Verify the `next` dist-tag on every free package.
 
-Use exact versions or `@next` in consuming applications. The default `latest` tag remains on
-the old stable channel until a stable release.
+Use exact versions or `@next` in consuming applications. `latest` advances only when a stable
+release is published.
 
 ## Stable release
 

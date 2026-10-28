@@ -3,7 +3,7 @@
 Thin React wrapper for Wicklib. No chart logic lives here; it mounts and disposes the core
 chart and exposes it through context.
 
-**Status: alpha.** Requires React 18 or newer.
+**Status: 0.1.0.** Requires React 18 or newer.
 
 ## Install
 
