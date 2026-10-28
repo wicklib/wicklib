@@ -1,5 +1,34 @@
 # @wicklib/core
 
+## 0.1.0
+
+### Minor Changes
+
+- 4e5282c: Add time-axis drag zoom and automatically size the price axis from its rendered labels.
+- b8b05d5: Add horizontal trackpad panning, price-axis scaling with manual vertical panning, double-click auto-scale reset, `PriceScaleApi.isAutoScale()`, and `ChartApi.resetView()`.
+- 4fa4f08: Add a typed chart theme contract with neutral light and dark presets for host-controlled theme application.
+- ea119c7: Add public per-pane Canvas2D chart overlays with typed geometry, lifecycle, and pane cascade.
+- 3b5baf1: Add generic line-series storage and working line, area, and histogram series types with datafeeds, markers, price lines, and auto-scaling.
+- 4f639a3: Add a lightweight-charts option mapper plus explicit wheel, drag, pinch, axis, and time-axis border controls.
+- fd8cb35: Add `timeScale.maxVisibleBars` to cap how many bars can be visible when zooming out.
+- 0ecfbf1: Add keyboard pan/zoom/fit controls and two-pointer pinch zoom.
+- e76e9e7: Add `titlePosition` to price lines so titles can render inside the plot while the price-axis label retains the value.
+- f2219e7: Add series datafeed
+- 489496a: Add multi-pane charts, the indicator engine, and built-in SMA, EMA, RSI, MACD, Bollinger Bands, VWAP, and ATR. Add optional OHLC volume for VWAP. Add trend line, horizontal line, rectangle, Fibonacci retracement, and measure drawings with selection, editing, and versioned documents.
+- 9979430: Add series price lines, replaceable series markers, and composited chart screenshot/data-URL export.
+- 54eb258: Add host-supplied trading calendars. Session-aware time-axis labels now skip closed periods and include session opens and closes across DST transitions.
+- 93cf6b0: Add explicit session gaps with `timeScale.gapMode: "show"` and `gapWidth`, including gap-aware pan, zoom, fitting, drawings, and aggregated candle rendering.
+
+### Patch Changes
+
+- 1ae98ba: Allow clearing a chart trading calendar with `timeScale.setOptions({ calendar: null })` and prefer session-open labels when compressed session boundaries collide.
+- 36abc29: Focus the chart on pointer down so keyboard drawing deletion works after selecting a drawing.
+- ad75744: Place drawing anchors at the pointer position instead of snapping the price to the crosshair magnet.
+- 4e01fc6: Allow time coordinates, time-axis labels, and drawings to extend beyond the last bar using the last observed interval.
+- c41b1ce: Prevent aggregated candles from merging across session gaps, which produced tall boundary candles.
+- b0dae75: Fix sparse lightweight-charts option mapping and reapply auto-scale after an automatic axis-width relayout.
+- b9e2ea5: Avoid duplicate month labels when a chart shows several months of data by aligning wide time-axis ticks to calendar month boundaries.
+
 ## 0.1.0-next.32
 
 ### Patch Changes

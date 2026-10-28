@@ -1,5 +1,33 @@
 # wicklib
 
+## 0.1.0
+
+### Patch Changes
+
+- Updated dependencies [4e5282c]
+- Updated dependencies [b8b05d5]
+- Updated dependencies [4fa4f08]
+- Updated dependencies [1ae98ba]
+- Updated dependencies [36abc29]
+- Updated dependencies [ad75744]
+- Updated dependencies [ea119c7]
+- Updated dependencies [4e01fc6]
+- Updated dependencies [c41b1ce]
+- Updated dependencies [3b5baf1]
+- Updated dependencies [b0dae75]
+- Updated dependencies [4f639a3]
+- Updated dependencies [fd8cb35]
+- Updated dependencies [b9e2ea5]
+- Updated dependencies [0ecfbf1]
+- Updated dependencies [e76e9e7]
+- Updated dependencies [f2219e7]
+- Updated dependencies [489496a]
+- Updated dependencies [9979430]
+- Updated dependencies [54eb258]
+- Updated dependencies [93cf6b0]
+  - @wicklib/core@0.1.0
+  - @wicklib/indicators@0.1.0
+
 ## 0.1.0-next.32
 
 ### Patch Changes

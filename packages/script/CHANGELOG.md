@@ -1,5 +1,45 @@
 # @wicklib/script
 
+## 0.1.0
+
+### Minor Changes
+
+- 8bb071f: Add bar-bound alert events to replay and stream results so hosts and adapters can retain alert timing.
+- c92753f: Add the WickScript API v1 authoring surface with `defineScript`, typed inputs and plots, `ScriptError`, and compile-time import/global/`any` validation.
+- d69925d: Add a QuickJS-backed sandbox with memory, wall-clock, interrupt, alert, and plot limits, plus a transport-independent worker protocol and `ScriptRuntimeError`.
+- 9d82f9f: Define API v1 streaming semantics: bar times must be strictly increasing, and partial-bar revisions fail with `REVISION_UNSUPPORTED`.
+- 7d50599: Add VWMA, true range, OBV, linear regression, and keyed bars-since support to the free `ta.*` set.
+- c6929e8: Add WMA, RMA, CCI, MFI, WPR, highestbars, and lowestbars to the free script API, plus editor validation callbacks and a richer default example.
+- 140a05a: Add the initial free `ta.*` set: SMA, EMA, RSI, ATR, highest, lowest, crossover, and crossunder.
+- 901b27a: Extend the free `ta.*` set with standard deviation, change, rate of change, and cumulative sum, plus golden fixtures and deterministic fuzz tests.
+- 1a8c237: Add `validateScript()` for non-executing contract checks and surface compiler failures as Monaco diagnostics.
+- 5721b21: Add the public worker-backed script runtime with compile, replay, stream, metadata, error reconstruction, and the `@wicklib/script/worker` entry.
+
+### Patch Changes
+
+- Updated dependencies [4e5282c]
+- Updated dependencies [b8b05d5]
+- Updated dependencies [4fa4f08]
+- Updated dependencies [1ae98ba]
+- Updated dependencies [36abc29]
+- Updated dependencies [ad75744]
+- Updated dependencies [ea119c7]
+- Updated dependencies [4e01fc6]
+- Updated dependencies [c41b1ce]
+- Updated dependencies [3b5baf1]
+- Updated dependencies [b0dae75]
+- Updated dependencies [4f639a3]
+- Updated dependencies [fd8cb35]
+- Updated dependencies [b9e2ea5]
+- Updated dependencies [0ecfbf1]
+- Updated dependencies [e76e9e7]
+- Updated dependencies [f2219e7]
+- Updated dependencies [489496a]
+- Updated dependencies [9979430]
+- Updated dependencies [54eb258]
+- Updated dependencies [93cf6b0]
+  - @wicklib/core@0.1.0
+
 ## 0.1.0-next.32
 
 ### Patch Changes

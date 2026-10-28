@@ -1,5 +1,50 @@
 # @wicklib/script-editor
 
+## 0.1.0
+
+### Minor Changes
+
+- 4d37d03: Implement the Monaco WickScript editor with generated core and script declarations, TypeScript diagnostics, default source, and lifecycle management.
+- c6929e8: Add WMA, RMA, CCI, MFI, WPR, highestbars, and lowestbars to the free script API, plus editor validation callbacks and a richer default example.
+- 1a8c237: Add `validateScript()` for non-executing contract checks and surface compiler failures as Monaco diagnostics.
+
+### Patch Changes
+
+- 7d23b56: Fix the Monaco TypeScript defaults import so the editor initializes in browsers, and add a real browser smoke page with worker-backed Monaco.
+- Updated dependencies [4e5282c]
+- Updated dependencies [b8b05d5]
+- Updated dependencies [4fa4f08]
+- Updated dependencies [1ae98ba]
+- Updated dependencies [36abc29]
+- Updated dependencies [ad75744]
+- Updated dependencies [ea119c7]
+- Updated dependencies [4e01fc6]
+- Updated dependencies [c41b1ce]
+- Updated dependencies [3b5baf1]
+- Updated dependencies [b0dae75]
+- Updated dependencies [4f639a3]
+- Updated dependencies [fd8cb35]
+- Updated dependencies [b9e2ea5]
+- Updated dependencies [0ecfbf1]
+- Updated dependencies [e76e9e7]
+- Updated dependencies [f2219e7]
+- Updated dependencies [489496a]
+- Updated dependencies [8bb071f]
+- Updated dependencies [c92753f]
+- Updated dependencies [d69925d]
+- Updated dependencies [9d82f9f]
+- Updated dependencies [7d50599]
+- Updated dependencies [c6929e8]
+- Updated dependencies [140a05a]
+- Updated dependencies [901b27a]
+- Updated dependencies [1a8c237]
+- Updated dependencies [5721b21]
+- Updated dependencies [9979430]
+- Updated dependencies [54eb258]
+- Updated dependencies [93cf6b0]
+  - @wicklib/core@0.1.0
+  - @wicklib/script@0.1.0
+
 ## 0.1.0-next.32
 
 ### Patch Changes
