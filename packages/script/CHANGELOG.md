@@ -1,5 +1,15 @@
 # @wicklib/script
 
+## 0.1.0-next.30
+
+### Minor Changes
+
+- c6929e8: Add WMA, RMA, CCI, MFI, WPR, highestbars, and lowestbars to the free script API, plus editor validation callbacks and a richer default example.
+
+### Patch Changes
+
+- @wicklib/core@0.1.0-next.30
+
 ## 0.1.0-next.29
 
 ### Patch Changes
