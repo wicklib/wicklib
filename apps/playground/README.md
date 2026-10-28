@@ -16,6 +16,8 @@ Never published. Not part of the Changesets group.
 - Dataset size: 5k, 25k, 100k synthetic 1m bars. Zooming out is capped at 720 bars.
 - Timeframe: 1m, 5m, 15m, 1h, 4h, or 1d, aggregated from the selected 1m source.
 - Regenerate: new deterministic dataset (seed increments).
+- Series demo: opens `/series.html` with line, area, and histogram series, plot price lines,
+  markers, theme switching, and PNG export.
 - Use feed: simulated async feed with latency, live bars, loading state, and range loads.
 - Binance 2025: load the local one-year BTCUSDT 1m snapshot (525,600 bars).
 - SPX 5m: load a local one-month Yahoo ^GSPC snapshot.
@@ -30,7 +32,8 @@ Never published. Not part of the Changesets group.
 - Trackpad: horizontal swipe pans time; vertical scroll or pinch zooms.
 - Theme: dark/light chart options.
 - FPS meter and crosshair OHLC readout.
-- Keyboard: arrows pan, `+`/`-` zoom, `Home` fits, `Escape` clears the crosshair.
+- Keyboard: arrows pan, `+`/`-` zoom, `Home` fits, `Escape` clears the crosshair,
+  `Delete`/`Backspace` removes the selected drawing.
 - Touch: one-finger pan, two-finger pinch zoom.
 - Script editor: open `/editor.html` for the Monaco WickScript editor with generated types.
 
@@ -53,6 +56,7 @@ authoring types and the TypeScript worker. This is the browser smoke test for
   `window.__wicklibReady` for Playwright.
 - `?bench` — runs a 180-frame 100k-bar pan benchmark and exposes `window.__wicklibBench`.
 - `?bench=zoom` — runs the same benchmark with all 100k bars visible.
+- `/series.html` — line/area/histogram, price-line, marker, theme, and export demo.
 
 ## Session fixture
 
@@ -110,8 +114,9 @@ pnpm test:visual
 ```
 
 The suite captures text-free plot crops for the static chart, indicator panes, and drawing
-tools, verifies derived timeframe aggregation, and asserts the 100k-bar pan benchmark stays
-under the CI threshold with all seven built-in indicators loaded. The recorded baseline is in
+tools, verifies derived timeframe aggregation, time-axis zoom, theme switching, drawing
+deletion, the series demo, and both 100k-bar pan benchmarks with all seven built-in indicators
+loaded. The recorded baseline is in
 [BENCHMARK.md](./BENCHMARK.md).
 
 To regenerate the snapshot after an intentional rendering change:

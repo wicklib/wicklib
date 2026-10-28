@@ -3,10 +3,10 @@
 Open-source charting engine for web applications. Canvas-first, framework-agnostic, and
 designed for a clean separation between the free engine and the commercial add-on.
 
-**Status: Phase 4 in progress — WickScript.**
-The free engine includes the chart, indicators, panes, drawings, React, session-aware axes, and
-a WickScript authoring/compiler/worker runtime with an initial `ta.*` set and Monaco editor.
-Broader `ta.*` coverage, the editor demo polish, and the pro script layer remain.
+**Status: pre-1.0.** The free core is feature-complete for the initial stable release:
+candlestick/line/area/histogram series, panes, indicators, drawings, annotations, themes,
+export, session-aware axes, and WickScript with a documented `ta.*` set and Monaco editor.
+The next phase is stabilization, documentation, and a stable `0.1.0` release.
 
 ## Try it
 
@@ -20,8 +20,8 @@ crosshair OHLC readout, a theme toggle, an FPS meter, SMA/RSI/MACD toggles, draw
 timeframe aggregation, local Binance and SPX snapshots, a Monaco script editor at
 `/editor.html`, a line/area/histogram and annotation demo at `/series.html`, and a "Use feed"
 mode with a simulated async feed. No live connection is
-required. Keyboard: arrows pan, `+`/`-` zoom, `Home` fits, `Delete`/`Backspace` removes
-the selected drawing. Pinch zoom works on touch. Core edits hot-reload.
+required. Keyboard: arrows pan, `+`/`-` zoom, `Home` fits, `Delete`/`Backspace` removes the
+selected drawing. Pinch zoom works on touch. Core edits hot-reload.
 
 ## Packages
 
@@ -36,6 +36,14 @@ the selected drawing. Pinch zoom works on touch. Core edits hot-reload.
 
 The commercial add-on (`@wicklib/pro`) lives in a separate private repository and consumes
 `@wicklib/core` through its published entrypoint only.
+
+## Documentation
+
+- [Documentation index](./docs/README.md)
+- [Core API and examples](./packages/core/README.md)
+- [RFCs](./docs/rfc/README.md) and [release procedure](./docs/RELEASE.md)
+- [Playground guide](./apps/playground/README.md) and [benchmark](./apps/playground/BENCHMARK.md)
+- [WickScript plan](./packages/script/PLAN.md) and [script guide](./packages/script/README.md)
 
 ## Development
 
@@ -65,9 +73,9 @@ are required.
   reviewed like code.
 - The site consumes published packages only; `apps/playground` is the local dev harness.
 
-See `docs/rfc/` for the accepted public API, datafeed, indicator/pane, drawing, overlay, and export contracts,
+See `docs/README.md` for the documentation index, `docs/rfc/` for accepted contracts,
 `apps/playground/BENCHMARK.md` for the rendering baseline, and `packages/script/PLAN.md`
-plus its ADRs for the scripting design that is frozen but not yet implemented.
+plus its ADRs for the scripting design.
 
 ## Releasing
 
@@ -81,9 +89,9 @@ authenticate with a granular `NPM_TOKEN` repository secret and provenance is dis
 npm supports the new subject format, delete the secret, remove the token step, restore
 `publishConfig.provenance`, and add `id-token: write`.
 
-The alpha line uses the `next` tag. Enter prerelease mode once with
-`pnpm changeset pre enter next`; exit with `pnpm changeset pre exit` before the first stable
-release.
+The alpha line uses the `next` tag. The stable line is published after
+`pnpm changeset pre exit` and a final versioning pass. See [docs/RELEASE.md](./docs/RELEASE.md)
+for the full checklist.
 
 1. Add an `NPM_TOKEN` Actions secret with publish access to `@wicklib` and `wicklib`
    (90-day granular token; rotate it).
