@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.29
+
+### Minor Changes
+
+- 3b5baf1: Add generic line-series storage and working line, area, and histogram series types with datafeeds, markers, price lines, and auto-scaling.
+
 ## 0.1.0-next.28
 
 ### Patch Changes
