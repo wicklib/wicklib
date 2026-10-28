@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.28
+
+### Patch Changes
+
+- b0dae75: Fix sparse lightweight-charts option mapping and reapply auto-scale after an automatic axis-width relayout.
+
 ## 0.1.0-next.27
 
 ### Minor Changes

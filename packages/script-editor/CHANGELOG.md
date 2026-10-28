@@ -1,5 +1,13 @@
 # @wicklib/script-editor
 
+## 0.1.0-next.28
+
+### Patch Changes
+
+- Updated dependencies [b0dae75]
+  - @wicklib/core@0.1.0-next.28
+  - @wicklib/script@0.1.0-next.28
+
 ## 0.1.0-next.27
 
 ### Patch Changes
