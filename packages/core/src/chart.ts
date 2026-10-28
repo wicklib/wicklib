@@ -1,4 +1,4 @@
-import type { OhlcStore } from "./data/ohlc-store";
+import type { SeriesDataStore } from "./data/series-store";
 import { fail, WickError } from "./errors";
 import { Drawing, type DrawingHost } from "./drawing";
 import {
@@ -25,11 +25,10 @@ import {
   type ResolvedLayout,
 } from "./render/chart-renderer";
 import { TimeScale, type TimeScaleSource } from "./scale/time-scale";
-import { CandlestickSeries, Series, type SeriesHost } from "./series";
+import { Series, type SeriesHost } from "./series";
 import type {
   AddDrawingOptions,
   AddIndicatorOptions,
-  CandlestickSeriesOptions,
   ChartApi,
   ChartEventMap,
   ChartOptions,
@@ -259,10 +258,6 @@ class Chart implements ChartApi, SeriesHost {
   ): SeriesApi<TData, TOptions> {
     this.assertAlive();
 
-    if (type.id !== CandlestickSeries.id) {
-      fail("UNKNOWN_SERIES_TYPE", `Unsupported series type: ${type.id}`);
-    }
-
     const paneId = (options as SeriesOptions | undefined)?.paneId ?? "main";
     const pane = this.findPane(paneId);
     if (!pane) {
@@ -270,13 +265,7 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     this.seriesCounter += 1;
-    const series = new Series(
-      this,
-      `series-${this.seriesCounter}`,
-      CandlestickSeries,
-      options as CandlestickSeriesOptions | undefined,
-      pane.id,
-    );
+    const series = new Series(this, `series-${this.seriesCounter}`, type, options, pane.id);
     pane.series.push(series);
     this.timeScaleModel.onDataChanged();
     this.requestRender();
@@ -307,19 +296,19 @@ class Chart implements ChartApi, SeriesHost {
   ): IndicatorApi<TInputs> {
     this.assertAlive();
 
-    const primary = this.primarySeries();
+    const primary = this.primaryOhlcSeries();
     if (!primary) {
-      fail("INVALID_ARGUMENT", "Add a series before adding an indicator");
+      fail("INVALID_ARGUMENT", "Add a candlestick series before adding an indicator");
     }
 
     const sourceSeriesId = options?.sourceSeriesId ?? primary.id;
     if (sourceSeriesId !== primary.id) {
-      fail("NOT_IMPLEMENTED", "Indicators currently support the primary series only");
+      fail("NOT_IMPLEMENTED", "Indicators currently support the primary candlestick series only");
     }
 
     const source = this.findSeries(sourceSeriesId);
-    if (!source) {
-      fail("INVALID_ARGUMENT", `Unknown source series: ${sourceSeriesId}`);
+    if (!source?.getOhlcStore()) {
+      fail("INVALID_ARGUMENT", `Unknown candlestick source series: ${sourceSeriesId}`);
     }
 
     const requestedPane = options?.pane ?? definition.defaultPane ?? "main";
@@ -350,7 +339,7 @@ class Chart implements ChartApi, SeriesHost {
       options?.inputs,
       {
         assertAlive: () => this.assertAlive(),
-        getSourceStore: (seriesId) => this.findSeries(seriesId)?.getStore() ?? null,
+        getSourceStore: (seriesId) => this.findSeries(seriesId)?.getOhlcStore() ?? null,
         requestRender: () => this.requestRender(),
         reportError: (error) => this.emitIndicatorError(indicatorId, error),
         removeIndicator: (target) => this.removeIndicator(target),
@@ -1219,6 +1208,16 @@ class Chart implements ChartApi, SeriesHost {
     return null;
   }
 
+  private primaryOhlcSeries(): Series | null {
+    for (const pane of this.panes) {
+      const series = pane.series.find((candidate) => candidate.kind === "candlestick");
+      if (series) {
+        return series;
+      }
+    }
+    return null;
+  }
+
   private emitIndicatorError(indicatorId: string, error: WickError): void {
     this.bus.emit("error", { error, source: "indicator", indicatorId });
   }
@@ -1786,11 +1785,11 @@ class Chart implements ChartApi, SeriesHost {
           continue;
         }
         const data = series.toRenderData();
-        const last = data.bars.lastBar();
-        if (last && data.lastValueVisible) {
+        if (data.store.length > 0 && data.lastValueVisible) {
+          const last = data.store.valueAt(data.store.length - 1);
           widest = Math.max(
             widest,
-            context.measureText(pane.priceScale.formatValue(last.close, this.options.locale)).width,
+            context.measureText(pane.priceScale.formatValue(last, this.options.locale)).width,
           );
         }
         for (const line of data.priceLines) {
@@ -1825,7 +1824,7 @@ class Chart implements ChartApi, SeriesHost {
       if (store.length === 0) {
         continue;
       }
-      const minMax = store.minMax(range.first, range.last);
+      const minMax = series.priceRange(range.first, range.last);
       if (!minMax) {
         continue;
       }
@@ -1853,7 +1852,7 @@ class Chart implements ChartApi, SeriesHost {
     return min === Number.POSITIVE_INFINITY ? null : { min, max };
   }
 
-  private primaryStore(): OhlcStore | null {
+  private primaryStore(): SeriesDataStore | null {
     return this.primarySeries()?.getStore() ?? null;
   }
 
@@ -1895,7 +1894,7 @@ class Chart implements ChartApi, SeriesHost {
           if (snapStore && snapStore.length > 0) {
             const snapIndex = Math.round(this.timeScaleModel.xToIndex(x));
             if (snapIndex >= 0 && snapIndex < snapStore.length) {
-              price = snapStore.closeAt(snapIndex);
+              price = snapStore.valueAt(snapIndex);
             }
           }
         }

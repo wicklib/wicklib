@@ -1,4 +1,6 @@
+import type { LineStore } from "../data/line-store";
 import type { OhlcStore } from "../data/ohlc-store";
+import type { SeriesDataStore } from "../data/series-store";
 import { anchorPoints, clipLineToRect, FIB_LEVELS, type ResolvedDrawingOptions } from "../drawings";
 import type { IndicatorRenderData, IndicatorPlotRenderData } from "../indicator";
 import type { PriceScale } from "../scale/price-scale";
@@ -52,20 +54,56 @@ export interface ResolvedCrosshair {
 
 export type PriceLineRenderData = Required<PriceLineOptions>;
 
-export interface SeriesRenderData {
-  bars: OhlcStore;
+interface SeriesRenderBase {
+  store: SeriesDataStore;
   visible: boolean;
   title: string;
-  upColor: string;
-  downColor: string;
-  wickUpColor: string;
-  wickDownColor: string;
-  borderVisible: boolean;
   lastValueVisible: boolean;
   priceLineVisible: boolean;
   priceLines: readonly PriceLineRenderData[];
   markers: readonly SeriesMarker[];
 }
+
+export interface CandlestickSeriesRenderData extends SeriesRenderBase {
+  kind: "candlestick";
+  store: OhlcStore;
+  upColor: string;
+  downColor: string;
+  wickUpColor: string;
+  wickDownColor: string;
+  borderVisible: boolean;
+}
+
+export interface LineSeriesRenderData extends SeriesRenderBase {
+  kind: "line";
+  store: LineStore;
+  color: string;
+  lineWidth: number;
+  lineStyle: "solid" | "dotted" | "dashed";
+}
+
+export interface AreaSeriesRenderData extends SeriesRenderBase {
+  kind: "area";
+  store: LineStore;
+  color: string;
+  lineWidth: number;
+  lineStyle: "solid" | "dotted" | "dashed";
+  topColor: string;
+  bottomColor: string;
+}
+
+export interface HistogramSeriesRenderData extends SeriesRenderBase {
+  kind: "histogram";
+  store: LineStore;
+  color: string;
+  base: number;
+}
+
+export type SeriesRenderData =
+  | CandlestickSeriesRenderData
+  | LineSeriesRenderData
+  | AreaSeriesRenderData
+  | HistogramSeriesRenderData;
 
 export interface DrawingRenderData {
   id: string;
@@ -295,11 +333,19 @@ export class ChartRenderer {
       context.clip();
 
       for (const series of pane.series) {
-        if (!series.visible || series.bars.length === 0 || range.last < range.first) {
+        if (!series.visible || series.store.length === 0 || range.last < range.first) {
           continue;
         }
         rendered = true;
-        this.drawCandles(context, model, pane, series, range.first, range.last);
+        if (series.kind === "candlestick") {
+          this.drawCandles(context, model, pane, series, range.first, range.last);
+        } else if (series.kind === "line") {
+          this.drawLineSeries(context, pane, series, range.first, range.last);
+        } else if (series.kind === "area") {
+          this.drawAreaSeries(context, pane, series, range.first, range.last);
+        } else {
+          this.drawHistogramSeries(context, pane, series, range.first, range.last);
+        }
       }
 
       if (this.drawIndicatorPlots(context, model, pane, range.first, range.last)) {
@@ -317,10 +363,10 @@ export class ChartRenderer {
 
       let legendOffset = 0;
       for (const series of pane.series) {
-        if (!series.visible || series.bars.length === 0) {
+        if (!series.visible || series.store.length === 0) {
           continue;
         }
-        const lastIndex = Math.min(range.last, series.bars.length - 1);
+        const lastIndex = Math.min(range.last, series.store.length - 1);
         if (lastIndex < 0) {
           continue;
         }
@@ -356,7 +402,7 @@ export class ChartRenderer {
     context: CanvasRenderingContext2D,
     model: ChartRenderModel,
     pane: PaneRenderModel,
-    series: SeriesRenderData,
+    series: CandlestickSeriesRenderData,
     first: number,
     last: number,
   ): void {
@@ -378,15 +424,15 @@ export class ChartRenderer {
       context.beginPath();
 
       for (let index = first; index <= last; index += 1) {
-        const open = series.bars.openAt(index);
-        const close = series.bars.closeAt(index);
+        const open = series.store.openAt(index);
+        const close = series.store.closeAt(index);
         const isUp = close >= open;
         if ((direction === "up") !== isUp) {
           continue;
         }
         const x = crisp(this.timeScale.indexToX(index));
-        context.moveTo(x, yOf(series.bars.highAt(index)));
-        context.lineTo(x, yOf(series.bars.lowAt(index)));
+        context.moveTo(x, yOf(series.store.highAt(index)));
+        context.lineTo(x, yOf(series.store.lowAt(index)));
       }
 
       context.stroke();
@@ -399,8 +445,8 @@ export class ChartRenderer {
       }
 
       for (let index = first; index <= last; index += 1) {
-        const open = series.bars.openAt(index);
-        const close = series.bars.closeAt(index);
+        const open = series.store.openAt(index);
+        const close = series.store.closeAt(index);
         const isUp = close >= open;
         if ((direction === "up") !== isUp) {
           continue;
@@ -424,12 +470,12 @@ export class ChartRenderer {
     context: CanvasRenderingContext2D,
     model: ChartRenderModel,
     pane: PaneRenderModel,
-    series: SeriesRenderData,
+    series: CandlestickSeriesRenderData,
     first: number,
     last: number,
   ): void {
     const { plot } = pane;
-    const count = series.bars.length;
+    const count = series.store.length;
     const from = Math.max(0, first);
     const to = Math.min(count - 1, last);
     const columns = Math.ceil(plot.width);
@@ -444,14 +490,14 @@ export class ChartRenderer {
         continue;
       }
 
-      const open = series.bars.openAt(start);
-      const close = series.bars.closeAt(end);
-      let high = series.bars.highAt(start);
-      let low = series.bars.lowAt(start);
+      const open = series.store.openAt(start);
+      const close = series.store.closeAt(end);
+      let high = series.store.highAt(start);
+      let low = series.store.lowAt(start);
 
       for (let index = start + 1; index <= end; index += 1) {
-        const nextHigh = series.bars.highAt(index);
-        const nextLow = series.bars.lowAt(index);
+        const nextHigh = series.store.highAt(index);
+        const nextLow = series.store.lowAt(index);
         if (nextHigh > high) {
           high = nextHigh;
         }
@@ -467,6 +513,107 @@ export class ChartRenderer {
 
       context.fillStyle = close >= open ? series.upColor : series.downColor;
       context.fillRect(plot.left + column, top, 1, height);
+    }
+  }
+
+  private drawLineSeries(
+    context: CanvasRenderingContext2D,
+    pane: PaneRenderModel,
+    series: LineSeriesRenderData,
+    first: number,
+    last: number,
+  ): void {
+    const stride = plotStride(first, last, pane.plot.width);
+    context.strokeStyle = series.color;
+    context.lineWidth = series.lineWidth;
+    context.setLineDash(dash(series.lineStyle));
+    context.beginPath();
+
+    let started = false;
+    for (let index = first; index <= last; index += stride) {
+      const x = this.timeScale.indexToX(index);
+      const y = pane.priceScale.priceToY(
+        series.store.valueAt(index),
+        pane.plot.top,
+        pane.plot.height,
+      );
+      if (!started) {
+        context.moveTo(x, y);
+        started = true;
+      } else {
+        context.lineTo(x, y);
+      }
+    }
+    context.stroke();
+    context.setLineDash([]);
+  }
+
+  private drawAreaSeries(
+    context: CanvasRenderingContext2D,
+    pane: PaneRenderModel,
+    series: AreaSeriesRenderData,
+    first: number,
+    last: number,
+  ): void {
+    const stride = plotStride(first, last, pane.plot.width);
+    const points: Array<{ x: number; y: number }> = [];
+    for (let index = first; index <= last; index += stride) {
+      points.push({
+        x: this.timeScale.indexToX(index),
+        y: pane.priceScale.priceToY(series.store.valueAt(index), pane.plot.top, pane.plot.height),
+      });
+    }
+    if (points.length === 0) {
+      return;
+    }
+
+    const gradient = context.createLinearGradient(0, pane.plot.top, 0, pane.plot.bottom);
+    gradient.addColorStop(0, series.topColor);
+    gradient.addColorStop(1, series.bottomColor);
+    context.beginPath();
+    context.moveTo(points[0]!.x, pane.plot.bottom);
+    for (const point of points) {
+      context.lineTo(point.x, point.y);
+    }
+    context.lineTo(points[points.length - 1]!.x, pane.plot.bottom);
+    context.closePath();
+    context.fillStyle = gradient;
+    context.fill();
+
+    context.beginPath();
+    context.moveTo(points[0]!.x, points[0]!.y);
+    for (let index = 1; index < points.length; index += 1) {
+      context.lineTo(points[index]!.x, points[index]!.y);
+    }
+    context.strokeStyle = series.color;
+    context.lineWidth = series.lineWidth;
+    context.setLineDash(dash(series.lineStyle));
+    context.stroke();
+    context.setLineDash([]);
+  }
+
+  private drawHistogramSeries(
+    context: CanvasRenderingContext2D,
+    pane: PaneRenderModel,
+    series: HistogramSeriesRenderData,
+    first: number,
+    last: number,
+  ): void {
+    const stride = plotStride(first, last, pane.plot.width);
+    const baseY = pane.priceScale.priceToY(series.base, pane.plot.top, pane.plot.height);
+    const width = Math.max(1, this.timeScale.getBarSpacing() * stride * 0.7);
+    context.fillStyle = series.color;
+
+    for (let index = first; index <= last; index += stride) {
+      const x = this.timeScale.indexToX(index);
+      const y = pane.priceScale.priceToY(
+        series.store.valueAt(index),
+        pane.plot.top,
+        pane.plot.height,
+      );
+      const top = Math.min(y, baseY);
+      const height = Math.max(1, Math.abs(baseY - y));
+      context.fillRect(x - width / 2, top, width, height);
     }
   }
 
@@ -697,7 +844,7 @@ export class ChartRenderer {
     context.textBaseline = "middle";
 
     for (const marker of series.markers) {
-      const index = series.bars.nearestIndex(marker.time);
+      const index = series.store.nearestIndex(marker.time);
       if (index < first || index > last) {
         continue;
       }
@@ -708,13 +855,21 @@ export class ChartRenderer {
       let y: number;
       let textAbove = true;
 
-      if (marker.position === "aboveBar") {
-        y = yOf(series.bars.highAt(index)) - radius - 3;
-      } else if (marker.position === "belowBar") {
-        y = yOf(series.bars.lowAt(index)) + radius + 3;
-        textAbove = false;
+      if (marker.position === "aboveBar" || marker.position === "belowBar") {
+        const value =
+          series.kind === "candlestick"
+            ? marker.position === "aboveBar"
+              ? series.store.highAt(index)
+              : series.store.lowAt(index)
+            : series.store.valueAt(index);
+        y = yOf(value) + (marker.position === "aboveBar" ? -radius - 3 : radius + 3);
+        textAbove = marker.position === "aboveBar";
       } else if (marker.position === "inBar") {
-        y = yOf((series.bars.openAt(index) + series.bars.closeAt(index)) / 2);
+        y = yOf(
+          series.kind === "candlestick"
+            ? (series.store.openAt(index) + series.store.closeAt(index)) / 2
+            : series.store.valueAt(index),
+        );
       } else if (marker.position === "atPriceTop") {
         y = yOf(marker.price!) - radius - 3;
       } else if (marker.position === "atPriceBottom") {
@@ -766,14 +921,14 @@ export class ChartRenderer {
     series: SeriesRenderData,
     lastIndex: number,
   ): void {
-    const last = series.bars.barAt(lastIndex);
+    const value = series.store.valueAt(lastIndex);
     const { plot } = pane;
-    const y = pane.priceScale.priceToY(last.close, plot.top, plot.height);
+    const y = pane.priceScale.priceToY(value, plot.top, plot.height);
     if (y < plot.top || y > plot.bottom) {
       return;
     }
 
-    const color = last.close >= last.open ? series.upColor : series.downColor;
+    const color = this.seriesColor(series, lastIndex);
 
     if (series.priceLineVisible) {
       context.save();
@@ -791,7 +946,7 @@ export class ChartRenderer {
       return;
     }
 
-    const label = pane.priceScale.formatValue(last.close, model.locale);
+    const label = pane.priceScale.formatValue(value, model.locale);
     const boxHeight = model.layout.fontSize + 6;
     const top = Math.max(plot.top, Math.min(plot.bottom - boxHeight, y - boxHeight / 2));
 
@@ -817,7 +972,7 @@ export class ChartRenderer {
       return;
     }
 
-    const last = series.bars.barAt(lastIndex);
+    const value = series.store.valueAt(lastIndex);
     const { plot } = pane;
     const y = plot.top + model.layout.fontSize + offset;
 
@@ -827,10 +982,19 @@ export class ChartRenderer {
     context.fillStyle = model.layout.textColor;
     context.fillText(series.title, plot.left + 8, y);
 
-    const label = ` ${pane.priceScale.formatValue(last.close, model.locale)}`;
+    const label = ` ${pane.priceScale.formatValue(value, model.locale)}`;
     const width = context.measureText(series.title).width;
-    context.fillStyle = last.close >= last.open ? series.upColor : series.downColor;
+    context.fillStyle = this.seriesColor(series, lastIndex);
     context.fillText(label, plot.left + 8 + width, y);
+  }
+
+  private seriesColor(series: SeriesRenderData, index: number): string {
+    if (series.kind === "candlestick") {
+      return series.store.closeAt(index) >= series.store.openAt(index)
+        ? series.upColor
+        : series.downColor;
+    }
+    return series.color;
   }
 
   private drawIndicatorLegend(

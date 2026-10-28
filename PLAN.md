@@ -119,8 +119,8 @@ wrapper implemented.
 6. [done] Visual regression with indicator panes and a 7-indicator benchmark.
 
 Implementation notes: `OhlcData` now carries optional volume for VWAP; indicator plots use
-the internal line/histogram/area renderers; standalone line/area/histogram series remain
-deferred until a generic data store exists. The React wrapper is client-only: `WickChart`
+the internal line/histogram/area renderers. Standalone line/area/histogram series are
+implemented through RFC-0012 and the generic line store. The React wrapper is client-only: `WickChart`
 creates the core chart in an effect, patches option updates, recreates on extension changes,
 and exposes the chart through `useChart`. Sessions/DST remain deferred behind the time-scale
 policy seam. RFC-0005 is accepted; compressed session labels, DST resolution, and explicit

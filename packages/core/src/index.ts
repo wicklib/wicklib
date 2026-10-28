@@ -9,7 +9,7 @@ export { isWickError, WickError } from "./errors";
 export type { WickErrorCode } from "./errors";
 export { assertFeature } from "./license";
 export { FibRetracement, HorizontalLine, Measure, Rectangle, TrendLine } from "./drawings";
-export { CandlestickSeries } from "./series";
+export { AreaSeries, CandlestickSeries, HistogramSeries, LineSeries } from "./series";
 export { ChartThemes, DarkTheme, LightTheme } from "./themes";
 export type { ChartTheme } from "./themes";
 export { VERSION } from "./version";
@@ -23,6 +23,7 @@ export type {
   ChartOverlay,
   ChartOverlayApi,
   AddDrawingOptions,
+  AreaSeriesOptions,
   CrosshairEvent,
   CrosshairLineOptions,
   CrosshairOptions,
@@ -43,6 +44,7 @@ export type {
   AddIndicatorOptions,
   GridLineOptions,
   GridOptions,
+  HistogramSeriesOptions,
   IndicatorApi,
   IndicatorBars,
   IndicatorContext,

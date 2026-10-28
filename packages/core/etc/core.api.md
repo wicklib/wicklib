@@ -22,6 +22,16 @@ export interface AddIndicatorOptions<TInputs extends IndicatorInputs = Indicator
 }
 
 // @public
+export const AreaSeries: SeriesType<LineData, AreaSeriesOptions>;
+
+// @public
+export interface AreaSeriesOptions extends LineSeriesOptions {
+    bottomColor?: string;
+    lineColor?: string;
+    topColor?: string;
+}
+
+// @public
 export function assertFeature(context: LicenseContext, feature: Feature): void;
 
 // @public
@@ -396,6 +406,16 @@ export interface GridOptions {
     vertLines?: GridLineOptions;
 }
 
+// @public
+export const HistogramSeries: SeriesType<LineData, HistogramSeriesOptions>;
+
+// @public
+export interface HistogramSeriesOptions extends SeriesOptions {
+    base?: number;
+    // (undocumented)
+    color?: string;
+}
+
 // @public (undocumented)
 export const HorizontalLine: DrawingToolDefinition;
 
@@ -623,6 +643,9 @@ export interface LineData extends SeriesData {
     // (undocumented)
     value: number;
 }
+
+// @public
+export const LineSeries: SeriesType<LineData, LineSeriesOptions>;
 
 // @public
 export interface LineSeriesOptions extends SeriesOptions {
@@ -979,8 +1002,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:842:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:857:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:861:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:876:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

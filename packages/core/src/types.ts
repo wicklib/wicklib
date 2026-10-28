@@ -420,12 +420,33 @@ export interface CandlestickSeriesOptions extends SeriesOptions {
 }
 
 /**
- * Line series options. The line renderer is not implemented in Phase 2.
+ * Line series options.
  */
 export interface LineSeriesOptions extends SeriesOptions {
   color?: string;
   lineWidth?: number;
   lineStyle?: "solid" | "dotted" | "dashed";
+}
+
+/**
+ * Area series options. The area fills from the line to the bottom of the pane.
+ */
+export interface AreaSeriesOptions extends LineSeriesOptions {
+  /** Fill gradient start at the line. Defaults to a translucent line colour. */
+  topColor?: string;
+  /** Fill gradient end at the pane bottom. Defaults to transparent. */
+  bottomColor?: string;
+  /** Line colour. Defaults to the line series colour. */
+  lineColor?: string;
+}
+
+/**
+ * Histogram series options.
+ */
+export interface HistogramSeriesOptions extends SeriesOptions {
+  color?: string;
+  /** Baseline in price units. Defaults to 0. */
+  base?: number;
 }
 
 /**

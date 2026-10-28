@@ -1,5 +1,6 @@
 import { fail } from "../errors";
 import type { OhlcData, Time } from "../types";
+import type { MergeResult, MutableSeriesStore } from "./series-store";
 
 function invalid(message: string, index: number): never {
   fail("INVALID_DATA", message, { index });
@@ -39,21 +40,12 @@ function validateIncoming(data: readonly OhlcData[]): void {
 }
 
 /**
- * Outcome of a merge, used by the datafeed controller.
- */
-export interface MergeResult {
-  prepended: number;
-  appended: number;
-  replaced: number;
-}
-
-/**
  * Columnar OHLC storage.
  *
  * Public input is an array of objects; internal storage is typed arrays so the render
  * loop never allocates per bar.
  */
-export class OhlcStore {
+export class OhlcStore implements MutableSeriesStore<OhlcData> {
   private times = new Float64Array(0);
   private opens = new Float64Array(0);
   private highs = new Float64Array(0);
@@ -126,6 +118,10 @@ export class OhlcStore {
   }
 
   closeAt(index: number): number {
+    return this.closes[index]!;
+  }
+
+  valueAt(index: number): number {
     return this.closes[index]!;
   }
 
