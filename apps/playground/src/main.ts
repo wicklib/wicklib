@@ -7,6 +7,7 @@ import {
   LightTheme,
   Rectangle,
   TrendLine,
+  type ChartApi,
   type DrawingToolDefinition,
   type OhlcData,
 } from "@wicklib/core";
@@ -64,6 +65,7 @@ declare global {
   interface Window {
     __wicklibReady?: boolean;
     __wicklibBench?: BenchResult;
+    __wicklibChart?: ChartApi;
   }
 }
 
@@ -185,6 +187,10 @@ const chart = createChart(chartElement, {
     scaleMargins: { top: 0.12, bottom: 0.12 },
   },
 });
+
+if (testMode) {
+  window.__wicklibChart = chart;
+}
 
 const series = chart.addSeries(CandlestickSeries, {
   title: "BTC/USD",

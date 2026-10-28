@@ -50,6 +50,8 @@ Interaction mapping:
 - `rightPriceScale` maps to Wicklib's single native price scale.
 - `timeScale.borderVisible` controls the time-axis border.
 - Width, height, auto-size, and locale map directly.
+- Sparse inputs emit only the interaction fields affected by the supplied flags; omitted
+  options never inject defaults.
 
 ## 6. Acceptance criteria
 

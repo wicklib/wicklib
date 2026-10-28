@@ -154,18 +154,10 @@ export function mapLightweightChartOptions(options: LightweightChartOptions): Ch
     result.crosshair = crosshair;
   }
 
-  const interaction: InteractionOptions = {
-    wheel: !(
-      options.handleScroll?.mouseWheel === false || options.handleScale?.mouseWheel === false
-    ),
-    drag:
-      options.handleScroll?.pressedMouseMove !== false ||
-      options.handleScroll?.horzTouchDrag !== false,
-    pinch: options.handleScale?.pinch !== false,
-    axisDrag: options.handleScale?.axisPressedMouseMove !== false,
-    axisDoubleClickReset: options.handleScale?.axisDoubleClickReset !== false,
-  };
-  result.interaction = interaction;
+  const interaction = mapInteraction(options.handleScroll, options.handleScale);
+  if (Object.keys(interaction).length > 0) {
+    result.interaction = interaction;
+  }
 
   const priceScale: PriceScaleOptions = {};
   if (options.rightPriceScale?.borderVisible !== undefined) {
@@ -202,6 +194,31 @@ export function mapLightweightChartOptions(options: LightweightChartOptions): Ch
   }
 
   return result;
+}
+
+function mapInteraction(
+  scroll: LightweightChartOptions["handleScroll"],
+  scale: LightweightChartOptions["handleScale"],
+): InteractionOptions {
+  const interaction: InteractionOptions = {};
+
+  if (scroll?.mouseWheel !== undefined || scale?.mouseWheel !== undefined) {
+    interaction.wheel = !(scroll?.mouseWheel === false || scale?.mouseWheel === false);
+  }
+  if (scroll?.pressedMouseMove !== undefined || scroll?.horzTouchDrag !== undefined) {
+    interaction.drag = scroll.pressedMouseMove !== false || scroll.horzTouchDrag !== false;
+  }
+  if (scale?.pinch !== undefined) {
+    interaction.pinch = scale.pinch !== false;
+  }
+  if (scale?.axisPressedMouseMove !== undefined) {
+    interaction.axisDrag = scale.axisPressedMouseMove !== false;
+  }
+  if (scale?.axisDoubleClickReset !== undefined) {
+    interaction.axisDoubleClickReset = scale.axisDoubleClickReset !== false;
+  }
+
+  return interaction;
 }
 
 function mapBackground(background: string | LightweightBackground | undefined): string | undefined {

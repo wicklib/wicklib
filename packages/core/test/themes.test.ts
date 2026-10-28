@@ -40,6 +40,8 @@ describe("chart themes", () => {
     expect(DarkTheme.layout.background).toBe("#0b0e14");
     expect(DarkTheme.grid.vertLines.color).toBe("#161b24");
     expect(DarkTheme.crosshair.labelBackground).toBe("#2a2e39");
+    expect(Object.isFrozen(DarkTheme)).toBe(true);
+    expect(Object.isFrozen(DarkTheme.grid.vertLines)).toBe(true);
   });
 
   it("can be applied at creation and switched without recreating the chart", () => {
@@ -48,6 +50,15 @@ describe("chart themes", () => {
     expect(() =>
       chart.setOptions({ ...DarkTheme, crosshair: { ...DarkTheme.crosshair } }),
     ).not.toThrow();
+    chart.destroy();
+  });
+
+  it("survives repeated theme changes", () => {
+    const chart = createChart(mount(), { ...DarkTheme });
+    for (let index = 0; index < 20; index += 1) {
+      chart.setOptions(index % 2 === 0 ? LightTheme : DarkTheme);
+    }
+    expect(() => chart.timeScale().getVisibleRange()).not.toThrow();
     chart.destroy();
   });
 });

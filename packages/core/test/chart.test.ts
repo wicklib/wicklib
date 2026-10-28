@@ -289,6 +289,25 @@ describe("createChart", () => {
     expect(after.to - after.from).toBeLessThan(before.to - before.from);
   });
 
+  it("disables both axis drags through the interaction option", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(1_000));
+    chart.timeScale().fitContent();
+    chart.setOptions({ interaction: { axisDrag: false } });
+
+    const before = chart.timeScale().getVisibleRange();
+    const root = element.firstElementChild as HTMLElement;
+
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 400, 390));
+    root.dispatchEvent(pointerEvent("pointermove", 1, 600, 390));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 600, 390));
+
+    const after = chart.timeScale().getVisibleRange();
+    expect(after).toEqual(before);
+  });
+
   it("drags the price axis into manual mode and resets auto-scale on double click", () => {
     const element = mount();
     const chart = track(createChart(element));
@@ -902,5 +921,43 @@ describe("chart screenshots", () => {
     expect(screenshot).toBeInstanceOf(HTMLCanvasElement);
     expect(screenshot.width).toBeGreaterThan(0);
     expect(screenshot.height).toBeGreaterThan(0);
+  });
+
+  it("flushes a pending frame before taking a screenshot", () => {
+    const chart = track(createChart(mount()));
+    chart.addSeries(CandlestickSeries).setData(bars(20));
+
+    const screenshot = chart.takeScreenshot();
+    expect(screenshot.width).toBeGreaterThan(0);
+    expect(screenshot.height).toBeGreaterThan(0);
+  });
+
+  it("uses the backing-store pixel ratio", () => {
+    const original = window.devicePixelRatio;
+    Object.defineProperty(window, "devicePixelRatio", { value: 2, configurable: true });
+    try {
+      const chart = track(createChart(mount()));
+      chart.addSeries(CandlestickSeries).setData(bars(20));
+      const screenshot = chart.takeScreenshot();
+      expect(screenshot.width).toBe(1600);
+      expect(screenshot.height).toBe(800);
+    } finally {
+      Object.defineProperty(window, "devicePixelRatio", { value: original, configurable: true });
+    }
+  });
+
+  it("validates data-URL quality", () => {
+    const chart = track(createChart(mount()));
+    chart.addSeries(CandlestickSeries).setData(bars(20));
+    const toDataUrl = vi
+      .spyOn(HTMLCanvasElement.prototype, "toDataURL")
+      .mockReturnValue("data:image/png;base64,test");
+
+    try {
+      expect(chart.exportImage()).toBe("data:image/png;base64,test");
+      expect(() => chart.exportImage("image/png", 2)).toThrow(/quality/);
+    } finally {
+      toDataUrl.mockRestore();
+    }
   });
 });

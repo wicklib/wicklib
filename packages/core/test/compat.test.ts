@@ -79,6 +79,13 @@ describe("mapLightweightChartOptions", () => {
     });
   });
 
+  it("does not inject defaults for sparse options", () => {
+    expect(mapLightweightChartOptions({})).toEqual({});
+    expect(mapLightweightChartOptions({ handleScroll: { mouseWheel: false } })).toEqual({
+      interaction: { wheel: false },
+    });
+  });
+
   it("maps crosshair, locale, and line styles", () => {
     const mapped = mapLightweightChartOptions({
       localization: { locale: "en-GB" },

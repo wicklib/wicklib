@@ -1685,15 +1685,7 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
-    for (const pane of this.panes) {
-      if (!pane.priceScale.isAutoScale()) {
-        continue;
-      }
-      const range = this.visiblePanePriceRange(pane);
-      if (range) {
-        pane.priceScale.setAutoRange(range.min, range.max);
-      }
-    }
+    this.applyAutoScale();
 
     const axisWidth = this.computeAxisWidth();
     if (axisWidth !== this.axisWidth) {
@@ -1703,6 +1695,7 @@ class Chart implements ChartApi, SeriesHost {
       if (!model) {
         return;
       }
+      this.applyAutoScale();
     }
 
     this.renderer.renderAll(model);
@@ -1757,6 +1750,18 @@ class Chart implements ChartApi, SeriesHost {
       axisWidth: this.axisWidth,
       axisHeight: TIME_AXIS_HEIGHT,
     };
+  }
+
+  private applyAutoScale(): void {
+    for (const pane of this.panes) {
+      if (!pane.priceScale.isAutoScale()) {
+        continue;
+      }
+      const range = this.visiblePanePriceRange(pane);
+      if (range) {
+        pane.priceScale.setAutoRange(range.min, range.max);
+      }
+    }
   }
 
   private computeAxisWidth(): number {
