@@ -103,6 +103,7 @@ The context object MUST expose:
 2. `ScriptResult.plots` MUST be ordered by bar.
 3. Runtime errors MUST include the failing bar index and MUST halt the run.
 4. Compile errors MUST be reported before any bar executes.
+5. Script alerts MUST include their source bar time and index in replay and stream results.
 
 ## 7. Resource limits
 

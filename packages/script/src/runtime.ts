@@ -40,11 +40,21 @@ export interface ScriptMetadata {
 }
 
 /**
+ * One alert emitted by a script, bound to its bar.
+ */
+export interface ScriptAlertEvent {
+  time: number;
+  barIndex: number;
+  message: string;
+}
+
+/**
  * Output of a completed replay or stream step.
  */
 export interface ScriptResult {
   plots: Readonly<Record<string, ReadonlyArray<number | null>>>;
   alerts: ReadonlyArray<string>;
+  alertEvents: ReadonlyArray<ScriptAlertEvent>;
 }
 
 /**

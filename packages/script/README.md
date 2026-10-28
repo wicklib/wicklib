@@ -51,6 +51,9 @@ per-session state. `barssince` requires an explicit stable key.
 `validateScript(source)` runs the same header/import/global/syntax validation as compilation
 without executing code. The editor uses it for inline diagnostics.
 
+Replay and streaming results include `alertEvents` with the bar time, bar index, and message,
+so hosts can deliver or persist alerts without losing their source bar.
+
 Replay and streaming use the same per-bar state path. API v1 streams closed bars only:
 sending a bar whose time is not greater than the previous bar fails with
 `REVISION_UNSUPPORTED`. To revise history, create a new session and replay it.

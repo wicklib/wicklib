@@ -44,6 +44,7 @@ describe("ScriptSandbox", () => {
       const result = sandbox.run(bars);
       expect(result.plots.line).toEqual([7, 9, 11]);
       expect(result.alerts).toEqual(["second bar"]);
+      expect(result.alertEvents).toEqual([{ time: 60_000, barIndex: 1, message: "second bar" }]);
     } finally {
       sandbox.dispose();
       sandbox.dispose();

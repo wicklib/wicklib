@@ -39,9 +39,16 @@ export type ScriptSandboxInputs = Readonly<Record<string, number | boolean | str
 /**
  * Plot and alert output from a sandbox run.
  */
+export interface ScriptSandboxAlert {
+  time: number;
+  barIndex: number;
+  message: string;
+}
+
 export interface ScriptSandboxResult {
   plots: Readonly<Record<string, ReadonlyArray<number | null>>>;
   alerts: ReadonlyArray<string>;
+  alertEvents: ReadonlyArray<ScriptSandboxAlert>;
 }
 
 export interface ScriptSandboxMetadata {
@@ -294,6 +301,7 @@ export class ScriptSandbox {
       plots[item.id] = [];
     }
     const alerts: string[] = [];
+    const alertEvents: ScriptSandboxAlert[] = [];
 
     for (let index = 0; index < bars.length; index += 1) {
       const bar = bars[index]!;
@@ -336,11 +344,14 @@ export class ScriptSandbox {
       for (const item of this.metadata.plots) {
         plots[item.id]!.push(this.host.currentPlots.get(item.id) ?? null);
       }
-      alerts.push(...this.host.currentAlerts);
+      for (const message of this.host.currentAlerts) {
+        alerts.push(message);
+        alertEvents.push({ time: bar.time, barIndex: globalIndex, message });
+      }
       this.lastTime = bar.time;
     }
 
-    return { plots, alerts };
+    return { plots, alerts, alertEvents };
   }
 
   /**

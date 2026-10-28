@@ -43,6 +43,7 @@ export type {
   ScriptInputs,
   ScriptLimits,
   ScriptMetadata,
+  ScriptAlertEvent,
   ScriptResult,
   ScriptRuntime,
   ScriptWorkerPort,
