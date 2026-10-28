@@ -3,5 +3,20 @@
     "name": "@wicklib/core",
     "path": "packages/core/dist/index.js",
     "limit": "33 kB"
+  },
+  {
+    "name": "@wicklib/script",
+    "path": "packages/script/dist/index.js",
+    "limit": "2 kB"
+  },
+  {
+    "name": "@wicklib/script worker",
+    "path": "packages/script/dist/worker.js",
+    "limit": "8 kB"
+  },
+  {
+    "name": "@wicklib/script-editor",
+    "path": "packages/script-editor/dist/index.js",
+    "limit": "12 kB"
   }
 ]

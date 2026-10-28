@@ -76,7 +76,9 @@ if (!app) {
 
 const params = new URLSearchParams(window.location.search);
 const testMode = params.has("test");
-const benchMode = params.has("bench");
+const benchParam = params.get("bench");
+const benchMode = benchParam !== null;
+const zoomBench = benchParam === "zoom";
 
 app.innerHTML = `
   <header class="toolbar">
@@ -638,6 +640,9 @@ function markReady(): void {
 
 async function runBenchmark(): Promise<void> {
   addBenchmarkIndicators();
+  if (zoomBench) {
+    chart.timeScale().setOptions({ maxVisibleBars: count });
+  }
   chart.timeScale().fitContent();
   await nextFrame();
   await nextFrame();

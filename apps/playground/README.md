@@ -52,6 +52,7 @@ authoring types and the TypeScript worker. This is the browser smoke test for
 - `?test` — deterministic static chart, animation/FPS loop disabled, sets
   `window.__wicklibReady` for Playwright.
 - `?bench` — runs a 180-frame 100k-bar pan benchmark and exposes `window.__wicklibBench`.
+- `?bench=zoom` — runs the same benchmark with all 100k bars visible.
 
 ## Session fixture
 

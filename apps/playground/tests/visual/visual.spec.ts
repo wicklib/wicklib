@@ -132,6 +132,19 @@ test("script editor mounts Monaco", async ({ page }) => {
   expect(value).toContain("@wicklib/script");
 });
 
+test("extreme zoom-out benchmark", async ({ page }) => {
+  await page.goto("/?bench=zoom");
+  await page.waitForFunction(() => Boolean(window.__wicklibBench), null, {
+    timeout: 45_000,
+  });
+
+  const result = await page.evaluate(() => window.__wicklibBench);
+  console.log("WICKLIB_BENCH_ZOOM", result);
+
+  expect(result?.frames).toBeGreaterThan(100);
+  expect(result?.p95Ms).toBeLessThan(50);
+});
+
 test("100k bar pan benchmark", async ({ page }) => {
   await page.goto("/?bench");
   await page.waitForFunction(() => Boolean(window.__wicklibBench), null, {
