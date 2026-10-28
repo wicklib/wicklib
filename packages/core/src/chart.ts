@@ -1227,6 +1227,12 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
+    try {
+      this.stack.root.focus({ preventScroll: true });
+    } catch {
+      // Focus is best-effort.
+    }
+
     const point = this.localPoint(event);
     const axisPane = this.priceAxisPaneAtPoint(point);
     if (axisPane) {

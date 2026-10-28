@@ -18,9 +18,10 @@ pnpm dev
 Opens the private playground at `localhost:5173` with 5k / 25k / 100k synthetic 1m bars, a
 crosshair OHLC readout, a theme toggle, an FPS meter, SMA/RSI/MACD toggles, drawing tools,
 timeframe aggregation, local Binance and SPX snapshots, a Monaco script editor at
-`/editor.html`, and a "Use feed" mode with a simulated async feed. No live connection is
-required. Keyboard: arrows pan, `+`/`-`
-zoom, `Home` fits. Pinch zoom works on touch. Core edits hot-reload.
+`/editor.html`, a line/area/histogram and annotation demo at `/series.html`, and a "Use feed"
+mode with a simulated async feed. No live connection is
+required. Keyboard: arrows pan, `+`/`-` zoom, `Home` fits, `Delete`/`Backspace` removes
+the selected drawing. Pinch zoom works on touch. Core edits hot-reload.
 
 ## Packages
 

@@ -103,6 +103,7 @@ app.innerHTML = `
       <button id="feed" type="button">Use feed</button>
       <button id="binance" type="button">Binance 2025</button>
       <button id="spx" type="button">SPX 5m</button>
+      <button id="series-demo" type="button">Series demo</button>
       <button id="fit" type="button">Fit</button>
       <button id="reset" type="button">Reset</button>
       <label class="toggle"><input id="sma" type="checkbox" /> SMA</label>
@@ -113,7 +114,7 @@ app.innerHTML = `
       <button type="button" data-drawing="horizontal-line" title="Horizontal line">H-Line</button>
       <button type="button" data-drawing="rectangle" title="Rectangle">Rect</button>
       <button type="button" data-drawing="fib-retracement" title="Fibonacci retracement">Fib</button>
-      <button id="clear-drawings" type="button">Clear</button>
+      <button id="clear-drawings" type="button" title="Select a drawing, then press Delete or Backspace. Clear removes all.">Clear</button>
       <button id="theme" type="button">Light</button>
     </div>
     <div class="metrics"><span id="fps">— fps</span></div>
@@ -156,6 +157,7 @@ const rsiToggle = byId<HTMLInputElement>("rsi");
 const macdToggle = byId<HTMLInputElement>("macd");
 const themeButton = byId<HTMLButtonElement>("theme");
 const clearDrawingsButton = byId<HTMLButtonElement>("clear-drawings");
+const seriesDemoButton = byId<HTMLButtonElement>("series-demo");
 
 const drawingTools: Record<string, DrawingToolDefinition> = {
   "trend-line": TrendLine,
@@ -764,6 +766,10 @@ binanceButton.addEventListener("click", () => {
 
 spxButton.addEventListener("click", () => {
   void loadSpx();
+});
+
+seriesDemoButton.addEventListener("click", () => {
+  window.location.href = "/series.html";
 });
 
 fitButton.addEventListener("click", () => {

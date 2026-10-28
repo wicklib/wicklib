@@ -19,6 +19,7 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL("./index.html", import.meta.url)),
         editor: fileURLToPath(new URL("./editor.html", import.meta.url)),
+        series: fileURLToPath(new URL("./series.html", import.meta.url)),
       },
     },
   },
