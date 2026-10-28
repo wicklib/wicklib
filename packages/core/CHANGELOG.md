@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.1.0-next.32
+
+### Patch Changes
+
+- 36abc29: Focus the chart on pointer down so keyboard drawing deletion works after selecting a drawing.
+
 ## 0.1.0-next.31
 
 No changes in this release.
