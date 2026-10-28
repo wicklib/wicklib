@@ -547,6 +547,65 @@ function registerTaFunctions(context: QuickJSContext, host: SandboxHostState): v
     return number(vwma(host, series, period));
   });
 
+  register("__wickscript_ta_wma", (sourceHandle, lengthHandle) => {
+    const series = source(sourceHandle);
+    const period = length(lengthHandle);
+    if (series === null || period === null) return context.null;
+    return number(wma(host, series, period));
+  });
+
+  register("__wickscript_ta_rma", (sourceHandle, lengthHandle) => {
+    const series = source(sourceHandle);
+    const period = length(lengthHandle);
+    if (series === null || period === null) return context.null;
+    return number(rma(host, series, period));
+  });
+
+  register("__wickscript_ta_cci", (sourceHandle, lengthHandle) => {
+    const series = source(sourceHandle);
+    const period = length(lengthHandle);
+    if (series === null || period === null) return context.null;
+    return number(cci(host, series, period));
+  });
+
+  const taMfi = context.newFunction("__wickscript_ta_mfi", (_contextHandle, lengthHandle) => {
+    if (!lengthHandle) {
+      setTaError(host, "ta.mfi requires a length argument");
+      return context.null;
+    }
+    const period = length(lengthHandle);
+    if (period === null) return context.null;
+    return number(mfi(host, period));
+  });
+  context.setProp(context.global, "__wickscript_ta_mfi", taMfi);
+  taMfi.dispose();
+
+  register("__wickscript_ta_highestbars", (sourceHandle, lengthHandle) => {
+    const series = source(sourceHandle);
+    const period = length(lengthHandle);
+    if (series === null || period === null) return context.null;
+    return number(barsSinceExtreme(host, series, period, "highest"));
+  });
+
+  register("__wickscript_ta_lowestbars", (sourceHandle, lengthHandle) => {
+    const series = source(sourceHandle);
+    const period = length(lengthHandle);
+    if (series === null || period === null) return context.null;
+    return number(barsSinceExtreme(host, series, period, "lowest"));
+  });
+
+  const taWpr = context.newFunction("__wickscript_ta_wpr", (_contextHandle, lengthHandle) => {
+    if (!lengthHandle) {
+      setTaError(host, "ta.wpr requires a length argument");
+      return context.null;
+    }
+    const period = length(lengthHandle);
+    if (period === null) return context.null;
+    return number(wpr(host, period));
+  });
+  context.setProp(context.global, "__wickscript_ta_wpr", taWpr);
+  taWpr.dispose();
+
   register("__wickscript_ta_linreg", (sourceHandle, lengthHandle) => {
     const series = source(sourceHandle);
     const period = length(lengthHandle);
@@ -691,6 +750,13 @@ function registerTaFunctions(context: QuickJSContext, host: SandboxHostState): v
           roc: __wickscript_ta_roc,
           cum: __wickscript_ta_cum,
           vwma: __wickscript_ta_vwma,
+          wma: __wickscript_ta_wma,
+          rma: __wickscript_ta_rma,
+          cci: __wickscript_ta_cci,
+          mfi: __wickscript_ta_mfi,
+          wpr: __wickscript_ta_wpr,
+          highestbars: __wickscript_ta_highestbars,
+          lowestbars: __wickscript_ta_lowestbars,
           tr: __wickscript_ta_tr,
           obv: __wickscript_ta_obv,
           linreg: __wickscript_ta_linreg,
@@ -934,6 +1000,117 @@ function vwma(host: SandboxHostState, series: PriceSource | number, period: numb
     volume += barVolume!;
   }
   return volume > 0 ? weighted / volume : null;
+}
+
+function wma(host: SandboxHostState, series: PriceSource | number, period: number): number | null {
+  const start = host.currentBarIndex - period + 1;
+  if (start < 0) return null;
+  let weighted = 0;
+  let weights = 0;
+  for (let index = start; index <= host.currentBarIndex; index += 1) {
+    const value = valueAt(host, index, series);
+    if (value === null) return null;
+    const weight = index - start + 1;
+    weighted += value * weight;
+    weights += weight;
+  }
+  return weighted / weights;
+}
+
+function rma(host: SandboxHostState, series: PriceSource | number, period: number): number | null {
+  const key = `rma:${String(series)}:${period}`;
+  const state = host.taState.get(key) as { index: number; value: number } | undefined;
+  if (state?.index === host.currentBarIndex) {
+    return state.value;
+  }
+  if (host.currentBarIndex < period - 1) {
+    return null;
+  }
+  const current = valueAt(host, host.currentBarIndex, series);
+  if (current === null) {
+    return null;
+  }
+  const value =
+    state && state.index < host.currentBarIndex
+      ? (state.value * (period - 1) + current) / period
+      : sma(host, series, period);
+  if (value === null) {
+    return null;
+  }
+  host.taState.set(key, { index: host.currentBarIndex, value });
+  return value;
+}
+
+function cci(host: SandboxHostState, series: PriceSource | number, period: number): number | null {
+  const average = sma(host, series, period);
+  if (average === null) return null;
+  const start = host.currentBarIndex - period + 1;
+  let deviation = 0;
+  for (let index = start; index <= host.currentBarIndex; index += 1) {
+    const value = valueAt(host, index, series);
+    if (value === null) return null;
+    deviation += Math.abs(value - average);
+  }
+  deviation /= period;
+  if (deviation === 0) return 0;
+  const current = valueAt(host, host.currentBarIndex, series);
+  return current === null ? null : (current - average) / (0.015 * deviation);
+}
+
+function mfi(host: SandboxHostState, period: number): number | null {
+  if (host.currentBarIndex < period) return null;
+  let positive = 0;
+  let negative = 0;
+  for (let index = host.currentBarIndex - period + 1; index <= host.currentBarIndex; index += 1) {
+    const bar = host.history[index];
+    const previous = host.history[index - 1];
+    if (!bar || !previous || !Number.isFinite(bar.volume)) return null;
+    const typical = (bar.high + bar.low + bar.close) / 3;
+    const previousTypical = (previous.high + previous.low + previous.close) / 3;
+    const flow = typical * bar.volume!;
+    if (typical > previousTypical) positive += flow;
+    else if (typical < previousTypical) negative += flow;
+  }
+  if (negative === 0) return 100;
+  if (positive === 0) return 0;
+  return 100 - 100 / (1 + positive / negative);
+}
+
+function wpr(host: SandboxHostState, period: number): number | null {
+  const start = host.currentBarIndex - period + 1;
+  if (start < 0) return null;
+  let high = Number.NEGATIVE_INFINITY;
+  let low = Number.POSITIVE_INFINITY;
+  for (let index = start; index <= host.currentBarIndex; index += 1) {
+    const bar = host.history[index];
+    if (!bar) return null;
+    high = Math.max(high, bar.high);
+    low = Math.min(low, bar.low);
+  }
+  const close = host.history[host.currentBarIndex]?.close;
+  if (close === undefined || high === low) return null;
+  return ((high - close) / (high - low)) * -100;
+}
+
+function barsSinceExtreme(
+  host: SandboxHostState,
+  series: PriceSource | number,
+  period: number,
+  direction: "highest" | "lowest",
+): number | null {
+  const start = host.currentBarIndex - period + 1;
+  if (start < 0) return null;
+  let best = direction === "highest" ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
+  let offset = 0;
+  for (let index = start; index <= host.currentBarIndex; index += 1) {
+    const value = valueAt(host, index, series);
+    if (value === null) return null;
+    if ((direction === "highest" && value >= best) || (direction === "lowest" && value <= best)) {
+      best = value;
+      offset = host.currentBarIndex - index;
+    }
+  }
+  return offset;
 }
 
 function obv(host: SandboxHostState): number | null {

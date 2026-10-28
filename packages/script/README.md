@@ -4,8 +4,8 @@ WickScript — TypeScript for charts.
 
 **Status: API v1 authoring + compiler + worker runtime.** `defineScript`, typed inputs/plots,
 source-faithful TypeScript transpilation, import/sandbox-boundary validation, a QuickJS
-worker runtime with limits, replay/stream execution, and the initial free `ta.*` set are
-implemented. The editor remains.
+worker runtime with limits, replay/stream execution, the free `ta.*` set, and the Monaco
+editor are implemented.
 
 Scripts are plain TypeScript against a fixed API. Wicklib does not invent syntax and does
 not fork TypeScript.
@@ -44,8 +44,9 @@ runtime.dispose();
 ```
 
 Free `ta.*` functions: `sma`, `ema`, `rsi`, `atr`, `highest`, `lowest`, `stdev`, `change`,
-`roc`, `cum`, `vwma`, `tr`, `obv`, `linreg`, `barssince`, `crossover`, and `crossunder`.
-They maintain deterministic per-session state. `barssince` requires an explicit stable key.
+`roc`, `cum`, `vwma`, `wma`, `rma`, `cci`, `mfi`, `wpr`, `highestbars`, `lowestbars`, `tr`,
+`obv`, `linreg`, `barssince`, `crossover`, and `crossunder`. They maintain deterministic
+per-session state. `barssince` requires an explicit stable key.
 
 `validateScript(source)` runs the same header/import/global/syntax validation as compilation
 without executing code. The editor uses it for inline diagnostics.

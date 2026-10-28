@@ -23,6 +23,13 @@ export interface ScriptTa {
   roc(context: ScriptContext, source: TaSeries, length?: number): number | null;
   cum(context: ScriptContext, source: TaSeries): number | null;
   vwma(context: ScriptContext, source: TaSeries, length: number): number | null;
+  wma(context: ScriptContext, source: TaSeries, length: number): number | null;
+  rma(context: ScriptContext, source: TaSeries, length: number): number | null;
+  cci(context: ScriptContext, source: TaSeries, length: number): number | null;
+  mfi(context: ScriptContext, length: number): number | null;
+  wpr(context: ScriptContext, length: number): number | null;
+  highestbars(context: ScriptContext, source: TaSeries, length: number): number | null;
+  lowestbars(context: ScriptContext, source: TaSeries, length: number): number | null;
   tr(context: ScriptContext): number | null;
   obv(context: ScriptContext): number | null;
   linreg(context: ScriptContext, source: TaSeries, length: number): number | null;
@@ -46,6 +53,13 @@ export const ta: ScriptTa = {
   roc: notImplemented("ta.roc"),
   cum: notImplemented("ta.cum"),
   vwma: notImplemented("ta.vwma"),
+  wma: notImplemented("ta.wma"),
+  rma: notImplemented("ta.rma"),
+  cci: notImplemented("ta.cci"),
+  mfi: notImplemented("ta.mfi"),
+  wpr: notImplemented("ta.wpr"),
+  highestbars: notImplemented("ta.highestbars"),
+  lowestbars: notImplemented("ta.lowestbars"),
   tr: notImplemented("ta.tr"),
   obv: notImplemented("ta.obv"),
   linreg: notImplemented("ta.linreg"),

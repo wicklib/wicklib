@@ -2,7 +2,7 @@
 
 Status: Phase 1 complete. Phase 2 complete. Phase 3 complete. Phase 4 in progress:
 ADR-0006 accepted; WickScript authoring, compiler, QuickJS worker runtime, replay/stream,
-golden/fuzz tests, initial `ta.*`, and Monaco editor are implemented.
+golden/fuzz tests, the free `ta.*` set, and Monaco editor are implemented.
 
 Phase 1 froze the contract: packages, toolchain, CI, release pipeline, API report, extension
 seams, and the normative WickScript plan. No rendering exists yet.
@@ -131,8 +131,8 @@ changes are involved.
 ## Phase 4 — WickScript
 
 Status: in progress. ADR-0006 accepted. API v1 authoring, compiler validation, QuickJS worker
-runtime, strict streaming semantics, initial `ta.*`, golden/fuzz tests, and the Monaco editor
-are implemented. Broader `ta.*` coverage and the pro script layer remain.
+runtime, strict streaming semantics, the free `ta.*` set, golden/fuzz tests, and the Monaco
+editor are implemented. The pro script layer remains.
 
 Follow `packages/script/PLAN.md` exactly. No core API changes without an ADR.
 

@@ -1,9 +1,9 @@
 # WickScript — Plan
 
 Status: **normative**. Phase 4 is in progress: ADR-0006 is accepted, API v1 authoring is
-frozen, the QuickJS worker runtime and strict streaming semantics are implemented, the initial
-free `ta.*` set and golden/fuzz suites are in place, and the Monaco editor is implemented.
-The pro script layer remains.
+frozen, the QuickJS worker runtime and strict streaming semantics are implemented, the free
+`ta.*` set and golden/fuzz suites are in place, and the Monaco editor is implemented. The pro
+script layer remains.
 Changing a decision in this document requires a new ADR in `docs/adr/`.
 
 ## 1. What WickScript is
@@ -118,8 +118,9 @@ functions. The script package never depends on pro. License tier travels in `met
 3. [done] QuickJS worker host + message protocol.
 4. [done] Per-bar scheduler with replay/stream parity. API v1 rejects in-place bar
    revisions; a future ADR can add a revision mode.
-5. [done] Free `ta.*` core set: SMA, EMA, RSI, ATR, highest, lowest, stdev, change, roc,
-   cum, VWMA, TR, OBV, LINREG, barssince, crossover, and crossunder.
+5. [done] Free `ta.*` set: SMA, EMA, RSI, ATR, highest, lowest, stdev, change, roc, cum,
+   VWMA, WMA, RMA, CCI, MFI, WPR, highestbars, lowestbars, TR, OBV, LINREG, barssince,
+   crossover, and crossunder.
 6. [done] Monaco editor + generated authoring type declarations.
 7. [done] Golden fixtures, deterministic fuzz tests, and resource-limit tests.
 8. Pro premium functions and strategy engine.

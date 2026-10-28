@@ -18,6 +18,8 @@ export interface ScriptEditorOptions {
   /** WickScript API version the editor should type against. */
   apiVersion?: number;
   onChange?: (value: string) => void;
+  /** Called after each validation pass with the compiler error, or null when valid. */
+  onValidate?: (error: ScriptError | null) => void;
 }
 
 /**
@@ -66,6 +68,7 @@ export function createScriptEditor(options: ScriptEditorOptions): ScriptEditor {
     try {
       validateScript(model.getValue());
       monaco.editor.setModelMarkers(model, "wicklib", []);
+      options.onValidate?.(null);
     } catch (error) {
       if (error instanceof ScriptError) {
         const line = error.line ?? 1;
@@ -80,6 +83,7 @@ export function createScriptEditor(options: ScriptEditorOptions): ScriptEditor {
             endColumn: column + 2,
           },
         ]);
+        options.onValidate?.(error);
       }
     }
   };
@@ -133,13 +137,15 @@ function configureMonaco(): void {
 
 function defaultSource(): string {
   return `// @wicklib/api 1
-import { defineScript } from "@wicklib/script";
+import { defineScript, ta } from "@wicklib/script";
 
 export default defineScript({
-  inputs: {},
-  plots: [{ id: "line", title: "Line", type: "line" }],
+  inputs: {
+    period: { type: "number", title: "Period", defaultValue: 20, min: 1 },
+  },
+  plots: [{ id: "sma", title: "SMA", type: "line" }],
   onBar(ctx) {
-    ctx.plot("line", ctx.bar.close);
+    ctx.plot("sma", ta.sma(ctx, "close", ctx.inputs.period));
   },
 });
 `;

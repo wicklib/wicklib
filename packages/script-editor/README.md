@@ -38,6 +38,7 @@ const editor = createScriptEditor({
   value: initialSource,
   apiVersion: 1,
   onChange: (source) => console.log(source),
+  onValidate: (error) => console.log(error ? error.message : "valid"),
 });
 
 editor.setValue(nextSource);
@@ -47,7 +48,7 @@ editor.dispose();
 The editor adds `@wicklib/core` and `@wicklib/script` declarations from generated package
 types. `pnpm build` regenerates those declarations before bundling. It also runs
 `validateScript()` on every edit and publishes compiler failures as Monaco markers, alongside
-normal TypeScript diagnostics.
+normal TypeScript diagnostics. `onValidate` receives the same error, or `null` when valid.
 
 ## License
 

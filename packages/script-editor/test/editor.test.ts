@@ -49,14 +49,17 @@ afterEach(() => {
 describe("@wicklib/script-editor", () => {
   it("mounts Monaco with WickScript declarations", () => {
     const onChange = vi.fn();
+    const onValidate = vi.fn();
     const scriptEditor = createScriptEditor({
       container: {} as HTMLElement,
       value: "// script",
       onChange,
+      onValidate,
     });
 
     expect(mocks.typescriptDefaults.addExtraLib).toHaveBeenCalledTimes(4);
     expect(mocks.setModelMarkers).toHaveBeenCalled();
+    expect(onValidate).toHaveBeenCalled();
     expect(mocks.editor.getValue()).toBe("source");
     expect(scriptEditor.getValue()).toBe("source");
 
