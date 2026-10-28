@@ -1,5 +1,15 @@
 # @wicklib/script
 
+## 0.1.0-next.31
+
+### Minor Changes
+
+- 8bb071f: Add bar-bound alert events to replay and stream results so hosts and adapters can retain alert timing.
+
+### Patch Changes
+
+- @wicklib/core@0.1.0-next.31
+
 ## 0.1.0-next.30
 
 ### Minor Changes
