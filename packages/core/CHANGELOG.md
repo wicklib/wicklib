@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.6.0
+
+### Minor Changes
+
+- 422537c: Expose per-tool drawing settings metadata so hosts can show only relevant controls; the playground now hides text/font for Elliott waves and other inapplicable settings.
+
 ## 0.5.0
 
 ### Minor Changes
