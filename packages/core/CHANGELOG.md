@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.3.0
+
+### Minor Changes
+
+- 2cb74e5: Add Elliott impulse, correction, triangle, double-combo, and triple-combo drawing tools, and preview a parallel channel's base line before the third anchor.
+
 ## 0.2.0
 
 ### Minor Changes
