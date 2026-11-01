@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.9.0
+
+### Minor Changes
+
+- 52e1b1f: Add a drawing-double-click event for host-specific editing actions, and polish the playground settings panel with mixed-value states and text editing.
+
 ## 0.8.0
 
 ### Minor Changes
