@@ -590,6 +590,10 @@ export interface DrawingOptions {
   fillColor?: string;
   fillOpacity?: number;
   showLabels?: boolean;
+  /** Text content for text drawings. */
+  text?: string;
+  /** Text size in CSS pixels. */
+  fontSize?: number;
   locked?: boolean;
   visible?: boolean;
 }
@@ -602,6 +606,8 @@ export interface DrawingToolDefinition {
   readonly meta: ExtensionMeta;
   /** Number of anchors required to create the drawing. */
   readonly anchors: 1 | 2 | 3 | 4 | 5 | 6;
+  /** How anchors are collected. Defaults to discrete clicks. */
+  readonly capture?: "anchors" | "freehand" | "path";
   readonly defaultOptions?: DrawingOptions;
   /** False for transient tools such as measure. Defaults to true. */
   readonly persist?: boolean;

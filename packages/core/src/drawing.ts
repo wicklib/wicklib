@@ -116,7 +116,11 @@ function validateAnchors(
   anchors: readonly DrawingAnchor[],
   definition: DrawingToolDefinition,
 ): DrawingAnchor[] {
-  if (anchors.length !== definition.anchors) {
+  if (definition.capture === "freehand" || definition.capture === "path") {
+    if (anchors.length < 2) {
+      fail("INVALID_ARGUMENT", `${definition.meta.name} requires at least 2 anchors`);
+    }
+  } else if (anchors.length !== definition.anchors) {
     fail("INVALID_ARGUMENT", `${definition.meta.name} requires ${definition.anchors} anchors`);
   }
 

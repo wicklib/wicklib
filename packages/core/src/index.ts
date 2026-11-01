@@ -9,6 +9,7 @@ export { isWickError, WickError } from "./errors";
 export type { WickErrorCode } from "./errors";
 export { assertFeature } from "./license";
 export {
+  Brush,
   Circle,
   CrossLine,
   ElliottCorrection,
@@ -19,12 +20,15 @@ export {
   FibExtension,
   FibRetracement,
   HorizontalLine,
+  Highlighter,
   HorizontalRay,
   LongShortPosition,
   Measure,
   ParallelChannel,
+  Path,
   PriceDateRange,
   Rectangle,
+  Text,
   TrendLine,
   VerticalLine,
 } from "./drawings";

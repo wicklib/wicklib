@@ -132,7 +132,8 @@ revisions, and typed loading/error events.
 - Session calendars, DST, holidays, and optional fixed-width closed-session gaps.
 - Drawing tools: trend/horizontal/vertical/cross lines, rays, channels, rectangles,
   Fibonacci retracement/extension, long/short positions, price/date ranges, circles, Elliott
-  impulse/correction/triangle/combo patterns, and measurements.
+  impulse/correction/triangle/combo patterns, brush/highlighter/path freehand tools, text,
+  and measurements. The first Elliott click is the labelled origin.
 - Multi-selection: Cmd/Ctrl-click to toggle, Cmd/Ctrl-drag for an additive marquee, group
   move, and group delete. `selectedDrawings()` returns the complete selection.
 - Extension overlays clipped to panes with time/price coordinate helpers.

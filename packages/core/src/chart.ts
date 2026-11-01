@@ -139,6 +139,8 @@ class Chart implements ChartApi, SeriesHost {
   private activeDrawingPaneId = "main";
   private pendingAnchors: DrawingAnchor[] = [];
   private previewPoint: Point | null = null;
+  private lastFreehandPoint: Point | null = null;
+  private freehandPointerId: number | null = null;
   private draggingDrawings: Drawing[] = [];
   private draggingAnchorIndex = -1;
   private drawingDragStart: Point | null = null;
@@ -693,12 +695,85 @@ class Chart implements ChartApi, SeriesHost {
     });
   }
 
+  private beginFreehand(pane: Pane, point: Point, event: PointerEvent): void {
+    const tool = this.activeTool;
+    const anchor = this.drawingAnchor(pane, point);
+    if (!tool || !anchor) {
+      return;
+    }
+    this.activeDrawingPaneId = pane.id;
+    this.pendingAnchors = [anchor];
+    this.previewPoint = point;
+    this.lastFreehandPoint = point;
+    this.freehandPointerId = event.pointerId;
+    try {
+      this.stack.root.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture is best-effort.
+    }
+    this.clearCrosshair();
+    this.requestRender();
+  }
+
+  private updateFreehand(point: Point, pointerId: number): void {
+    if (pointerId !== this.freehandPointerId || !this.lastFreehandPoint) {
+      return;
+    }
+    if (Math.hypot(point.x - this.lastFreehandPoint.x, point.y - this.lastFreehandPoint.y) < 2) {
+      return;
+    }
+    const pane = this.findPane(this.activeDrawingPaneId);
+    if (!pane) {
+      return;
+    }
+    const anchor = this.drawingAnchor(pane, point);
+    if (!anchor) {
+      return;
+    }
+    this.pendingAnchors.push(anchor);
+    this.previewPoint = point;
+    this.lastFreehandPoint = point;
+    this.requestRender();
+  }
+
+  private finishFreehand(): void {
+    const tool = this.activeTool;
+    const pane = this.findPane(this.activeDrawingPaneId);
+    if (tool && pane && this.pendingAnchors.length >= 2) {
+      const options = this.activeDrawingOptions;
+      const drawing = this.createDrawing(tool, pane, this.pendingAnchors, options);
+      this.resetDrawingTool();
+      this.selectOnly(drawing);
+      this.bus.emit("drawing-created", { drawing });
+    } else {
+      this.resetDrawingTool();
+    }
+    this.requestRender();
+  }
+
+  private finishPath(): void {
+    const tool = this.activeTool;
+    const pane = this.findPane(this.activeDrawingPaneId);
+    if (tool && pane && this.pendingAnchors.length >= 2) {
+      const options = this.activeDrawingOptions;
+      const drawing = this.createDrawing(tool, pane, this.pendingAnchors, options);
+      this.resetDrawingTool();
+      this.selectOnly(drawing);
+      this.bus.emit("drawing-created", { drawing });
+    } else {
+      this.resetDrawingTool();
+    }
+    this.requestRender();
+  }
+
   private resetDrawingTool(): void {
     this.activeTool = null;
     this.activeDrawingOptions = undefined;
     this.activeDrawingPaneId = "main";
     this.pendingAnchors = [];
     this.previewPoint = null;
+    this.lastFreehandPoint = null;
+    this.freehandPointerId = null;
   }
 
   private buildDrawingRenderData(): DrawingRenderData[] {
@@ -720,11 +795,16 @@ class Chart implements ChartApi, SeriesHost {
         toolId: this.activeTool.id,
         paneId: this.activeDrawingPaneId,
         anchors: this.pendingAnchors,
-        anchorCount: this.activeTool.anchors,
+        anchorCount:
+          this.activeTool.capture === "freehand" || this.activeTool.capture === "path"
+            ? Number.MAX_SAFE_INTEGER
+            : this.activeTool.anchors,
         previewPoint:
-          this.activeTool.anchors > 1 && this.pendingAnchors.length < this.activeTool.anchors
+          this.activeTool.capture === "freehand" || this.activeTool.capture === "path"
             ? this.previewPoint
-            : null,
+            : this.activeTool.anchors > 1 && this.pendingAnchors.length < this.activeTool.anchors
+              ? this.previewPoint
+              : null,
         options: resolveDrawingOptions(this.activeTool.defaultOptions, this.activeDrawingOptions),
         selected: false,
         preview: true,
@@ -768,6 +848,11 @@ class Chart implements ChartApi, SeriesHost {
 
     this.pendingAnchors.push(anchor);
     this.previewPoint = point;
+
+    if (this.activeTool.capture === "path") {
+      this.requestRender();
+      return;
+    }
 
     if (this.pendingAnchors.length >= this.activeTool.anchors) {
       const tool = this.activeTool;
@@ -1446,7 +1531,11 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     if (this.activeTool) {
-      this.placeAnchor(pane, point);
+      if (this.activeTool.capture === "freehand") {
+        this.beginFreehand(pane, point, event);
+      } else {
+        this.placeAnchor(pane, point);
+      }
       return;
     }
 
@@ -1517,9 +1606,13 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     if (this.activeTool) {
-      this.previewPoint = point;
-      this.updateCrosshair(point.x, point.y);
-      this.requestRender();
+      if (this.activeTool.capture === "freehand") {
+        this.updateFreehand(point, event.pointerId);
+      } else {
+        this.previewPoint = point;
+        this.updateCrosshair(point.x, point.y);
+        this.requestRender();
+      }
       return;
     }
 
@@ -1616,6 +1709,14 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     if (this.activeTool) {
+      if (this.activeTool.capture === "freehand" && event.pointerId === this.freehandPointerId) {
+        try {
+          this.stack.root.releasePointerCapture(event.pointerId);
+        } catch {
+          // Pointer capture is best-effort.
+        }
+        this.finishFreehand();
+      }
       return;
     }
 
@@ -1692,6 +1793,9 @@ class Chart implements ChartApi, SeriesHost {
     this.priceAxisDrag = null;
     this.timeAxisDrag = null;
     this.marquee = null;
+    if (this.activeTool?.capture === "freehand") {
+      this.resetDrawingTool();
+    }
     this.resetDrawingDrag();
     this.stack.root.style.cursor = "crosshair";
     this.clearCrosshair();
@@ -1719,6 +1823,20 @@ class Chart implements ChartApi, SeriesHost {
   };
 
   private readonly onDoubleClick = (event: MouseEvent): void => {
+    if (this.activeTool?.capture === "path") {
+      if (this.pendingAnchors.length > 2) {
+        this.pendingAnchors.pop();
+      }
+      if (this.pendingAnchors.length >= 2) {
+        this.finishPath();
+      } else {
+        this.resetDrawingTool();
+        this.requestRender();
+      }
+      event.preventDefault();
+      return;
+    }
+
     if (!this.options.interaction.axisDoubleClickReset) {
       return;
     }
@@ -1734,6 +1852,14 @@ class Chart implements ChartApi, SeriesHost {
   };
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === "Enter" && this.activeTool?.capture === "path") {
+      if (this.pendingAnchors.length >= 2) {
+        this.finishPath();
+      }
+      event.preventDefault();
+      return;
+    }
+
     if (event.key === "Delete" || event.key === "Backspace") {
       const selected = this.orderedSelection();
       if (selected.length > 0) {

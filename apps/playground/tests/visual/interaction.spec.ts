@@ -68,18 +68,53 @@ test("creates an Elliott impulse drawing from the tool menu", async ({ page }) =
 
   await page.selectOption("#drawing-tool", "elliott-impulse");
   for (const point of [
-    { x: 180, y: 190 },
-    { x: 280, y: 250 },
-    { x: 380, y: 210 },
-    { x: 480, y: 270 },
-    { x: 580, y: 230 },
+    { x: 160, y: 160 },
+    { x: 220, y: 210 },
+    { x: 300, y: 180 },
+    { x: 380, y: 240 },
+    { x: 470, y: 200 },
+    { x: 560, y: 250 },
   ]) {
     await page.mouse.click(box.x + point.x, box.y + point.y);
   }
 
   const drawing = await page.evaluate(() => window.__wicklibChart?.serializeDrawings().drawings[0]);
   expect(drawing?.toolId).toBe("elliott-impulse");
-  expect(drawing?.anchors).toHaveLength(5);
+  expect(drawing?.anchors).toHaveLength(6);
+});
+
+test("creates brush, path, and text drawings", async ({ page }) => {
+  await page.goto("/?test");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+
+  const box = await page.locator("#chart").boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) {
+    return;
+  }
+
+  await page.selectOption("#drawing-tool", "brush");
+  await page.mouse.move(box.x + 180, box.y + 160);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 260, box.y + 220, { steps: 8 });
+  await page.mouse.move(box.x + 340, box.y + 180, { steps: 8 });
+  await page.mouse.up();
+
+  await page.selectOption("#drawing-tool", "path");
+  await page.mouse.click(box.x + 200, box.y + 260);
+  await page.mouse.click(box.x + 300, box.y + 300);
+  await page.mouse.click(box.x + 400, box.y + 260);
+  await page.keyboard.press("Enter");
+
+  await page.selectOption("#drawing-tool", "text");
+  await page.mouse.click(box.x + 450, box.y + 180);
+
+  const drawings = await page.evaluate(
+    () => window.__wicklibChart?.serializeDrawings().drawings ?? [],
+  );
+  expect(drawings.find((drawing) => drawing.toolId === "brush")?.anchors.length).toBeGreaterThan(2);
+  expect(drawings.find((drawing) => drawing.toolId === "path")?.anchors).toHaveLength(3);
+  expect(drawings.find((drawing) => drawing.toolId === "text")?.options.text).toBe("Text");
 });
 
 test("selects and deletes multiple drawings with a modifier marquee", async ({ page }) => {

@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 
 import {
   CandlestickSeries,
+  Brush,
   Circle,
   createChart,
   CrossLine,
@@ -11,13 +12,16 @@ import {
   ElliottTriangle,
   ElliottTripleCombo,
   FibExtension,
+  Highlighter,
   HorizontalLine,
   HorizontalRay,
   LongShortPosition,
   Measure,
   ParallelChannel,
+  Path,
   PriceDateRange,
   Rectangle,
+  Text,
   TrendLine,
   VerticalLine,
   type ChartApi,
@@ -677,12 +681,19 @@ describe("createChart", () => {
       { time: 10 * MINUTE, price: 108 },
       { time: 20 * MINUTE, price: 103 },
     ];
-    const five = [
+    const four = [
+      { time: 0, price: 98 },
+      { time: 10 * MINUTE, price: 108 },
+      { time: 20 * MINUTE, price: 103 },
+      { time: 30 * MINUTE, price: 112 },
+    ];
+    const six = [
       { time: 0, price: 98 },
       { time: 10 * MINUTE, price: 108 },
       { time: 20 * MINUTE, price: 103 },
       { time: 30 * MINUTE, price: 112 },
       { time: 40 * MINUTE, price: 109 },
+      { time: 50 * MINUTE, price: 116 },
     ];
     const cases = [
       [HorizontalRay, one],
@@ -693,11 +704,15 @@ describe("createChart", () => {
       [LongShortPosition, three],
       [PriceDateRange, two],
       [Circle, two],
-      [ElliottImpulse, five],
-      [ElliottCorrection, three],
-      [ElliottTriangle, five],
-      [ElliottDoubleCombo, three],
-      [ElliottTripleCombo, five],
+      [ElliottImpulse, six],
+      [ElliottCorrection, four],
+      [ElliottTriangle, six],
+      [ElliottDoubleCombo, four],
+      [ElliottTripleCombo, six],
+      [Brush, two],
+      [Highlighter, two],
+      [Path, three],
+      [Text, one],
     ] as const;
 
     for (const [tool, anchors] of cases) {

@@ -171,11 +171,11 @@ export interface ChartRenderModel {
 const TIME_AXIS_HEIGHT = 28;
 
 const ELLIOTT_LABELS: Readonly<Record<string, readonly string[]>> = {
-  "elliott-impulse": ["1", "2", "3", "4", "5"],
-  "elliott-correction": ["A", "B", "C"],
-  "elliott-triangle": ["A", "B", "C", "D", "E"],
-  "elliott-double-combo": ["W", "X", "Y"],
-  "elliott-triple-combo": ["W", "X", "Y", "X", "Z"],
+  "elliott-impulse": ["0", "1", "2", "3", "4", "5"],
+  "elliott-correction": ["0", "A", "B", "C"],
+  "elliott-triangle": ["0", "A", "B", "C", "D", "E"],
+  "elliott-double-combo": ["0", "W", "X", "Y"],
+  "elliott-triple-combo": ["0", "W", "X", "Y", "X", "Z"],
 };
 
 /**
@@ -1408,6 +1408,36 @@ export class ChartRenderer {
             );
           }
         }
+        return;
+      }
+      case "brush":
+      case "highlighter":
+      case "path": {
+        if (points.length < 2) {
+          return;
+        }
+        context.save();
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        context.beginPath();
+        context.moveTo(points[0]!.x, points[0]!.y);
+        for (let index = 1; index < points.length; index += 1) {
+          context.lineTo(points[index]!.x, points[index]!.y);
+        }
+        context.stroke();
+        context.restore();
+        return;
+      }
+      case "text": {
+        const text = drawing.options.text;
+        if (!text) {
+          return;
+        }
+        context.fillStyle = drawing.options.color;
+        context.font = `${drawing.options.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        context.textAlign = "left";
+        context.textBaseline = "bottom";
+        context.fillText(text, points[0]!.x, points[0]!.y);
         return;
       }
       case "measure": {

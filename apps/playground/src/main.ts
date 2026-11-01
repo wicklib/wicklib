@@ -2,6 +2,7 @@ import {
   CandlestickSeries,
   createChart,
   DarkTheme,
+  Brush,
   Circle,
   CrossLine,
   ElliottCorrection,
@@ -11,13 +12,16 @@ import {
   ElliottTripleCombo,
   FibExtension,
   FibRetracement,
+  Highlighter,
   HorizontalLine,
   HorizontalRay,
   LightTheme,
   LongShortPosition,
   ParallelChannel,
+  Path,
   PriceDateRange,
   Rectangle,
+  Text,
   TrendLine,
   VerticalLine,
   type ChartApi,
@@ -139,6 +143,10 @@ app.innerHTML = `
         <option value="long-short-position">Long/short position</option>
         <option value="price-date-range">Price/date range</option>
         <option value="circle">Circle</option>
+        <option value="brush">Brush</option>
+        <option value="highlighter">Highlighter</option>
+        <option value="path">Path</option>
+        <option value="text">Text</option>
         <optgroup label="Elliott wave">
           <option value="elliott-impulse">Impulse 1–5</option>
           <option value="elliott-correction">Correction A–C</option>
@@ -205,6 +213,10 @@ const drawingTools: Record<string, DrawingToolDefinition> = {
   "long-short-position": LongShortPosition,
   "price-date-range": PriceDateRange,
   circle: Circle,
+  brush: Brush,
+  highlighter: Highlighter,
+  path: Path,
+  text: Text,
   "elliott-impulse": ElliottImpulse,
   "elliott-correction": ElliottCorrection,
   "elliott-triangle": ElliottTriangle,

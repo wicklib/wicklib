@@ -47,22 +47,24 @@ the visual toolbar under host control.
 - Anchor editing remains single-drawing.
 - Existing `drawing-selected` remains; a new `drawing-selection` event carries the full set.
 
-### Batch 3 — freehand and text
+### Batch 3 — implemented
 
-- `brush`
-- `highlighter`
-- `path`
-- `text`
+- `brush` — freehand capture.
+- `highlighter` — thick translucent freehand capture.
+- `path` — variable vertices; finish with Enter or double-click.
+- `text` — one anchor with text content supplied through drawing options.
 
-These need variable anchor counts, freehand capture, and text editing semantics.
+Inline text editing and a settings panel remain host-application work.
 
 ### Batch 4 — implemented
 
-- `elliott-impulse` — labels 1, 2, 3, 4, 5.
-- `elliott-correction` — labels A, B, C.
-- `elliott-triangle` — labels A, B, C, D, E.
-- `elliott-double-combo` — labels W, X, Y.
-- `elliott-triple-combo` — labels W, X, Y, X, Z.
+- `elliott-impulse` — labels 0, 1, 2, 3, 4, 5.
+- `elliott-correction` — labels 0, A, B, C.
+- `elliott-triangle` — labels 0, A, B, C, D, E.
+- `elliott-double-combo` — labels 0, W, X, Y.
+- `elliott-triple-combo` — labels 0, W, X, Y, X, Z.
+
+The first click is the wave origin.
 
 Each pattern is a polyline with labelled anchors. Parallel channels show a ghost base line
 before the third anchor is placed.

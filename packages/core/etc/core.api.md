@@ -34,6 +34,9 @@ export interface AreaSeriesOptions extends LineSeriesOptions {
 // @public
 export function assertFeature(context: LicenseContext, feature: Feature): void;
 
+// @public (undocumented)
+export const Brush: DrawingToolDefinition;
+
 // @public
 export const CandlestickSeries: SeriesType<OhlcData, CandlestickSeriesOptions>;
 
@@ -363,6 +366,7 @@ export interface DrawingOptions {
     fillColor?: string;
     // (undocumented)
     fillOpacity?: number;
+    fontSize?: number;
     // (undocumented)
     lineStyle?: DrawingLineStyle;
     // (undocumented)
@@ -371,6 +375,7 @@ export interface DrawingOptions {
     locked?: boolean;
     // (undocumented)
     showLabels?: boolean;
+    text?: string;
     // (undocumented)
     visible?: boolean;
 }
@@ -381,6 +386,7 @@ export type DrawingSelectionMode = "replace" | "add" | "toggle";
 // @public
 export interface DrawingToolDefinition {
     readonly anchors: 1 | 2 | 3 | 4 | 5 | 6;
+    readonly capture?: "anchors" | "freehand" | "path";
     // (undocumented)
     readonly defaultOptions?: DrawingOptions;
     // (undocumented)
@@ -438,6 +444,9 @@ export interface GridOptions {
     // (undocumented)
     vertLines?: GridLineOptions;
 }
+
+// @public (undocumented)
+export const Highlighter: DrawingToolDefinition;
 
 // @public
 export const HistogramSeries: SeriesType<LineData, HistogramSeriesOptions>;
@@ -766,6 +775,9 @@ export interface PaneOptions {
 // @public (undocumented)
 export const ParallelChannel: DrawingToolDefinition;
 
+// @public (undocumented)
+export const Path: DrawingToolDefinition;
+
 // @public
 export interface Point {
     // (undocumented)
@@ -964,6 +976,10 @@ export interface SubscriptionRequest {
     symbol: string;
 }
 
+// @public (undocumented)
+const Text_2: DrawingToolDefinition;
+export { Text_2 as Text }
+
 // @public
 export type Time = number;
 
@@ -1055,8 +1071,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:876:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:891:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:882:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:897:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

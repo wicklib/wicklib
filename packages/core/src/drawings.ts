@@ -14,6 +14,8 @@ export interface ResolvedDrawingOptions {
   fillColor: string;
   fillOpacity: number;
   showLabels: boolean;
+  text: string;
+  fontSize: number;
   locked: boolean;
   visible: boolean;
 }
@@ -50,6 +52,8 @@ const DEFAULTS: DrawingOptions = {
   lineStyle: "solid",
   fillOpacity: 0.12,
   showLabels: true,
+  text: "",
+  fontSize: 13,
   locked: false,
   visible: true,
 };
@@ -181,7 +185,7 @@ export const ElliottImpulse: DrawingToolDefinition = Object.freeze({
     version: VERSION,
     license: "free" as const,
   },
-  anchors: 5,
+  anchors: 6,
   defaultOptions: { color: "#2962ff" },
 });
 
@@ -193,7 +197,7 @@ export const ElliottCorrection: DrawingToolDefinition = Object.freeze({
     version: VERSION,
     license: "free" as const,
   },
-  anchors: 3,
+  anchors: 4,
   defaultOptions: { color: "#2962ff" },
 });
 
@@ -205,7 +209,7 @@ export const ElliottTriangle: DrawingToolDefinition = Object.freeze({
     version: VERSION,
     license: "free" as const,
   },
-  anchors: 5,
+  anchors: 6,
   defaultOptions: { color: "#2962ff" },
 });
 
@@ -217,7 +221,7 @@ export const ElliottDoubleCombo: DrawingToolDefinition = Object.freeze({
     version: VERSION,
     license: "free" as const,
   },
-  anchors: 3,
+  anchors: 4,
   defaultOptions: { color: "#2962ff" },
 });
 
@@ -229,7 +233,7 @@ export const ElliottTripleCombo: DrawingToolDefinition = Object.freeze({
     version: VERSION,
     license: "free" as const,
   },
-  anchors: 5,
+  anchors: 6,
   defaultOptions: { color: "#2962ff" },
 });
 
@@ -255,6 +259,57 @@ export const FibRetracement: DrawingToolDefinition = Object.freeze({
   },
   anchors: 2,
   defaultOptions: { color: "#787b86" },
+});
+
+export const Brush: DrawingToolDefinition = Object.freeze({
+  id: "brush",
+  meta: {
+    id: "com.wicklib.brush",
+    name: "Brush",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+  capture: "freehand",
+  defaultOptions: { color: "#2962ff", lineWidth: 2 },
+});
+
+export const Highlighter: DrawingToolDefinition = Object.freeze({
+  id: "highlighter",
+  meta: {
+    id: "com.wicklib.highlighter",
+    name: "Highlighter",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+  capture: "freehand",
+  defaultOptions: { color: "rgba(255,235,59,0.35)", lineWidth: 14 },
+});
+
+export const Path: DrawingToolDefinition = Object.freeze({
+  id: "path",
+  meta: {
+    id: "com.wicklib.path",
+    name: "Path",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+  capture: "path",
+  defaultOptions: { color: "#2962ff", lineWidth: 2 },
+});
+
+export const Text: DrawingToolDefinition = Object.freeze({
+  id: "text",
+  meta: {
+    id: "com.wicklib.text",
+    name: "Text",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 1,
+  defaultOptions: { text: "Text", showLabels: true },
 });
 
 export const Measure: DrawingToolDefinition = Object.freeze({
@@ -289,6 +344,10 @@ export const DRAWING_TOOLS: ReadonlyMap<string, DrawingToolDefinition> = new Map
     ElliottTriangle,
     ElliottDoubleCombo,
     ElliottTripleCombo,
+    Brush,
+    Highlighter,
+    Path,
+    Text,
     Measure,
   ].map((tool) => [tool.id, tool]),
 );
@@ -307,6 +366,8 @@ export function resolveDrawingOptions(
     fillColor,
     fillOpacity: merged.fillOpacity ?? 0.12,
     showLabels: merged.showLabels ?? true,
+    text: merged.text ?? "",
+    fontSize: merged.fontSize ?? 13,
     locked: merged.locked ?? false,
     visible: merged.visible ?? true,
   };
@@ -323,6 +384,8 @@ export function mergeDrawingOptions(
     fillColor: patch.fillColor ?? base.fillColor,
     fillOpacity: patch.fillOpacity ?? base.fillOpacity,
     showLabels: patch.showLabels ?? base.showLabels,
+    text: patch.text ?? base.text,
+    fontSize: patch.fontSize ?? base.fontSize,
     locked: patch.locked ?? base.locked,
     visible: patch.visible ?? base.visible,
   };
@@ -449,8 +512,21 @@ export function hitTestDrawing(
     case "elliott-correction":
     case "elliott-triangle":
     case "elliott-double-combo":
-    case "elliott-triple-combo": {
+    case "elliott-triple-combo":
+    case "brush":
+    case "highlighter":
+    case "path": {
       return distanceToPolyline(point, points) <= tolerance;
+    }
+    case "text": {
+      const anchor = points[0]!;
+      const width = Math.max(20, target.options.text.length * target.options.fontSize * 0.6);
+      return (
+        point.x >= anchor.x - tolerance &&
+        point.x <= anchor.x + width + tolerance &&
+        point.y >= anchor.y - target.options.fontSize - tolerance &&
+        point.y <= anchor.y + tolerance
+      );
     }
     default: {
       if (points.length < 2) {
