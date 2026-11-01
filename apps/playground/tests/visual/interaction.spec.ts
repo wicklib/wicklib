@@ -88,7 +88,9 @@ test("edits the selected drawing through the settings panel", async ({ page }) =
   await page.waitForFunction(() => window.__wicklibReady === true);
 
   const id = await page.evaluate(() => {
-    const drawing = window.__wicklibChart?.serializeDrawings().drawings[0];
+    const drawing = window.__wicklibChart
+      ?.serializeDrawings()
+      .drawings.find((candidate) => candidate.toolId === "rectangle");
     if (drawing) {
       window.__wicklibChart?.selectDrawing(drawing.id);
     }
@@ -96,6 +98,7 @@ test("edits the selected drawing through the settings panel", async ({ page }) =
   });
   expect(id).not.toBeNull();
   await expect(page.locator("#drawing-settings")).toBeVisible();
+  await expect(page.locator('[data-setting="fillColor"]')).toBeVisible();
 
   await page.evaluate(() => {
     const input = document.querySelector<HTMLInputElement>("#drawing-color");
@@ -142,6 +145,9 @@ test("creates brush, path, and text drawings", async ({ page }) => {
   expect(drawings.find((drawing) => drawing.toolId === "brush")?.anchors.length).toBeGreaterThan(2);
   expect(drawings.find((drawing) => drawing.toolId === "path")?.anchors).toHaveLength(3);
   expect(drawings.find((drawing) => drawing.toolId === "text")?.options.text).toBe("Text");
+  await expect(page.locator('[data-setting="text"]')).toBeVisible();
+  await expect(page.locator('[data-setting="fontSize"]')).toBeVisible();
+  await expect(page.locator('[data-setting="lineWidth"]')).toBeHidden();
 });
 
 test("selects and deletes multiple drawings with a modifier marquee", async ({ page }) => {

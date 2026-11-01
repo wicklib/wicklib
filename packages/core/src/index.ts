@@ -31,6 +31,7 @@ export {
   Text,
   TrendLine,
   VerticalLine,
+  drawingToolSettings,
 } from "./drawings";
 export { AreaSeries, CandlestickSeries, HistogramSeries, LineSeries } from "./series";
 export { ChartThemes, DarkTheme, LightTheme } from "./themes";
@@ -56,6 +57,7 @@ export type {
   DrawingLineStyle,
   DrawingOptions,
   DrawingSelectionMode,
+  DrawingSetting,
   DrawingToolDefinition,
   DataLoadingEvent,
   DataRequest,

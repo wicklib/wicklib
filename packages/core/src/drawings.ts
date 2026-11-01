@@ -2,6 +2,7 @@ import type {
   DrawingAnchor,
   DrawingLineStyle,
   DrawingOptions,
+  DrawingSetting,
   DrawingToolDefinition,
   Point,
 } from "./types";
@@ -45,6 +46,82 @@ export interface HitTestTarget {
   anchors: readonly DrawingAnchor[];
   options: ResolvedDrawingOptions;
 }
+
+const STROKE_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "color",
+  "lineWidth",
+  "lineStyle",
+  "locked",
+  "visible",
+]);
+const LABEL_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "color",
+  "lineWidth",
+  "lineStyle",
+  "showLabels",
+  "locked",
+  "visible",
+]);
+const FILL_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "color",
+  "lineWidth",
+  "lineStyle",
+  "fillColor",
+  "fillOpacity",
+  "locked",
+  "visible",
+]);
+const LABEL_FILL_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "color",
+  "lineWidth",
+  "lineStyle",
+  "fillColor",
+  "fillOpacity",
+  "showLabels",
+  "locked",
+  "visible",
+]);
+const LONG_SHORT_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "color",
+  "lineWidth",
+  "lineStyle",
+  "fillOpacity",
+  "showLabels",
+  "locked",
+  "visible",
+]);
+const TEXT_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "color",
+  "text",
+  "fontSize",
+  "locked",
+  "visible",
+]);
+
+const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Object.freeze({
+  "trend-line": STROKE_SETTINGS,
+  "horizontal-line": STROKE_SETTINGS,
+  "horizontal-ray": STROKE_SETTINGS,
+  "vertical-line": STROKE_SETTINGS,
+  "cross-line": STROKE_SETTINGS,
+  "parallel-channel": FILL_SETTINGS,
+  rectangle: FILL_SETTINGS,
+  "fib-retracement": LABEL_SETTINGS,
+  "fib-extension": LABEL_SETTINGS,
+  "long-short-position": LONG_SHORT_SETTINGS,
+  "price-date-range": LABEL_FILL_SETTINGS,
+  circle: FILL_SETTINGS,
+  "elliott-impulse": LABEL_SETTINGS,
+  "elliott-correction": LABEL_SETTINGS,
+  "elliott-triangle": LABEL_SETTINGS,
+  "elliott-double-combo": LABEL_SETTINGS,
+  "elliott-triple-combo": LABEL_SETTINGS,
+  brush: STROKE_SETTINGS,
+  highlighter: STROKE_SETTINGS,
+  path: STROKE_SETTINGS,
+  text: TEXT_SETTINGS,
+  measure: LABEL_SETTINGS,
+});
 
 const DEFAULTS: DrawingOptions = {
   color: "#2962ff",
@@ -351,6 +428,16 @@ export const DRAWING_TOOLS: ReadonlyMap<string, DrawingToolDefinition> = new Map
     Measure,
   ].map((tool) => [tool.id, tool]),
 );
+
+/**
+ * Returns the settings a host should expose for a drawing tool.
+ */
+export function drawingToolSettings(toolId: string): readonly DrawingSetting[] {
+  if (!DRAWING_TOOLS.has(toolId)) {
+    throw new Error(`Unknown drawing tool: ${toolId}`);
+  }
+  return TOOL_SETTINGS[toolId] ?? STROKE_SETTINGS;
+}
 
 export function resolveDrawingOptions(
   defaultOptions: DrawingOptions | undefined,

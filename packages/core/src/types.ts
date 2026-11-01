@@ -581,6 +581,21 @@ export interface DrawingAnchor {
 export type DrawingLineStyle = "solid" | "dotted" | "dashed";
 
 /**
+ * A setting that can be edited for a drawing tool.
+ */
+export type DrawingSetting =
+  | "color"
+  | "lineWidth"
+  | "lineStyle"
+  | "fillColor"
+  | "fillOpacity"
+  | "showLabels"
+  | "text"
+  | "fontSize"
+  | "locked"
+  | "visible";
+
+/**
  * Drawing style and state options.
  */
 export interface DrawingOptions {

@@ -24,7 +24,9 @@ import {
   Text,
   TrendLine,
   VerticalLine,
+  drawingToolSettings,
   type ChartApi,
+  type DrawingSetting,
   type DrawingToolDefinition,
   type OhlcData,
 } from "@wicklib/core";
@@ -167,21 +169,22 @@ app.innerHTML = `
   </div>
   <div id="drawing-settings" class="settings" hidden>
     <strong id="settings-title">Drawing settings</strong>
-    <label>Color <input id="drawing-color" type="color" value="#2962ff" /></label>
-    <label>Width <input id="drawing-width" type="number" min="1" max="30" step="1" value="1" /></label>
-    <label>Style
+    <label data-setting="color">Color <input id="drawing-color" type="color" value="#2962ff" /></label>
+    <label data-setting="lineWidth">Width <input id="drawing-width" type="number" min="1" max="30" step="1" value="1" /></label>
+    <label data-setting="lineStyle">Style
       <select id="drawing-style">
         <option value="solid">Solid</option>
         <option value="dotted">Dotted</option>
         <option value="dashed">Dashed</option>
       </select>
     </label>
-    <label>Fill <input id="drawing-opacity" type="range" min="0" max="1" step="0.05" value="0.12" /></label>
-    <label class="toggle"><input id="drawing-labels" type="checkbox" checked /> Labels</label>
-    <label class="toggle"><input id="drawing-locked" type="checkbox" /> Locked</label>
-    <label class="toggle"><input id="drawing-visible" type="checkbox" checked /> Visible</label>
-    <label>Text <input id="drawing-text" type="text" value="" /></label>
-    <label>Font <input id="drawing-font" type="number" min="8" max="48" step="1" value="13" /></label>
+    <label data-setting="fillColor">Fill color <input id="drawing-fill-color" type="color" value="#2962ff" /></label>
+    <label data-setting="fillOpacity">Fill opacity <input id="drawing-opacity" type="range" min="0" max="1" step="0.05" value="0.12" /></label>
+    <label class="toggle" data-setting="showLabels"><input id="drawing-labels" type="checkbox" checked /> Labels</label>
+    <label class="toggle" data-setting="locked"><input id="drawing-locked" type="checkbox" /> Locked</label>
+    <label class="toggle" data-setting="visible"><input id="drawing-visible" type="checkbox" checked /> Visible</label>
+    <label data-setting="text">Text <input id="drawing-text" type="text" value="" /></label>
+    <label data-setting="fontSize">Font <input id="drawing-font" type="number" min="8" max="48" step="1" value="13" /></label>
     <button id="drawing-defaults" type="button">Save as default</button>
     <button id="drawing-delete" type="button">Delete selected</button>
   </div>
@@ -223,6 +226,7 @@ const seriesDemoButton = byId<HTMLButtonElement>("series-demo");
 const settingsPanel = byId<HTMLDivElement>("drawing-settings");
 const settingsTitle = byId<HTMLElement>("settings-title");
 const drawingColor = byId<HTMLInputElement>("drawing-color");
+const drawingFillColor = byId<HTMLInputElement>("drawing-fill-color");
 const drawingWidth = byId<HTMLInputElement>("drawing-width");
 const drawingStyle = byId<HTMLSelectElement>("drawing-style");
 const drawingOpacity = byId<HTMLInputElement>("drawing-opacity");
@@ -925,9 +929,20 @@ function syncDrawingSettings(): void {
   }
 
   const options = drawings[0]!.getOptions();
+  const tools = new Set(drawings.map((drawing) => drawing.toolId));
+  const allowed = new Set<DrawingSetting>(
+    drawings
+      .map((drawing) => new Set(drawingToolSettings(drawing.toolId)))
+      .reduce((current, next) => new Set([...current].filter((item) => next.has(item)))),
+  );
+  for (const element of settingsPanel.querySelectorAll<HTMLElement>("[data-setting]")) {
+    element.hidden = !allowed.has(element.dataset.setting as DrawingSetting);
+  }
+  drawingDefaultsButton.disabled = tools.size !== 1;
   syncingSettings = true;
-  settingsTitle.textContent = `${drawings.length} selected · ${drawings[0]!.toolId}`;
+  settingsTitle.textContent = `${drawings.length} selected · ${[...tools].join(", ")}`;
   drawingColor.value = colorInputValue(options.color ?? "#2962ff");
+  drawingFillColor.value = colorInputValue(options.fillColor ?? options.color ?? "#2962ff");
   drawingWidth.value = String(options.lineWidth ?? 1);
   drawingStyle.value = options.lineStyle ?? "solid";
   drawingOpacity.value = String(options.fillOpacity ?? 0.12);
@@ -949,6 +964,9 @@ function updateSelectedDrawingSettings(
 
 drawingColor.addEventListener("input", () => {
   updateSelectedDrawingSettings({ color: drawingColor.value });
+});
+drawingFillColor.addEventListener("input", () => {
+  updateSelectedDrawingSettings({ fillColor: drawingFillColor.value });
 });
 drawingWidth.addEventListener("change", () => {
   const value = Number(drawingWidth.value);

@@ -28,9 +28,10 @@ Never published. Not part of the Changesets group.
   patterns. Paths finish with Enter or double-click.
 - Cmd/Ctrl-click toggles drawings in the selection; Cmd/Ctrl-drag selects all drawings
   intersecting the marquee; selected drawings move and delete as a group.
-- Drawing settings: selecting a drawing opens a settings bar for color, width, line style,
-  fill opacity, labels, locking, visibility, text, and font size. “Save as default” applies
-  the current style to future drawings of that tool.
+- Drawing settings: selecting a drawing opens a settings bar with only the controls that
+  apply to its tool. Filled shapes show fill controls, labelled tools show labels, and only
+  the text tool shows text/font fields. “Save as default” applies the current style to future
+  drawings of that tool.
 - Fit: reset the time scale, capped at 720 bars.
 - Reset: fit the time scale and restore auto-scale on every pane.
 - Fit/reset leave a 30-bar future margin so drawings and dates can extend past the last bar.

@@ -389,6 +389,9 @@ export interface DrawingOptions {
 export type DrawingSelectionMode = "replace" | "add" | "toggle";
 
 // @public
+export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "text" | "fontSize" | "locked" | "visible";
+
+// @public
 export interface DrawingToolDefinition {
     readonly anchors: 1 | 2 | 3 | 4 | 5 | 6;
     readonly capture?: "anchors" | "freehand" | "path";
@@ -400,6 +403,9 @@ export interface DrawingToolDefinition {
     readonly meta: ExtensionMeta;
     readonly persist?: boolean;
 }
+
+// @public
+export function drawingToolSettings(toolId: string): readonly DrawingSetting[];
 
 // @public (undocumented)
 export const ElliottCorrection: DrawingToolDefinition;
@@ -1076,8 +1082,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:889:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:904:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:893:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:908:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

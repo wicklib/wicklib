@@ -29,6 +29,18 @@ tools.
 ## 4. Public API
 
 ```ts
+type DrawingSetting =
+  | "color"
+  | "lineWidth"
+  | "lineStyle"
+  | "fillColor"
+  | "fillOpacity"
+  | "showLabels"
+  | "text"
+  | "fontSize"
+  | "locked"
+  | "visible";
+
 interface DrawingApi {
   getOptions(): DrawingOptions;
 }
@@ -38,7 +50,13 @@ interface ChartApi {
   setDrawingDefaults(toolId: string, options: Partial<DrawingOptions>): void;
   drawingDefaults(toolId: string): DrawingOptions;
 }
+
+function drawingToolSettings(toolId: string): readonly DrawingSetting[];
 ```
+
+`drawingToolSettings()` is the capability matrix for host settings UIs. For example, Elliott
+wave tools expose labels but not text/font controls; the text tool exposes text/font but not
+line width or fills; fill controls appear only on filled shapes.
 
 `DrawingOptions` covers colour, line width/style, fill colour/opacity, labels, text, font size,
 locking, and visibility.

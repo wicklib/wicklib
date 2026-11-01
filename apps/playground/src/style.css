@@ -156,6 +156,10 @@ button.active {
   display: none;
 }
 
+.settings [hidden] {
+  display: none !important;
+}
+
 .settings label {
   display: inline-flex;
   align-items: center;
