@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.7.0
+
+### Minor Changes
+
+- 9654a80: Expose a stable drawing tool catalog with category grouping and per-tool settings capabilities for host-built menus.
+
 ## 0.6.0
 
 ### Minor Changes
