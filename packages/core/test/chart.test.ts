@@ -797,6 +797,40 @@ describe("createChart", () => {
     expect(created).toEqual(["horizontal-line"]);
   });
 
+  it("navigates drawing selection with the keyboard and announces it", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+    const first = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 0, price: 100 }],
+    });
+    const second = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 10 * MINUTE, price: 110 }],
+    });
+    const third = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 20 * MINUTE, price: 120 }],
+    });
+    const root = element.firstElementChild as HTMLElement;
+    const live = root.querySelector('[aria-live="polite"]');
+
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "a", metaKey: true }));
+    expect(chart.selectedDrawings()).toHaveLength(3);
+    expect(live?.textContent).toContain("3 drawings selected");
+
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "[" }));
+    expect(chart.selectedDrawing()?.id).toBe(third.id);
+    expect(live?.textContent).toContain("Horizontal Line");
+
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "]" }));
+    expect(chart.selectedDrawing()?.id).toBe(first.id);
+
+    chart.selectNextDrawing();
+    expect(chart.selectedDrawing()?.id).toBe(second.id);
+    chart.selectPreviousDrawing();
+    expect(chart.selectedDrawing()?.id).toBe(first.id);
+    expect(root.getAttribute("aria-keyshortcuts")).toContain("Delete");
+  });
+
   it("applies per-tool defaults and updates selected drawing settings", () => {
     const chart = track(createChart(mount()));
     chart.addSeries(CandlestickSeries).setData(bars(50));

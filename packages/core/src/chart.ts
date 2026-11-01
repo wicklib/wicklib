@@ -486,6 +486,35 @@ class Chart implements ChartApi, SeriesHost {
     }
   }
 
+  selectNextDrawing(options?: SelectDrawingOptions): void {
+    this.assertAlive();
+    if (this.drawings.length === 0) {
+      return;
+    }
+    const current = this.selectedInternal();
+    const index = current ? this.drawings.indexOf(current) : -1;
+    const next = this.drawings[(index + 1) % this.drawings.length]!;
+    this.selectDrawing(next.id, options);
+  }
+
+  selectPreviousDrawing(options?: SelectDrawingOptions): void {
+    this.assertAlive();
+    if (this.drawings.length === 0) {
+      return;
+    }
+    const current = this.selectedInternal();
+    const index = current ? this.drawings.indexOf(current) : 0;
+    const previous = this.drawings[(index - 1 + this.drawings.length) % this.drawings.length]!;
+    this.selectDrawing(previous.id, options);
+  }
+
+  selectAllDrawings(): void {
+    this.assertAlive();
+    if (this.setSelection(this.drawings)) {
+      this.emitSelection();
+    }
+  }
+
   updateSelectedDrawings(options: Partial<DrawingOptions>): void {
     this.assertAlive();
     for (const drawing of this.orderedSelection()) {
@@ -671,6 +700,13 @@ class Chart implements ChartApi, SeriesHost {
     const drawings = this.orderedSelection();
     this.bus.emit("drawing-selection", { drawings });
     this.bus.emit("drawing-selected", { drawing: drawings[0] ?? null });
+    if (drawings.length === 0) {
+      this.stack.announce("Drawing selection cleared.");
+    } else if (drawings.length === 1) {
+      this.stack.announce(`${drawings[0]!.definition.meta.name} selected. Press Delete to remove.`);
+    } else {
+      this.stack.announce(`${drawings.length} drawings selected. Press Delete to remove.`);
+    }
     this.requestRender();
   }
 
@@ -1882,6 +1918,24 @@ class Chart implements ChartApi, SeriesHost {
   };
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {
+      this.selectAllDrawings();
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key === "]" || event.key === "[") {
+      if (this.drawings.length > 0) {
+        if (event.key === "]") {
+          this.selectNextDrawing();
+        } else {
+          this.selectPreviousDrawing();
+        }
+        event.preventDefault();
+      }
+      return;
+    }
+
     if (event.key === "Enter" && this.activeTool?.capture === "path") {
       if (this.pendingAnchors.length >= 2) {
         this.finishPath();

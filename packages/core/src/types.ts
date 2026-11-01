@@ -916,6 +916,9 @@ export interface ChartApi {
   selectedDrawing(): DrawingApi | null;
   selectedDrawings(): readonly DrawingApi[];
   selectDrawing(id: string | null, options?: SelectDrawingOptions): void;
+  selectNextDrawing(options?: SelectDrawingOptions): void;
+  selectPreviousDrawing(options?: SelectDrawingOptions): void;
+  selectAllDrawings(): void;
   /** Applies a partial style update to every selected drawing. */
   updateSelectedDrawings(options: Partial<DrawingOptions>): void;
   /** Sets per-chart defaults applied to newly created drawings of a tool. */

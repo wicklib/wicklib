@@ -79,11 +79,17 @@ export interface ChartApi {
     // (undocumented)
     resize(): void;
     // (undocumented)
+    selectAllDrawings(): void;
+    // (undocumented)
     selectDrawing(id: string | null, options?: SelectDrawingOptions): void;
     // (undocumented)
     selectedDrawing(): DrawingApi | null;
     // (undocumented)
     selectedDrawings(): readonly DrawingApi[];
+    // (undocumented)
+    selectNextDrawing(options?: SelectDrawingOptions): void;
+    // (undocumented)
+    selectPreviousDrawing(options?: SelectDrawingOptions): void;
     // (undocumented)
     serializeDrawings(): DrawingDocument;
     setDrawingDefaults(toolId: string, options: Partial<DrawingOptions>): void;
@@ -1098,8 +1104,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:893:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:908:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:896:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:911:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

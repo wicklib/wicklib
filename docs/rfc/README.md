@@ -19,6 +19,8 @@ changing its decisions requires a new RFC or an ADR.
 | 0012 | Generic series and line/area/histogram | Accepted |
 | 0013 | Expanded drawings and multi-selection  | Accepted |
 | 0014 | Drawing settings and defaults          | Accepted |
+| 0015 | Drawing tool catalog                   | Accepted |
+| 0016 | Drawing keyboard accessibility         | Accepted |
 
 Rules:
 

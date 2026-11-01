@@ -126,7 +126,8 @@ revisions, and typed loading/error events.
 - Continuous index-based time scale and linear price scale.
 - Time-axis drag zooms; price-axis drag scales the price range.
 - Wheel zoom, trackpad pan, drag pan, and two-pointer pinch zoom.
-- Keyboard pan/zoom/fit and `Delete`/`Backspace` for selected drawings.
+- Keyboard pan/zoom/fit, `Delete`/`Backspace`, `[`/`]` drawing navigation, Cmd/Ctrl+A
+  select-all, and a polite live announcement of selection changes.
 - Automatic price-axis width from rendered labels.
 - Multi-pane layouts with independent price scales and a shared time axis.
 - Session calendars, DST, holidays, and optional fixed-width closed-session gaps.

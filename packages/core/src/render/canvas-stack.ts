@@ -9,6 +9,7 @@ export type Layer = "grid" | "series" | "extensions" | "drawings" | "overlay";
 export class CanvasStack {
   readonly root: HTMLDivElement;
 
+  private readonly announcer: HTMLDivElement;
   private readonly canvases: Record<Layer, HTMLCanvasElement>;
   private readonly contexts: Record<Layer, CanvasRenderingContext2D>;
   private width = 0;
@@ -24,6 +25,22 @@ export class CanvasStack {
     root.style.overflow = "hidden";
     root.style.userSelect = "none";
     root.style.cursor = "crosshair";
+    root.setAttribute(
+      "aria-keyshortcuts",
+      "Delete Backspace Escape ArrowLeft ArrowRight + - Home [ ]",
+    );
+
+    const announcer = doc.createElement("div");
+    announcer.setAttribute("role", "status");
+    announcer.setAttribute("aria-live", "polite");
+    announcer.setAttribute("aria-atomic", "true");
+    announcer.style.position = "absolute";
+    announcer.style.width = "1px";
+    announcer.style.height = "1px";
+    announcer.style.overflow = "hidden";
+    announcer.style.clip = "rect(0 0 0 0)";
+    announcer.style.whiteSpace = "nowrap";
+    root.appendChild(announcer);
 
     const make = (layer: Layer): [HTMLCanvasElement, CanvasRenderingContext2D] => {
       const canvas = doc.createElement("canvas");
@@ -59,6 +76,7 @@ export class CanvasStack {
 
     container.appendChild(root);
     this.root = root;
+    this.announcer = announcer;
   }
 
   getWidth(): number {
@@ -92,6 +110,10 @@ export class CanvasStack {
 
   context(layer: Layer): CanvasRenderingContext2D {
     return this.contexts[layer];
+  }
+
+  announce(message: string): void {
+    this.announcer.textContent = message;
   }
 
   /**

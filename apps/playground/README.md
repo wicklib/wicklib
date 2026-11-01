@@ -45,7 +45,8 @@ Never published. Not part of the Changesets group.
 - Theme: dark/light chart options.
 - FPS meter and crosshair OHLC readout.
 - Keyboard: arrows pan, `+`/`-` zoom, `Home` fits, `Escape` clears the crosshair,
-  `Delete`/`Backspace` removes every selected drawing.
+  `Delete`/`Backspace` removes every selected drawing, `[`/`]` selects the previous/next
+  drawing, and Cmd/Ctrl+A selects all drawings.
 - Touch: one-finger pan, two-finger pinch zoom.
 - Script editor: open `/editor.html` for the Monaco WickScript editor with generated types.
 
