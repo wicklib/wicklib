@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.5.0
+
+### Minor Changes
+
+- 00ce9ff: Add drawing settings APIs for reading options, updating the selection, and per-tool defaults, and bound parallel channels to their anchor range instead of the full chart.
+
 ## 0.4.0
 
 ### Minor Changes
