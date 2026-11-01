@@ -8,7 +8,21 @@ export type { LightweightChartOptions } from "./compat/lightweight-charts";
 export { isWickError, WickError } from "./errors";
 export type { WickErrorCode } from "./errors";
 export { assertFeature } from "./license";
-export { FibRetracement, HorizontalLine, Measure, Rectangle, TrendLine } from "./drawings";
+export {
+  Circle,
+  CrossLine,
+  FibExtension,
+  FibRetracement,
+  HorizontalLine,
+  HorizontalRay,
+  LongShortPosition,
+  Measure,
+  ParallelChannel,
+  PriceDateRange,
+  Rectangle,
+  TrendLine,
+  VerticalLine,
+} from "./drawings";
 export { AreaSeries, CandlestickSeries, HistogramSeries, LineSeries } from "./series";
 export { ChartThemes, DarkTheme, LightTheme } from "./themes";
 export type { ChartTheme } from "./themes";
@@ -32,6 +46,7 @@ export type {
   DrawingDocument,
   DrawingLineStyle,
   DrawingOptions,
+  DrawingSelectionMode,
   DrawingToolDefinition,
   DataLoadingEvent,
   DataRequest,
@@ -85,6 +100,7 @@ export type {
   SeriesOptions,
   SerializedDrawing,
   SeriesType,
+  SelectDrawingOptions,
   SessionGapMode,
   SessionWindow,
   SourceValue,

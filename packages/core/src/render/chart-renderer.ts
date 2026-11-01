@@ -1,7 +1,14 @@
 import type { LineStore } from "../data/line-store";
 import type { OhlcStore } from "../data/ohlc-store";
 import type { SeriesDataStore } from "../data/series-store";
-import { anchorPoints, clipLineToRect, FIB_LEVELS, type ResolvedDrawingOptions } from "../drawings";
+import {
+  anchorPoints,
+  clipLineToRect,
+  FIB_EXTENSION_LEVELS,
+  FIB_LEVELS,
+  parallelLines,
+  type ResolvedDrawingOptions,
+} from "../drawings";
 import type { IndicatorRenderData, IndicatorPlotRenderData } from "../indicator";
 import type { PriceScale } from "../scale/price-scale";
 import type { TimeScale } from "../scale/time-scale";
@@ -110,6 +117,7 @@ export interface DrawingRenderData {
   toolId: string;
   paneId: string;
   anchors: readonly DrawingAnchor[];
+  anchorCount: number;
   previewPoint: Point | null;
   options: ResolvedDrawingOptions;
   selected: boolean;
@@ -129,6 +137,11 @@ export interface CrosshairRenderPoint {
   point: Point;
 }
 
+export interface SelectionBoxRenderData {
+  start: Point;
+  current: Point;
+}
+
 export interface OverlayRenderData {
   id: string;
   paneId: string;
@@ -146,6 +159,7 @@ export interface ChartRenderModel {
   grid: ResolvedGrid;
   crosshair: ResolvedCrosshair;
   crosshairPoint: CrosshairRenderPoint | null;
+  selectionBox: SelectionBoxRenderData | null;
   locale: string;
   timezone: string;
   timeVisible: boolean;
@@ -1066,7 +1080,7 @@ export class ChartRenderer {
       if (points.length === 0) {
         continue;
       }
-      if (drawing.previewPoint && points.length < 2) {
+      if (drawing.previewPoint && points.length < drawing.anchorCount) {
         points.push(drawing.previewPoint);
       }
 
@@ -1101,6 +1115,22 @@ export class ChartRenderer {
         context.restore();
       }
     }
+
+    if (model.selectionBox) {
+      const left = Math.min(model.selectionBox.start.x, model.selectionBox.current.x);
+      const top = Math.min(model.selectionBox.start.y, model.selectionBox.current.y);
+      const width = Math.abs(model.selectionBox.current.x - model.selectionBox.start.x);
+      const height = Math.abs(model.selectionBox.current.y - model.selectionBox.start.y);
+      context.save();
+      context.fillStyle = "rgba(41,98,255,0.08)";
+      context.strokeStyle = "#2962ff";
+      context.lineWidth = 1;
+      context.setLineDash([4, 3]);
+      context.fillRect(left, top, width, height);
+      context.strokeRect(crisp(left), crisp(top), width, height);
+      context.setLineDash([]);
+      context.restore();
+    }
   }
 
   private drawTool(
@@ -1121,6 +1151,33 @@ export class ChartRenderer {
         context.stroke();
         return;
       }
+      case "horizontal-ray": {
+        const y = crisp(points[0]!.y);
+        context.beginPath();
+        context.moveTo(points[0]!.x, y);
+        context.lineTo(plot.right, y);
+        context.stroke();
+        return;
+      }
+      case "vertical-line": {
+        const x = crisp(points[0]!.x);
+        context.beginPath();
+        context.moveTo(x, plot.top);
+        context.lineTo(x, plot.bottom);
+        context.stroke();
+        return;
+      }
+      case "cross-line": {
+        const x = crisp(points[0]!.x);
+        const y = crisp(points[0]!.y);
+        context.beginPath();
+        context.moveTo(plot.left, y);
+        context.lineTo(plot.right, y);
+        context.moveTo(x, plot.top);
+        context.lineTo(x, plot.bottom);
+        context.stroke();
+        return;
+      }
       case "trend-line": {
         if (points.length < 2) {
           return;
@@ -1135,7 +1192,8 @@ export class ChartRenderer {
         context.stroke();
         return;
       }
-      case "rectangle": {
+      case "rectangle":
+      case "price-date-range": {
         if (points.length < 2) {
           return;
         }
@@ -1148,6 +1206,108 @@ export class ChartRenderer {
         context.fillRect(x, y, width, height);
         context.globalAlpha = drawing.preview ? 0.65 : 1;
         context.strokeRect(x, y, width, height);
+
+        if (drawing.toolId === "price-date-range" && drawing.options.showLabels) {
+          const firstPrice = pane.priceScale.yToPrice(points[0]!.y, plot.top, plot.height);
+          const priceDelta =
+            pane.priceScale.yToPrice(points[1]!.y, plot.top, plot.height) - firstPrice;
+          const percent = firstPrice === 0 ? 0 : (priceDelta / Math.abs(firstPrice)) * 100;
+          const seconds = Math.abs(drawing.anchors[1]!.time - drawing.anchors[0]!.time) / 1000;
+          this.drawLabel(
+            context,
+            model,
+            `${priceDelta >= 0 ? "+" : ""}${pane.priceScale.formatValue(priceDelta, model.locale)} (${percent.toFixed(2)}%)  ${formatDuration(seconds)}`,
+            x + 8,
+            y + model.layout.fontSize + 4,
+          );
+        }
+        return;
+      }
+      case "circle": {
+        if (points.length < 2) {
+          return;
+        }
+        const cx = (points[0]!.x + points[1]!.x) / 2;
+        const cy = (points[0]!.y + points[1]!.y) / 2;
+        const rx = Math.abs(points[1]!.x - points[0]!.x) / 2;
+        const ry = Math.abs(points[1]!.y - points[0]!.y) / 2;
+        context.beginPath();
+        context.ellipse(cx, cy, Math.max(0.5, rx), Math.max(0.5, ry), 0, 0, Math.PI * 2);
+        context.globalAlpha = drawing.preview ? 0.3 : drawing.options.fillOpacity;
+        context.fill();
+        context.globalAlpha = drawing.preview ? 0.65 : 1;
+        context.stroke();
+        return;
+      }
+      case "parallel-channel": {
+        if (points.length < 3) {
+          return;
+        }
+        const channel = parallelLines(points, plot);
+        context.beginPath();
+        context.moveTo(channel[0][0].x, channel[0][0].y);
+        context.lineTo(channel[0][1].x, channel[0][1].y);
+        context.lineTo(channel[1][1].x, channel[1][1].y);
+        context.lineTo(channel[1][0].x, channel[1][0].y);
+        context.closePath();
+        context.globalAlpha = drawing.preview ? 0.15 : drawing.options.fillOpacity;
+        context.fill();
+        context.globalAlpha = drawing.preview ? 0.65 : 1;
+        context.stroke();
+        for (const line of channel) {
+          context.beginPath();
+          context.moveTo(line[0].x, line[0].y);
+          context.lineTo(line[1].x, line[1].y);
+          context.stroke();
+        }
+        return;
+      }
+      case "long-short-position": {
+        if (points.length < 3) {
+          return;
+        }
+        const entry = points[0]!;
+        const stop = points[1]!;
+        const target = points[2]!;
+        const left = Math.min(entry.x, stop.x, target.x);
+        const right = Math.max(entry.x, stop.x, target.x);
+        const width = Math.max(1, right - left);
+        const stopTop = Math.min(entry.y, stop.y);
+        const stopHeight = Math.max(1, Math.abs(stop.y - entry.y));
+        const targetTop = Math.min(entry.y, target.y);
+        const targetHeight = Math.max(1, Math.abs(target.y - entry.y));
+
+        context.globalAlpha = drawing.options.fillOpacity;
+        context.fillStyle = "#ef5350";
+        context.fillRect(left, stopTop, width, stopHeight);
+        context.fillStyle = "#26a69a";
+        context.fillRect(left, targetTop, width, targetHeight);
+        context.globalAlpha = drawing.preview ? 0.65 : 1;
+        context.strokeRect(left, stopTop, width, stopHeight);
+        context.strokeRect(left, targetTop, width, targetHeight);
+        context.beginPath();
+        context.moveTo(left, entry.y);
+        context.lineTo(right, entry.y);
+        context.stroke();
+
+        if (drawing.options.showLabels) {
+          const risk = Math.abs(
+            pane.priceScale.yToPrice(stop.y, plot.top, plot.height) -
+              pane.priceScale.yToPrice(entry.y, plot.top, plot.height),
+          );
+          const reward = Math.abs(
+            pane.priceScale.yToPrice(target.y, plot.top, plot.height) -
+              pane.priceScale.yToPrice(entry.y, plot.top, plot.height),
+          );
+          const ratio = risk === 0 ? "∞" : (reward / risk).toFixed(2);
+          this.drawLabel(
+            context,
+            model,
+            `Entry ${pane.priceScale.formatValue(pane.priceScale.yToPrice(entry.y, plot.top, plot.height), model.locale)}  R/R ${ratio}`,
+            left + 8,
+            entry.y - 10,
+          );
+        }
         return;
       }
       case "fib-retracement": {
@@ -1158,6 +1318,31 @@ export class ChartRenderer {
         const second = points[1]!;
         for (const level of FIB_LEVELS) {
           const y = first.y + (second.y - first.y) * level;
+          context.beginPath();
+          context.moveTo(plot.left, y);
+          context.lineTo(plot.right, y);
+          context.stroke();
+
+          if (drawing.options.showLabels) {
+            const value = pane.priceScale.yToPrice(y, plot.top, plot.height);
+            this.drawLabel(
+              context,
+              model,
+              `${level.toFixed(3)}  ${pane.priceScale.formatValue(value, model.locale)}`,
+              plot.left + 8,
+              y,
+            );
+          }
+        }
+        return;
+      }
+      case "fib-extension": {
+        if (points.length < 3) {
+          return;
+        }
+        const delta = points[1]!.y - points[0]!.y;
+        for (const level of FIB_EXTENSION_LEVELS) {
+          const y = points[2]!.y + delta * level;
           context.beginPath();
           context.moveTo(plot.left, y);
           context.lineTo(plot.right, y);

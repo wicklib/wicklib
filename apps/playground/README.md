@@ -23,7 +23,9 @@ Never published. Not part of the Changesets group.
 - SPX 5m: load a local one-month Yahoo ^GSPC snapshot.
 - Sessions: a deterministic US equities regular-hours fixture with a DST-aware calendar.
 - SMA / RSI / MACD toggles: overlays and separate indicator panes.
-- Trend, H-Line, Rect, Fib, and Clear: interactive drawing tools.
+- Trend, H-Line, Rect, Fib, More, and Clear: interactive drawing tools.
+- Cmd/Ctrl-click toggles drawings in the selection; Cmd/Ctrl-drag selects all drawings
+  intersecting the marquee; selected drawings move and delete as a group.
 - Fit: reset the time scale, capped at 720 bars.
 - Reset: fit the time scale and restore auto-scale on every pane.
 - Fit/reset leave a 30-bar future margin so drawings and dates can extend past the last bar.
@@ -33,7 +35,7 @@ Never published. Not part of the Changesets group.
 - Theme: dark/light chart options.
 - FPS meter and crosshair OHLC readout.
 - Keyboard: arrows pan, `+`/`-` zoom, `Home` fits, `Escape` clears the crosshair,
-  `Delete`/`Backspace` removes the selected drawing.
+  `Delete`/`Backspace` removes every selected drawing.
 - Touch: one-finger pan, two-finger pinch zoom.
 - Script editor: open `/editor.html` for the Monaco WickScript editor with generated types.
 

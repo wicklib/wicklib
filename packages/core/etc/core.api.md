@@ -75,9 +75,11 @@ export interface ChartApi {
     // (undocumented)
     resize(): void;
     // (undocumented)
-    selectDrawing(id: string | null): void;
+    selectDrawing(id: string | null, options?: SelectDrawingOptions): void;
     // (undocumented)
     selectedDrawing(): DrawingApi | null;
+    // (undocumented)
+    selectedDrawings(): readonly DrawingApi[];
     // (undocumented)
     serializeDrawings(): DrawingDocument;
     // (undocumented)
@@ -133,6 +135,10 @@ export interface ChartEventMap {
     // (undocumented)
     "drawing-selected": {
         drawing: DrawingApi | null;
+    };
+    // (undocumented)
+    "drawing-selection": {
+        drawings: readonly DrawingApi[];
     };
     // (undocumented)
     "drawing-updated": {
@@ -222,6 +228,9 @@ export const ChartThemes: Readonly<{
     dark: ChartTheme;
 }>;
 
+// @public (undocumented)
+export const Circle: DrawingToolDefinition;
+
 // @public
 export function createChart(container: HTMLElement, options?: ChartOptions): ChartApi;
 
@@ -261,6 +270,9 @@ export interface CrosshairOptions {
     // (undocumented)
     vertLine?: CrosshairLineOptions;
 }
+
+// @public (undocumented)
+export const CrossLine: DrawingToolDefinition;
 
 // @public
 export const DarkTheme: ChartTheme;
@@ -364,6 +376,9 @@ export interface DrawingOptions {
 }
 
 // @public
+export type DrawingSelectionMode = "replace" | "add" | "toggle";
+
+// @public
 export interface DrawingToolDefinition {
     readonly anchors: 1 | 2 | 3;
     // (undocumented)
@@ -388,6 +403,9 @@ export interface ExtensionMeta {
 
 // @public
 export type Feature = "orderflow" | "volume-profile" | "panes" | "layouts" | "strategy" | "alerts" | "script-functions";
+
+// @public (undocumented)
+export const FibExtension: DrawingToolDefinition;
 
 // @public (undocumented)
 export const FibRetracement: DrawingToolDefinition;
@@ -418,6 +436,9 @@ export interface HistogramSeriesOptions extends SeriesOptions {
 
 // @public (undocumented)
 export const HorizontalLine: DrawingToolDefinition;
+
+// @public (undocumented)
+export const HorizontalRay: DrawingToolDefinition;
 
 // @public
 export interface IndicatorApi<TInputs extends IndicatorInputs = IndicatorInputs> {
@@ -657,6 +678,9 @@ export interface LineSeriesOptions extends SeriesOptions {
     lineWidth?: number;
 }
 
+// @public (undocumented)
+export const LongShortPosition: DrawingToolDefinition;
+
 // @public
 export function mapLightweightChartOptions(options: LightweightChartOptions): ChartOptions;
 
@@ -724,6 +748,9 @@ export interface PaneOptions {
     priceScale?: PriceScaleOptions;
 }
 
+// @public (undocumented)
+export const ParallelChannel: DrawingToolDefinition;
+
 // @public
 export interface Point {
     // (undocumented)
@@ -731,6 +758,9 @@ export interface Point {
     // (undocumented)
     y: number;
 }
+
+// @public (undocumented)
+export const PriceDateRange: DrawingToolDefinition;
 
 // @public
 export interface PriceLineApi {
@@ -798,6 +828,11 @@ export type ReadyEvent = void;
 
 // @public (undocumented)
 export const Rectangle: DrawingToolDefinition;
+
+// @public
+export interface SelectDrawingOptions {
+    mode?: DrawingSelectionMode;
+}
 
 // @public
 export interface SerializedDrawing {
@@ -962,6 +997,9 @@ export type Unsubscribe = () => void;
 // @public
 export const VERSION: string;
 
+// @public (undocumented)
+export const VerticalLine: DrawingToolDefinition;
+
 // @public
 export interface VisibleRange {
     // (undocumented)
@@ -1002,8 +1040,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:861:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:876:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:876:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:891:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

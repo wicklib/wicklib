@@ -2,11 +2,19 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 
 import {
   CandlestickSeries,
+  Circle,
   createChart,
+  CrossLine,
+  FibExtension,
   HorizontalLine,
+  HorizontalRay,
+  LongShortPosition,
   Measure,
+  ParallelChannel,
+  PriceDateRange,
   Rectangle,
   TrendLine,
+  VerticalLine,
   type ChartApi,
   type ChartErrorEvent,
   type CrosshairEvent,
@@ -650,6 +658,46 @@ describe("createChart", () => {
     expect(restored.selectedDrawing()).toBeNull();
   });
 
+  it("creates, renders, serializes, and restores every drawing tool", () => {
+    const chart = track(createChart(mount()));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+
+    const one = [{ time: 5 * MINUTE, price: 100 }];
+    const two = [
+      { time: 0, price: 98 },
+      { time: 10 * MINUTE, price: 108 },
+    ];
+    const three = [
+      { time: 0, price: 98 },
+      { time: 10 * MINUTE, price: 108 },
+      { time: 20 * MINUTE, price: 103 },
+    ];
+    const cases = [
+      [HorizontalRay, one],
+      [VerticalLine, one],
+      [CrossLine, one],
+      [ParallelChannel, three],
+      [FibExtension, three],
+      [LongShortPosition, three],
+      [PriceDateRange, two],
+      [Circle, two],
+    ] as const;
+
+    for (const [tool, anchors] of cases) {
+      const drawing = chart.addDrawing(tool, { anchors });
+      expect(drawing.toolId).toBe(tool.id);
+    }
+
+    expect(chart.serializeDrawings().drawings).toHaveLength(cases.length);
+    expect(chart.takeScreenshot().width).toBeGreaterThan(0);
+
+    const serialized = chart.serializeDrawings();
+    const restored = track(createChart(mount()));
+    restored.addSeries(CandlestickSeries).setData(bars(50));
+    restored.loadDrawings(serialized);
+    expect(restored.serializeDrawings().drawings).toHaveLength(cases.length);
+  });
+
   it("places drawing anchors at the pointer even with crosshair magnet enabled", () => {
     const element = mount();
     const chart = track(createChart(element, { crosshair: { mode: "magnet" } }));
@@ -715,6 +763,60 @@ describe("createChart", () => {
 
     expect(cancelled).toEqual(["trend-line"]);
     expect(created).toEqual(["horizontal-line"]);
+  });
+
+  it("supports additive, toggle, and clearing multi-selection", () => {
+    const chart = track(createChart(mount()));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+    const first = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 0, price: 100 }],
+    });
+    const second = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 10 * MINUTE, price: 110 }],
+    });
+    const events: string[][] = [];
+    chart.on("drawing-selection", ({ drawings }) => {
+      events.push(drawings.map((drawing) => drawing.id));
+    });
+
+    chart.selectDrawing(first.id);
+    chart.selectDrawing(second.id, { mode: "add" });
+    expect(chart.selectedDrawings().map((drawing) => drawing.id)).toEqual([first.id, second.id]);
+    expect(chart.selectedDrawing()?.id).toBe(first.id);
+
+    chart.selectDrawing(first.id, { mode: "toggle" });
+    expect(chart.selectedDrawings().map((drawing) => drawing.id)).toEqual([second.id]);
+
+    chart.selectDrawing(null);
+    expect(chart.selectedDrawings()).toEqual([]);
+    expect(events.at(-1)).toEqual([]);
+
+    chart.selectDrawing(first.id, { mode: "add" });
+    chart.selectDrawing(second.id, { mode: "add" });
+    expect(chart.serializeDrawings().drawings).toHaveLength(2);
+  });
+
+  it("deletes every selected unlocked drawing", () => {
+    const chart = track(createChart(mount()));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+    const first = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 0, price: 100 }],
+    });
+    const locked = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 10 * MINUTE, price: 110 }],
+      options: { locked: true },
+    });
+    const second = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 20 * MINUTE, price: 120 }],
+    });
+
+    chart.selectDrawing(first.id);
+    chart.selectDrawing(locked.id, { mode: "add" });
+    chart.selectDrawing(second.id, { mode: "add" });
+    const root = (chart as unknown as { stack: { root: HTMLElement } }).stack.root;
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true }));
+
+    expect(chart.serializeDrawings().drawings.map((drawing) => drawing.id)).toEqual([locked.id]);
   });
 
   it("deletes selected drawings and ignores locked ones", () => {

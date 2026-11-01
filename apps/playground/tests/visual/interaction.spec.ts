@@ -56,6 +56,39 @@ test("focuses the chart on pointer down", async ({ page }) => {
   expect(focused).toBe(true);
 });
 
+test("selects and deletes multiple drawings with a modifier marquee", async ({ page }) => {
+  await page.goto("/?test");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+
+  const box = await page.locator("#chart").boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) {
+    return;
+  }
+
+  for (const offset of [200, 400]) {
+    await page.selectOption("#drawing-tool", "vertical-line");
+    await page.mouse.click(box.x + offset, box.y + 200);
+  }
+  const count = () =>
+    page.evaluate(() => window.__wicklibChart?.serializeDrawings().drawings.length ?? 0);
+  expect(await count()).toBe(2);
+
+  const modifier = process.platform === "darwin" ? "Meta" : "Control";
+  await page.keyboard.down(modifier);
+  await page.mouse.move(box.x + 150, box.y + 120);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 450, box.y + 320, { steps: 5 });
+  await page.mouse.up();
+  await page.keyboard.up(modifier);
+
+  const selected = await page.evaluate(() => window.__wicklibChart?.selectedDrawings().length ?? 0);
+  expect(selected).toBe(2);
+
+  await page.keyboard.press("Delete");
+  expect(await count()).toBe(0);
+});
+
 test("removes selected drawings with Delete and Backspace", async ({ page }) => {
   await page.goto("/?test&drawings");
   await page.waitForFunction(() => window.__wicklibReady === true);

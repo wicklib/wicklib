@@ -77,6 +77,102 @@ export const HorizontalLine: DrawingToolDefinition = Object.freeze({
   defaultOptions: { color: "#f0b90b" },
 });
 
+export const HorizontalRay: DrawingToolDefinition = Object.freeze({
+  id: "horizontal-ray",
+  meta: {
+    id: "com.wicklib.horizontal-ray",
+    name: "Horizontal Ray",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 1,
+  defaultOptions: { color: "#f0b90b" },
+});
+
+export const VerticalLine: DrawingToolDefinition = Object.freeze({
+  id: "vertical-line",
+  meta: {
+    id: "com.wicklib.vertical-line",
+    name: "Vertical Line",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 1,
+  defaultOptions: { color: "#787b86" },
+});
+
+export const CrossLine: DrawingToolDefinition = Object.freeze({
+  id: "cross-line",
+  meta: {
+    id: "com.wicklib.cross-line",
+    name: "Cross Line",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 1,
+  defaultOptions: { color: "#787b86" },
+});
+
+export const ParallelChannel: DrawingToolDefinition = Object.freeze({
+  id: "parallel-channel",
+  meta: {
+    id: "com.wicklib.parallel-channel",
+    name: "Parallel Channel",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 3,
+  defaultOptions: { fillOpacity: 0.1 },
+});
+
+export const FibExtension: DrawingToolDefinition = Object.freeze({
+  id: "fib-extension",
+  meta: {
+    id: "com.wicklib.fib-extension",
+    name: "Fib Extension",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 3,
+  defaultOptions: { color: "#787b86" },
+});
+
+export const LongShortPosition: DrawingToolDefinition = Object.freeze({
+  id: "long-short-position",
+  meta: {
+    id: "com.wicklib.long-short-position",
+    name: "Long/Short Position",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 3,
+  defaultOptions: { showLabels: true },
+});
+
+export const PriceDateRange: DrawingToolDefinition = Object.freeze({
+  id: "price-date-range",
+  meta: {
+    id: "com.wicklib.price-date-range",
+    name: "Price/Date Range",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+  defaultOptions: { fillOpacity: 0.1 },
+});
+
+export const Circle: DrawingToolDefinition = Object.freeze({
+  id: "circle",
+  meta: {
+    id: "com.wicklib.circle",
+    name: "Circle",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+  defaultOptions: { fillOpacity: 0.1 },
+});
+
 export const Rectangle: DrawingToolDefinition = Object.freeze({
   id: "rectangle",
   meta: {
@@ -115,7 +211,21 @@ export const Measure: DrawingToolDefinition = Object.freeze({
 });
 
 export const DRAWING_TOOLS: ReadonlyMap<string, DrawingToolDefinition> = new Map(
-  [TrendLine, HorizontalLine, Rectangle, FibRetracement, Measure].map((tool) => [tool.id, tool]),
+  [
+    TrendLine,
+    HorizontalLine,
+    HorizontalRay,
+    VerticalLine,
+    CrossLine,
+    ParallelChannel,
+    Rectangle,
+    FibRetracement,
+    FibExtension,
+    LongShortPosition,
+    PriceDateRange,
+    Circle,
+    Measure,
+  ].map((tool) => [tool.id, tool]),
 );
 
 export function resolveDrawingOptions(
@@ -203,17 +313,45 @@ export function hitTestDrawing(
     case "horizontal-line": {
       return Math.abs(point.y - points[0]!.y) <= tolerance;
     }
-    case "trend-line": {
+    case "horizontal-ray": {
+      return point.x >= points[0]!.x - tolerance && Math.abs(point.y - points[0]!.y) <= tolerance;
+    }
+    case "vertical-line": {
+      return Math.abs(point.x - points[0]!.x) <= tolerance;
+    }
+    case "cross-line": {
+      return (
+        Math.abs(point.x - points[0]!.x) <= tolerance ||
+        Math.abs(point.y - points[0]!.y) <= tolerance
+      );
+    }
+    case "trend-line":
+    case "parallel-channel": {
       if (points.length < 2) {
         return false;
       }
+      if (target.toolId === "parallel-channel" && points.length >= 3) {
+        const channel = parallelLines(points, pane.plot);
+        return (
+          distanceToLine(point, channel[0][0], channel[0][1]) <= tolerance ||
+          distanceToLine(point, channel[1][0], channel[1][1]) <= tolerance ||
+          pointInChannel(point, channel, tolerance)
+        );
+      }
       return distanceToLine(point, points[0]!, points[1]!) <= tolerance;
     }
-    case "rectangle": {
+    case "rectangle":
+    case "price-date-range": {
       if (points.length < 2) {
         return false;
       }
       return pointInRect(point, points[0]!, points[1]!, tolerance);
+    }
+    case "circle": {
+      if (points.length < 2) {
+        return false;
+      }
+      return pointInEllipse(point, points[0]!, points[1]!, tolerance);
     }
     case "fib-retracement": {
       if (points.length < 2) {
@@ -223,6 +361,24 @@ export function hitTestDrawing(
         const y = points[0]!.y + (points[1]!.y - points[0]!.y) * level;
         return Math.abs(point.y - y) <= tolerance;
       });
+    }
+    case "fib-extension": {
+      if (points.length < 3) {
+        return false;
+      }
+      const delta = points[1]!.y - points[0]!.y;
+      return FIB_EXTENSION_LEVELS.some(
+        (level) => Math.abs(point.y - (points[2]!.y + delta * level)) <= tolerance,
+      );
+    }
+    case "long-short-position": {
+      if (points.length < 3) {
+        return false;
+      }
+      return (
+        pointInRect(point, points[0]!, points[1]!, tolerance) ||
+        pointInRect(point, points[0]!, points[2]!, tolerance)
+      );
     }
     default: {
       if (points.length < 2) {
@@ -259,6 +415,10 @@ export function hitTestAnchor(
 }
 
 export const FIB_LEVELS: readonly number[] = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+
+export const FIB_EXTENSION_LEVELS: readonly number[] = [
+  0, 0.382, 0.618, 1, 1.618, 2.618, 3.618, 4.236,
+];
 
 export function clipLineToRect(
   first: Point,
@@ -337,4 +497,82 @@ function pointInRect(point: Point, first: Point, second: Point, tolerance: numbe
   const top = Math.min(first.y, second.y) - tolerance;
   const bottom = Math.max(first.y, second.y) + tolerance;
   return point.x >= left && point.x <= right && point.y >= top && point.y <= bottom;
+}
+
+export function parallelLines(
+  points: readonly Point[],
+  plot: { left: number; right: number; top: number; bottom: number },
+): [[Point, Point], [Point, Point]] {
+  const first = points[0]!;
+  const second = points[1]!;
+  const third = points[2]!;
+  const dx = second.x - first.x;
+
+  if (Math.abs(dx) < 0.0001) {
+    return [
+      [
+        { x: first.x, y: plot.top },
+        { x: first.x, y: plot.bottom },
+      ],
+      [
+        { x: third.x, y: plot.top },
+        { x: third.x, y: plot.bottom },
+      ],
+    ];
+  }
+
+  const slope = (second.y - first.y) / dx;
+  const baseAt = (x: number): number => first.y + slope * (x - first.x);
+  const offset = third.y - baseAt(third.x);
+  return [
+    [
+      { x: plot.left, y: baseAt(plot.left) },
+      { x: plot.right, y: baseAt(plot.right) },
+    ],
+    [
+      { x: plot.left, y: baseAt(plot.left) + offset },
+      { x: plot.right, y: baseAt(plot.right) + offset },
+    ],
+  ];
+}
+
+function pointInChannel(
+  point: Point,
+  lines: [[Point, Point], [Point, Point]],
+  tolerance: number,
+): boolean {
+  const polygon = [lines[0][0], lines[0][1], lines[1][1], lines[1][0]];
+  if (pointInPolygon(point, polygon)) {
+    return true;
+  }
+  return polygon.some((candidate, index) => {
+    const next = polygon[(index + 1) % polygon.length]!;
+    return distanceToSegment(point, candidate, next) <= tolerance;
+  });
+}
+
+function pointInEllipse(point: Point, first: Point, second: Point, tolerance: number): boolean {
+  const cx = (first.x + second.x) / 2;
+  const cy = (first.y + second.y) / 2;
+  const rx = Math.abs(second.x - first.x) / 2 + tolerance;
+  const ry = Math.abs(second.y - first.y) / 2 + tolerance;
+  if (rx === 0 || ry === 0) {
+    return Math.hypot(point.x - cx, point.y - cy) <= tolerance;
+  }
+  return ((point.x - cx) / rx) ** 2 + ((point.y - cy) / ry) ** 2 <= 1;
+}
+
+function pointInPolygon(point: Point, polygon: readonly Point[]): boolean {
+  let inside = false;
+  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+    const current = polygon[index]!;
+    const prior = polygon[previous]!;
+    const intersects =
+      current.y > point.y !== prior.y > point.y &&
+      point.x < ((prior.x - current.x) * (point.y - current.y)) / (prior.y - current.y) + current.x;
+    if (intersects) {
+      inside = !inside;
+    }
+  }
+  return inside;
 }

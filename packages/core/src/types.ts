@@ -618,6 +618,19 @@ export interface AddDrawingOptions {
 }
 
 /**
+ * How `selectDrawing` changes the current selection.
+ */
+export type DrawingSelectionMode = "replace" | "add" | "toggle";
+
+/**
+ * Options for changing drawing selection.
+ */
+export interface SelectDrawingOptions {
+  /** Defaults to replace. */
+  mode?: DrawingSelectionMode;
+}
+
+/**
  * A live drawing annotation.
  */
 export interface DrawingApi {
@@ -760,6 +773,7 @@ export interface ChartEventMap {
   "data-loading": DataLoadingEvent;
   "drawing-created": { drawing: DrawingApi };
   "drawing-selected": { drawing: DrawingApi | null };
+  "drawing-selection": { drawings: readonly DrawingApi[] };
   "drawing-updated": { drawing: DrawingApi };
   "drawing-removed": { drawingId: string };
   "drawing-cancelled": { toolId: string };
@@ -878,7 +892,8 @@ export interface ChartApi {
   startDrawing(tool: DrawingToolDefinition, options?: Partial<AddDrawingOptions>): void;
   cancelDrawing(): void;
   selectedDrawing(): DrawingApi | null;
-  selectDrawing(id: string | null): void;
+  selectedDrawings(): readonly DrawingApi[];
+  selectDrawing(id: string | null, options?: SelectDrawingOptions): void;
   serializeDrawings(): DrawingDocument;
   loadDrawings(document: DrawingDocument): void;
   /** Fits the time scale and restores auto-scale on every pane. */

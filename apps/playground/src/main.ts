@@ -2,11 +2,19 @@ import {
   CandlestickSeries,
   createChart,
   DarkTheme,
+  Circle,
+  CrossLine,
+  FibExtension,
   FibRetracement,
   HorizontalLine,
+  HorizontalRay,
   LightTheme,
+  LongShortPosition,
+  ParallelChannel,
+  PriceDateRange,
   Rectangle,
   TrendLine,
+  VerticalLine,
   type ChartApi,
   type DrawingToolDefinition,
   type OhlcData,
@@ -116,6 +124,17 @@ app.innerHTML = `
       <button type="button" data-drawing="horizontal-line" title="Horizontal line">H-Line</button>
       <button type="button" data-drawing="rectangle" title="Rectangle">Rect</button>
       <button type="button" data-drawing="fib-retracement" title="Fibonacci retracement">Fib</button>
+      <select id="drawing-tool" title="More drawing tools">
+        <option value="">More…</option>
+        <option value="horizontal-ray">Horizontal ray</option>
+        <option value="vertical-line">Vertical line</option>
+        <option value="cross-line">Cross line</option>
+        <option value="parallel-channel">Parallel channel</option>
+        <option value="fib-extension">Fib extension</option>
+        <option value="long-short-position">Long/short position</option>
+        <option value="price-date-range">Price/date range</option>
+        <option value="circle">Circle</option>
+      </select>
       <button id="clear-drawings" type="button" title="Select a drawing, then press Delete or Backspace. Clear removes all.">Clear</button>
       <button id="theme" type="button">Light</button>
     </div>
@@ -166,8 +185,17 @@ const drawingTools: Record<string, DrawingToolDefinition> = {
   "horizontal-line": HorizontalLine,
   rectangle: Rectangle,
   "fib-retracement": FibRetracement,
+  "horizontal-ray": HorizontalRay,
+  "vertical-line": VerticalLine,
+  "cross-line": CrossLine,
+  "parallel-channel": ParallelChannel,
+  "fib-extension": FibExtension,
+  "long-short-position": LongShortPosition,
+  "price-date-range": PriceDateRange,
+  circle: Circle,
 };
 const drawingButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-drawing]"));
+const drawingToolSelect = byId<HTMLSelectElement>("drawing-tool");
 
 function setActiveDrawingButton(toolId: string | null): void {
   for (const button of drawingButtons) {
@@ -797,6 +825,15 @@ for (const button of drawingButtons) {
     setActiveDrawingButton(tool.id);
   });
 }
+
+drawingToolSelect.addEventListener("change", () => {
+  const tool = drawingTools[drawingToolSelect.value];
+  if (tool) {
+    chart.startDrawing(tool);
+    setActiveDrawingButton(null);
+  }
+  drawingToolSelect.value = "";
+});
 
 clearDrawingsButton.addEventListener("click", () => {
   chart.loadDrawings({ version: 1, drawings: [] });
