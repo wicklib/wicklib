@@ -459,7 +459,7 @@ export function hitTestDrawing(
         return false;
       }
       if (target.toolId === "parallel-channel" && points.length >= 3) {
-        const channel = parallelLines(points, pane.plot);
+        const channel = parallelLines(points);
         return (
           distanceToLine(point, channel[0][0], channel[0][1]) <= tolerance ||
           distanceToLine(point, channel[1][0], channel[1][1]) <= tolerance ||
@@ -655,24 +655,23 @@ function pointInRect(point: Point, first: Point, second: Point, tolerance: numbe
   return point.x >= left && point.x <= right && point.y >= top && point.y <= bottom;
 }
 
-export function parallelLines(
-  points: readonly Point[],
-  plot: { left: number; right: number; top: number; bottom: number },
-): [[Point, Point], [Point, Point]] {
+export function parallelLines(points: readonly Point[]): [[Point, Point], [Point, Point]] {
   const first = points[0]!;
   const second = points[1]!;
   const third = points[2]!;
+  const left = Math.min(first.x, second.x, third.x);
+  const right = Math.max(first.x, second.x, third.x);
   const dx = second.x - first.x;
 
   if (Math.abs(dx) < 0.0001) {
     return [
       [
-        { x: first.x, y: plot.top },
-        { x: first.x, y: plot.bottom },
+        { x: first.x, y: first.y },
+        { x: first.x, y: third.y },
       ],
       [
-        { x: third.x, y: plot.top },
-        { x: third.x, y: plot.bottom },
+        { x: third.x, y: first.y },
+        { x: third.x, y: third.y },
       ],
     ];
   }
@@ -682,12 +681,12 @@ export function parallelLines(
   const offset = third.y - baseAt(third.x);
   return [
     [
-      { x: plot.left, y: baseAt(plot.left) },
-      { x: plot.right, y: baseAt(plot.right) },
+      { x: left, y: baseAt(left) },
+      { x: right, y: baseAt(right) },
     ],
     [
-      { x: plot.left, y: baseAt(plot.left) + offset },
-      { x: plot.right, y: baseAt(plot.right) + offset },
+      { x: left, y: baseAt(left) + offset },
+      { x: right, y: baseAt(right) + offset },
     ],
   ];
 }

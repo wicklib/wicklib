@@ -69,6 +69,7 @@ export interface ChartApi {
     cancelDrawing(): void;
     // (undocumented)
     destroy(): void;
+    drawingDefaults(toolId: string): DrawingOptions;
     exportImage(type?: string, quality?: number): string;
     // (undocumented)
     loadDrawings(document: DrawingDocument): void;
@@ -85,6 +86,7 @@ export interface ChartApi {
     selectedDrawings(): readonly DrawingApi[];
     // (undocumented)
     serializeDrawings(): DrawingDocument;
+    setDrawingDefaults(toolId: string, options: Partial<DrawingOptions>): void;
     // (undocumented)
     setOptions(options: Partial<ChartOptions>): void;
     // (undocumented)
@@ -92,6 +94,7 @@ export interface ChartApi {
     takeScreenshot(): HTMLCanvasElement;
     // (undocumented)
     timeScale(): TimeScaleApi;
+    updateSelectedDrawings(options: Partial<DrawingOptions>): void;
 }
 
 // @public
@@ -333,6 +336,8 @@ export interface DrawingAnchor {
 export interface DrawingApi {
     // (undocumented)
     getAnchors(): readonly DrawingAnchor[];
+    // (undocumented)
+    getOptions(): DrawingOptions;
     // (undocumented)
     readonly id: string;
     // (undocumented)
@@ -1071,8 +1076,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:882:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:897:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:889:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:904:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

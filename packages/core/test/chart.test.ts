@@ -797,6 +797,36 @@ describe("createChart", () => {
     expect(created).toEqual(["horizontal-line"]);
   });
 
+  it("applies per-tool defaults and updates selected drawing settings", () => {
+    const chart = track(createChart(mount()));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+    chart.setDrawingDefaults("horizontal-line", {
+      color: "#123456",
+      lineWidth: 3,
+      fillOpacity: 0.4,
+    });
+    expect(chart.drawingDefaults("horizontal-line")).toMatchObject({
+      color: "#123456",
+      lineWidth: 3,
+      fillOpacity: 0.4,
+    });
+
+    const first = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 0, price: 100 }],
+    });
+    const second = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 10 * MINUTE, price: 110 }],
+    });
+    expect(first.getOptions()).toMatchObject({ color: "#123456", lineWidth: 3 });
+
+    chart.selectDrawing(first.id);
+    chart.selectDrawing(second.id, { mode: "add" });
+    chart.updateSelectedDrawings({ color: "#abcdef", lineWidth: 5 });
+    expect(first.getOptions()).toMatchObject({ color: "#abcdef", lineWidth: 5 });
+    expect(second.getOptions()).toMatchObject({ color: "#abcdef", lineWidth: 5 });
+    expect(() => chart.setDrawingDefaults("missing", {})).toThrow(/Unknown drawing tool/);
+  });
+
   it("supports additive, toggle, and clearing multi-selection", () => {
     const chart = track(createChart(mount()));
     chart.addSeries(CandlestickSeries).setData(bars(50));

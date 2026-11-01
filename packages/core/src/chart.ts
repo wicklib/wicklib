@@ -132,6 +132,7 @@ class Chart implements ChartApi, SeriesHost {
   private indicatorCounter = 0;
   private drawingCounter = 0;
   private readonly drawings: Drawing[] = [];
+  private readonly drawingDefaultOptions = new Map<string, DrawingOptions>();
   private readonly overlays: OverlayEntry[] = [];
   private readonly selectedDrawingIds = new Set<string>();
   private activeTool: DrawingToolDefinition | null = null;
@@ -485,6 +486,35 @@ class Chart implements ChartApi, SeriesHost {
     }
   }
 
+  updateSelectedDrawings(options: Partial<DrawingOptions>): void {
+    this.assertAlive();
+    for (const drawing of this.orderedSelection()) {
+      drawing.setOptions(options);
+    }
+  }
+
+  setDrawingDefaults(toolId: string, options: Partial<DrawingOptions>): void {
+    this.assertAlive();
+    if (!DRAWING_TOOLS.has(toolId)) {
+      fail("INVALID_ARGUMENT", `Unknown drawing tool: ${toolId}`);
+    }
+    this.drawingDefaultOptions.set(
+      toolId,
+      mergeDefined<DrawingOptions>(this.drawingDefaultOptions.get(toolId) ?? {}, options),
+    );
+  }
+
+  drawingDefaults(toolId: string): DrawingOptions {
+    this.assertAlive();
+    const tool = DRAWING_TOOLS.get(toolId);
+    if (!tool) {
+      fail("INVALID_ARGUMENT", `Unknown drawing tool: ${toolId}`);
+    }
+    return {
+      ...resolveDrawingOptions(tool.defaultOptions, this.drawingDefaultOptions.get(toolId)),
+    };
+  }
+
   serializeDrawings(): DrawingDocument {
     this.assertAlive();
     const drawings: SerializedDrawing[] = [];
@@ -572,7 +602,7 @@ class Chart implements ChartApi, SeriesHost {
       pane.id,
       tool,
       anchors,
-      options,
+      mergeDefined<DrawingOptions>(this.drawingDefaultOptions.get(tool.id) ?? {}, options),
       this.drawingHost,
     );
     this.drawings.push(drawing);

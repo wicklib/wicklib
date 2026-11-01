@@ -1258,7 +1258,7 @@ export class ChartRenderer {
           context.stroke();
           return;
         }
-        const channel = parallelLines(points, plot);
+        const channel = parallelLines(points);
         context.beginPath();
         context.moveTo(channel[0][0].x, channel[0][0].y);
         context.lineTo(channel[0][1].x, channel[0][1].y);

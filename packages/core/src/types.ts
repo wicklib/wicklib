@@ -644,6 +644,7 @@ export interface DrawingApi {
   readonly toolId: string;
   readonly paneId: string;
   getAnchors(): readonly DrawingAnchor[];
+  getOptions(): DrawingOptions;
   setAnchors(anchors: readonly DrawingAnchor[]): void;
   setOptions(options: Partial<DrawingOptions>): void;
   remove(): void;
@@ -900,6 +901,12 @@ export interface ChartApi {
   selectedDrawing(): DrawingApi | null;
   selectedDrawings(): readonly DrawingApi[];
   selectDrawing(id: string | null, options?: SelectDrawingOptions): void;
+  /** Applies a partial style update to every selected drawing. */
+  updateSelectedDrawings(options: Partial<DrawingOptions>): void;
+  /** Sets per-chart defaults applied to newly created drawings of a tool. */
+  setDrawingDefaults(toolId: string, options: Partial<DrawingOptions>): void;
+  /** Returns the effective defaults for a tool, including built-in defaults. */
+  drawingDefaults(toolId: string): DrawingOptions;
   serializeDrawings(): DrawingDocument;
   loadDrawings(document: DrawingDocument): void;
   /** Fits the time scale and restores auto-scale on every pane. */
