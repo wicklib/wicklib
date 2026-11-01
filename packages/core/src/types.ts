@@ -797,6 +797,7 @@ export interface ChartEventMap {
   "drawing-selected": { drawing: DrawingApi | null };
   "drawing-selection": { drawings: readonly DrawingApi[] };
   "drawing-updated": { drawing: DrawingApi };
+  "drawing-double-click": { drawing: DrawingApi; point: Point };
   "drawing-removed": { drawingId: string };
   "drawing-cancelled": { toolId: string };
   click: ChartClickEvent;

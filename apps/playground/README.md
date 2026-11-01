@@ -30,8 +30,9 @@ Never published. Not part of the Changesets group.
   intersecting the marquee; selected drawings move and delete as a group.
 - Drawing settings: selecting a drawing opens a settings bar with only the controls that
   apply to its tool. Filled shapes show fill controls, labelled tools show labels, and only
-  the text tool shows text/font fields. “Save as default” applies the current style to future
-  drawings of that tool.
+  the text tool shows text/font fields. Mixed selections display a “Multiple values” marker
+  and indeterminate checkboxes. “Save as default” applies the current style to future drawings
+  of that tool. Double-click a text drawing to edit its text.
 - Undo/Redo: drawing history for creation, editing, deletion, settings, and clearing.
   Cmd/Ctrl+Z undoes; Cmd/Ctrl+Shift+Z redoes.
 - Save/Load: stores the current drawing document in localStorage for the persistence example.

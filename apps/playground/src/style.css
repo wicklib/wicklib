@@ -160,6 +160,16 @@ button.active {
   display: none !important;
 }
 
+.settings .mixed {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.settings [data-mixed="true"] {
+  border-style: dashed !important;
+  border-color: var(--muted) !important;
+}
+
 .settings label {
   display: inline-flex;
   align-items: center;

@@ -1903,10 +1903,31 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
+    const point = this.localPoint(event);
+    const drawingPane = this.paneAtPoint(point);
+    if (drawingPane?.plot) {
+      const geometry: DrawingGeometryPane = {
+        plot: drawingPane.plot,
+        priceScale: drawingPane.priceScale,
+      };
+      for (let index = this.drawings.length - 1; index >= 0; index -= 1) {
+        const drawing = this.drawings[index]!;
+        if (drawing.paneId !== drawingPane.id) {
+          continue;
+        }
+        if (!hitTestDrawing(this.hitTarget(drawing), point, geometry, this.timeScaleModel)) {
+          continue;
+        }
+        this.selectOnly(drawing);
+        this.bus.emit("drawing-double-click", { drawing, point });
+        event.preventDefault();
+        return;
+      }
+    }
+
     if (!this.options.interaction.axisDoubleClickReset) {
       return;
     }
-    const point = this.localPoint(event);
     const pane = this.priceAxisPaneAtPoint(point);
     if (!pane) {
       return;

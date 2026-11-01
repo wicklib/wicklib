@@ -140,7 +140,8 @@ revisions, and typed loading/error events.
 - Drawing settings: read with `getOptions()`, patch the selection with
   `updateSelectedDrawings()`, and configure future drawings with `setDrawingDefaults()`.
   Use `drawingToolSettings(toolId)` or `DRAWING_TOOL_CATALOG` to build host menus and show
-  only relevant controls per tool. The menu, icons, settings controls, and persistence remain
+  only relevant controls per tool. `drawing-double-click` lets a host open tool-specific
+  editors, such as a text prompt. The menu, icons, settings controls, and persistence remain
   host-owned.
 - Extension overlays clipped to panes with time/price coordinate helpers.
 

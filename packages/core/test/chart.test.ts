@@ -667,6 +667,30 @@ describe("createChart", () => {
     expect(restored.selectedDrawing()).toBeNull();
   });
 
+  it("emits drawing-double-click for line and text drawings", () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+    const events: string[] = [];
+    chart.on("drawing-double-click", ({ drawing }) => events.push(drawing.toolId));
+    const root = element.firstElementChild as HTMLElement;
+
+    chart.startDrawing(HorizontalLine);
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 200, 200));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 200, 200));
+    root.dispatchEvent(
+      new MouseEvent("dblclick", { clientX: 200, clientY: 200, bubbles: true, cancelable: true }),
+    );
+
+    chart.startDrawing(Text);
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 300, 250));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 300, 250));
+    root.dispatchEvent(
+      new MouseEvent("dblclick", { clientX: 300, clientY: 250, bubbles: true, cancelable: true }),
+    );
+    expect(events).toEqual(["horizontal-line", "text"]);
+  });
+
   it("creates, renders, serializes, and restores every drawing tool", () => {
     const chart = track(createChart(mount()));
     chart.addSeries(CandlestickSeries).setData(bars(50));

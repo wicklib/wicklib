@@ -113,6 +113,37 @@ test("undoes, redoes, saves, and loads drawings", async ({ page }) => {
   expect(await count()).toBe(1);
 });
 
+test("shows mixed values for a multi-tool-independent selection", async ({ page }) => {
+  await page.goto("/?test");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+
+  const box = await page.locator("#chart").boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) {
+    return;
+  }
+
+  for (const x of [200, 400]) {
+    await page.selectOption("#drawing-tool", "vertical-line");
+    await page.mouse.click(box.x + x, box.y + 200);
+  }
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>("#drawing-color");
+    if (input) {
+      input.value = "#ff0000";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  });
+
+  const modifier = process.platform === "darwin" ? "Meta" : "Control";
+  await page.keyboard.down(modifier);
+  await page.keyboard.press("a");
+  await page.keyboard.up(modifier);
+
+  await expect(page.locator("#settings-mixed")).toBeVisible();
+  await expect(page.locator("#drawing-color")).toHaveAttribute("data-mixed", "true");
+});
+
 test("edits the selected drawing through the settings panel", async ({ page }) => {
   await page.goto("/?test&drawings");
   await page.waitForFunction(() => window.__wicklibReady === true);
@@ -166,8 +197,13 @@ test("creates brush, path, and text drawings", async ({ page }) => {
   await page.mouse.click(box.x + 400, box.y + 260);
   await page.keyboard.press("Enter");
 
+  const textBox = await page.locator("#chart").boundingBox();
+  expect(textBox).not.toBeNull();
+  if (!textBox) {
+    return;
+  }
   await page.selectOption("#drawing-tool", "text");
-  await page.mouse.click(box.x + 450, box.y + 180);
+  await page.mouse.click(textBox.x + 450, textBox.y + 180);
 
   const drawings = await page.evaluate(
     () => window.__wicklibChart?.serializeDrawings().drawings ?? [],

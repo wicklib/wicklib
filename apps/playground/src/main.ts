@@ -173,10 +173,12 @@ app.innerHTML = `
   </div>
   <div id="drawing-settings" class="settings" hidden>
     <strong id="settings-title">Drawing settings</strong>
+    <span id="settings-mixed" class="mixed" hidden>Multiple values</span>
     <label data-setting="color">Color <input id="drawing-color" type="color" value="#2962ff" /></label>
     <label data-setting="lineWidth">Width <input id="drawing-width" type="number" min="1" max="30" step="1" value="1" /></label>
     <label data-setting="lineStyle">Style
       <select id="drawing-style">
+        <option value="" disabled>Mixed</option>
         <option value="solid">Solid</option>
         <option value="dotted">Dotted</option>
         <option value="dashed">Dashed</option>
@@ -233,6 +235,7 @@ const clearDrawingsButton = byId<HTMLButtonElement>("clear-drawings");
 const seriesDemoButton = byId<HTMLButtonElement>("series-demo");
 const settingsPanel = byId<HTMLDivElement>("drawing-settings");
 const settingsTitle = byId<HTMLElement>("settings-title");
+const settingsMixed = byId<HTMLSpanElement>("settings-mixed");
 const drawingColor = byId<HTMLInputElement>("drawing-color");
 const drawingFillColor = byId<HTMLInputElement>("drawing-fill-color");
 const drawingWidth = byId<HTMLInputElement>("drawing-width");
@@ -930,6 +933,20 @@ function colorInputValue(color: string): string {
   return /^#[0-9a-f]{6}$/i.test(color) ? color : "#2962ff";
 }
 
+function valuesDiffer<T>(values: readonly T[]): boolean {
+  return values.length > 1 && values.some((value) => value !== values[0]);
+}
+
+function markMixed(element: HTMLElement, mixed: boolean): void {
+  if (mixed) {
+    element.dataset.mixed = "true";
+    element.title = "Multiple values";
+  } else {
+    delete element.dataset.mixed;
+    element.removeAttribute("title");
+  }
+}
+
 function syncDrawingSettings(): void {
   const drawings = chart.selectedDrawings();
   settingsPanel.hidden = drawings.length === 0;
@@ -938,6 +955,7 @@ function syncDrawingSettings(): void {
   }
 
   const options = drawings[0]!.getOptions();
+  const allOptions = drawings.map((drawing) => drawing.getOptions());
   const tools = new Set(drawings.map((drawing) => drawing.toolId));
   const allowed = new Set<DrawingSetting>(
     drawings
@@ -947,19 +965,47 @@ function syncDrawingSettings(): void {
   for (const element of settingsPanel.querySelectorAll<HTMLElement>("[data-setting]")) {
     element.hidden = !allowed.has(element.dataset.setting as DrawingSetting);
   }
+
+  const mixed = {
+    color: valuesDiffer(allOptions.map((option) => option.color ?? "#2962ff")),
+    lineWidth: valuesDiffer(allOptions.map((option) => option.lineWidth ?? 1)),
+    lineStyle: valuesDiffer(allOptions.map((option) => option.lineStyle ?? "solid")),
+    fillColor: valuesDiffer(
+      allOptions.map((option) => option.fillColor ?? option.color ?? "#2962ff"),
+    ),
+    fillOpacity: valuesDiffer(allOptions.map((option) => option.fillOpacity ?? 0.12)),
+    showLabels: valuesDiffer(allOptions.map((option) => option.showLabels ?? true)),
+    locked: valuesDiffer(allOptions.map((option) => option.locked ?? false)),
+    visible: valuesDiffer(allOptions.map((option) => option.visible ?? true)),
+    text: valuesDiffer(allOptions.map((option) => option.text ?? "")),
+    fontSize: valuesDiffer(allOptions.map((option) => option.fontSize ?? 13)),
+  };
+  const hasMixed = Object.values(mixed).some(Boolean);
+  settingsMixed.hidden = !hasMixed;
   drawingDefaultsButton.disabled = tools.size !== 1;
   syncingSettings = true;
   settingsTitle.textContent = `${drawings.length} selected · ${[...tools].join(", ")}`;
   drawingColor.value = colorInputValue(options.color ?? "#2962ff");
   drawingFillColor.value = colorInputValue(options.fillColor ?? options.color ?? "#2962ff");
   drawingWidth.value = String(options.lineWidth ?? 1);
-  drawingStyle.value = options.lineStyle ?? "solid";
+  drawingStyle.value = mixed.lineStyle ? "" : (options.lineStyle ?? "solid");
   drawingOpacity.value = String(options.fillOpacity ?? 0.12);
   drawingLabels.checked = options.showLabels ?? true;
+  drawingLabels.indeterminate = mixed.showLabels;
   drawingLocked.checked = options.locked ?? false;
+  drawingLocked.indeterminate = mixed.locked;
   drawingVisible.checked = options.visible ?? true;
-  drawingText.value = options.text ?? "";
+  drawingVisible.indeterminate = mixed.visible;
+  drawingText.value = mixed.text ? "" : (options.text ?? "");
+  drawingText.placeholder = mixed.text ? "Multiple values" : "";
   drawingFont.value = String(options.fontSize ?? 13);
+  markMixed(drawingColor, mixed.color);
+  markMixed(drawingFillColor, mixed.fillColor);
+  markMixed(drawingWidth, mixed.lineWidth);
+  markMixed(drawingStyle, mixed.lineStyle);
+  markMixed(drawingOpacity, mixed.fillOpacity);
+  markMixed(drawingText, mixed.text);
+  markMixed(drawingFont, mixed.fontSize);
   syncingSettings = false;
 }
 
@@ -984,9 +1030,11 @@ drawingWidth.addEventListener("change", () => {
   }
 });
 drawingStyle.addEventListener("change", () => {
-  updateSelectedDrawingSettings({
-    lineStyle: drawingStyle.value as "solid" | "dotted" | "dashed",
-  });
+  if (drawingStyle.value) {
+    updateSelectedDrawingSettings({
+      lineStyle: drawingStyle.value as "solid" | "dotted" | "dashed",
+    });
+  }
 });
 drawingOpacity.addEventListener("input", () => {
   updateSelectedDrawingSettings({ fillOpacity: Number(drawingOpacity.value) });
@@ -1142,6 +1190,16 @@ document.addEventListener("keydown", (event) => {
     redoDrawings();
   } else {
     undoDrawings();
+  }
+});
+
+chart.on("drawing-double-click", ({ drawing }) => {
+  if (drawing.toolId !== "text") {
+    return;
+  }
+  const next = window.prompt("Edit text", drawing.getOptions().text ?? "");
+  if (next !== null) {
+    drawing.setOptions({ text: next });
   }
 });
 
