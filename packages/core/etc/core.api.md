@@ -325,6 +325,9 @@ export interface DataResponse<TData extends SeriesData = SeriesData> {
 }
 
 // @public
+export const DRAWING_TOOL_CATALOG: readonly DrawingToolCatalogEntry[];
+
+// @public
 export interface DrawingAnchor {
     // (undocumented)
     price: number;
@@ -392,6 +395,19 @@ export type DrawingSelectionMode = "replace" | "add" | "toggle";
 export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "text" | "fontSize" | "locked" | "visible";
 
 // @public
+export interface DrawingToolCatalogEntry {
+    // (undocumented)
+    readonly category: DrawingToolCategory;
+    // (undocumented)
+    readonly definition: DrawingToolDefinition;
+    // (undocumented)
+    readonly settings: readonly DrawingSetting[];
+}
+
+// @public
+export type DrawingToolCategory = "lines" | "channels" | "fibonacci" | "shapes" | "positions" | "ranges" | "patterns" | "freehand" | "text" | "measurement";
+
+// @public
 export interface DrawingToolDefinition {
     readonly anchors: 1 | 2 | 3 | 4 | 5 | 6;
     readonly capture?: "anchors" | "freehand" | "path";
@@ -404,7 +420,7 @@ export interface DrawingToolDefinition {
     readonly persist?: boolean;
 }
 
-// @public
+// @public (undocumented)
 export function drawingToolSettings(toolId: string): readonly DrawingSetting[];
 
 // @public (undocumented)

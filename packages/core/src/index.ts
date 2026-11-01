@@ -31,8 +31,10 @@ export {
   Text,
   TrendLine,
   VerticalLine,
+  DRAWING_TOOL_CATALOG,
   drawingToolSettings,
 } from "./drawings";
+export type { DrawingToolCatalogEntry, DrawingToolCategory } from "./drawings";
 export { AreaSeries, CandlestickSeries, HistogramSeries, LineSeries } from "./series";
 export { ChartThemes, DarkTheme, LightTheme } from "./themes";
 export type { ChartTheme } from "./themes";

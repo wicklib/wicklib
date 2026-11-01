@@ -432,6 +432,68 @@ export const DRAWING_TOOLS: ReadonlyMap<string, DrawingToolDefinition> = new Map
 /**
  * Returns the settings a host should expose for a drawing tool.
  */
+/**
+ * Stable grouping for host menus.
+ */
+export type DrawingToolCategory =
+  | "lines"
+  | "channels"
+  | "fibonacci"
+  | "shapes"
+  | "positions"
+  | "ranges"
+  | "patterns"
+  | "freehand"
+  | "text"
+  | "measurement";
+
+const TOOL_CATEGORIES: Readonly<Record<string, DrawingToolCategory>> = Object.freeze({
+  "trend-line": "lines",
+  "horizontal-line": "lines",
+  "horizontal-ray": "lines",
+  "vertical-line": "lines",
+  "cross-line": "lines",
+  "parallel-channel": "channels",
+  "fib-retracement": "fibonacci",
+  "fib-extension": "fibonacci",
+  rectangle: "shapes",
+  circle: "shapes",
+  "long-short-position": "positions",
+  "price-date-range": "ranges",
+  "elliott-impulse": "patterns",
+  "elliott-correction": "patterns",
+  "elliott-triangle": "patterns",
+  "elliott-double-combo": "patterns",
+  "elliott-triple-combo": "patterns",
+  brush: "freehand",
+  highlighter: "freehand",
+  path: "freehand",
+  text: "text",
+  measure: "measurement",
+});
+
+/**
+ * One entry in the built-in drawing-tool catalog.
+ */
+export interface DrawingToolCatalogEntry {
+  readonly definition: DrawingToolDefinition;
+  readonly category: DrawingToolCategory;
+  readonly settings: readonly DrawingSetting[];
+}
+
+/**
+ * Built-in drawing tools in menu order. Hosts own labels, icons, localization, and layout.
+ */
+export const DRAWING_TOOL_CATALOG: readonly DrawingToolCatalogEntry[] = Object.freeze(
+  [...DRAWING_TOOLS.values()].map((definition) =>
+    Object.freeze({
+      definition,
+      category: TOOL_CATEGORIES[definition.id] ?? "lines",
+      settings: drawingToolSettings(definition.id),
+    }),
+  ),
+);
+
 export function drawingToolSettings(toolId: string): readonly DrawingSetting[] {
   if (!DRAWING_TOOLS.has(toolId)) {
     throw new Error(`Unknown drawing tool: ${toolId}`);

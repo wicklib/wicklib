@@ -138,8 +138,9 @@ revisions, and typed loading/error events.
   move, and group delete. `selectedDrawings()` returns the complete selection.
 - Drawing settings: read with `getOptions()`, patch the selection with
   `updateSelectedDrawings()`, and configure future drawings with `setDrawingDefaults()`.
-  Use `drawingToolSettings(toolId)` to show only relevant controls per tool. The settings
-  controls and persistence remain host-owned.
+  Use `drawingToolSettings(toolId)` or `DRAWING_TOOL_CATALOG` to build host menus and show
+  only relevant controls per tool. The menu, icons, settings controls, and persistence remain
+  host-owned.
 - Extension overlays clipped to panes with time/price coordinate helpers.
 
 Use `interaction` to disable wheel, drag, pinch, or axis handling. Use `resetView()` to fit the

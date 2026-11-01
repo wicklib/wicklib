@@ -1,6 +1,26 @@
 import { describe, expect, it } from "vitest";
 
-import { drawingToolSettings, parallelLines } from "../src/drawings";
+import { DRAWING_TOOL_CATALOG, drawingToolSettings, parallelLines } from "../src/drawings";
+
+describe("drawing catalog", () => {
+  it("groups and describes every built-in tool", () => {
+    const ids = DRAWING_TOOL_CATALOG.map((entry) => entry.definition.id);
+    expect(ids).toContain("trend-line");
+    expect(ids).toContain("elliott-impulse");
+    expect(ids).toContain("brush");
+    expect(ids).toContain("text");
+
+    const elliott = DRAWING_TOOL_CATALOG.find(
+      (entry) => entry.definition.id === "elliott-triple-combo",
+    );
+    expect(elliott?.category).toBe("patterns");
+    expect(elliott?.settings).not.toContain("text");
+
+    const text = DRAWING_TOOL_CATALOG.find((entry) => entry.definition.id === "text");
+    expect(text?.category).toBe("text");
+    expect(text?.settings).toContain("fontSize");
+  });
+});
 
 describe("drawing settings", () => {
   it("exposes only the settings relevant to each tool", () => {
