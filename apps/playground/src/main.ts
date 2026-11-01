@@ -165,6 +165,26 @@ app.innerHTML = `
     <span id="feed-status"></span>
     <span id="readout"></span>
   </div>
+  <div id="drawing-settings" class="settings" hidden>
+    <strong id="settings-title">Drawing settings</strong>
+    <label>Color <input id="drawing-color" type="color" value="#2962ff" /></label>
+    <label>Width <input id="drawing-width" type="number" min="1" max="30" step="1" value="1" /></label>
+    <label>Style
+      <select id="drawing-style">
+        <option value="solid">Solid</option>
+        <option value="dotted">Dotted</option>
+        <option value="dashed">Dashed</option>
+      </select>
+    </label>
+    <label>Fill <input id="drawing-opacity" type="range" min="0" max="1" step="0.05" value="0.12" /></label>
+    <label class="toggle"><input id="drawing-labels" type="checkbox" checked /> Labels</label>
+    <label class="toggle"><input id="drawing-locked" type="checkbox" /> Locked</label>
+    <label class="toggle"><input id="drawing-visible" type="checkbox" checked /> Visible</label>
+    <label>Text <input id="drawing-text" type="text" value="" /></label>
+    <label>Font <input id="drawing-font" type="number" min="8" max="48" step="1" value="13" /></label>
+    <button id="drawing-defaults" type="button">Save as default</button>
+    <button id="drawing-delete" type="button">Delete selected</button>
+  </div>
   <div id="chart"></div>
 `;
 
@@ -179,6 +199,7 @@ const byId = <T extends HTMLElement>(id: string): T => {
 const chartElement = byId<HTMLDivElement>("chart");
 if (testMode || benchMode) {
   chartElement.style.height = "640px";
+  chartElement.style.minHeight = "640px";
   chartElement.style.flex = "none";
 }
 const summary = byId<HTMLSpanElement>("summary");
@@ -199,6 +220,19 @@ const macdToggle = byId<HTMLInputElement>("macd");
 const themeButton = byId<HTMLButtonElement>("theme");
 const clearDrawingsButton = byId<HTMLButtonElement>("clear-drawings");
 const seriesDemoButton = byId<HTMLButtonElement>("series-demo");
+const settingsPanel = byId<HTMLDivElement>("drawing-settings");
+const settingsTitle = byId<HTMLElement>("settings-title");
+const drawingColor = byId<HTMLInputElement>("drawing-color");
+const drawingWidth = byId<HTMLInputElement>("drawing-width");
+const drawingStyle = byId<HTMLSelectElement>("drawing-style");
+const drawingOpacity = byId<HTMLInputElement>("drawing-opacity");
+const drawingLabels = byId<HTMLInputElement>("drawing-labels");
+const drawingLocked = byId<HTMLInputElement>("drawing-locked");
+const drawingVisible = byId<HTMLInputElement>("drawing-visible");
+const drawingText = byId<HTMLInputElement>("drawing-text");
+const drawingFont = byId<HTMLInputElement>("drawing-font");
+const drawingDefaultsButton = byId<HTMLButtonElement>("drawing-defaults");
+const drawingDeleteButton = byId<HTMLButtonElement>("drawing-delete");
 
 const drawingTools: Record<string, DrawingToolDefinition> = {
   "trend-line": TrendLine,
@@ -876,6 +910,97 @@ chart.on("drawing-created", () => {
 chart.on("drawing-cancelled", () => {
   setActiveDrawingButton(null);
 });
+
+let syncingSettings = false;
+
+function colorInputValue(color: string): string {
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : "#2962ff";
+}
+
+function syncDrawingSettings(): void {
+  const drawings = chart.selectedDrawings();
+  settingsPanel.hidden = drawings.length === 0;
+  if (drawings.length === 0) {
+    return;
+  }
+
+  const options = drawings[0]!.getOptions();
+  syncingSettings = true;
+  settingsTitle.textContent = `${drawings.length} selected · ${drawings[0]!.toolId}`;
+  drawingColor.value = colorInputValue(options.color ?? "#2962ff");
+  drawingWidth.value = String(options.lineWidth ?? 1);
+  drawingStyle.value = options.lineStyle ?? "solid";
+  drawingOpacity.value = String(options.fillOpacity ?? 0.12);
+  drawingLabels.checked = options.showLabels ?? true;
+  drawingLocked.checked = options.locked ?? false;
+  drawingVisible.checked = options.visible ?? true;
+  drawingText.value = options.text ?? "";
+  drawingFont.value = String(options.fontSize ?? 13);
+  syncingSettings = false;
+}
+
+function updateSelectedDrawingSettings(
+  options: Parameters<typeof chart.updateSelectedDrawings>[0],
+): void {
+  if (!syncingSettings) {
+    chart.updateSelectedDrawings(options);
+  }
+}
+
+drawingColor.addEventListener("input", () => {
+  updateSelectedDrawingSettings({ color: drawingColor.value });
+});
+drawingWidth.addEventListener("change", () => {
+  const value = Number(drawingWidth.value);
+  if (Number.isFinite(value) && value > 0) {
+    updateSelectedDrawingSettings({ lineWidth: value });
+  }
+});
+drawingStyle.addEventListener("change", () => {
+  updateSelectedDrawingSettings({
+    lineStyle: drawingStyle.value as "solid" | "dotted" | "dashed",
+  });
+});
+drawingOpacity.addEventListener("input", () => {
+  updateSelectedDrawingSettings({ fillOpacity: Number(drawingOpacity.value) });
+});
+drawingLabels.addEventListener("change", () => {
+  updateSelectedDrawingSettings({ showLabels: drawingLabels.checked });
+});
+drawingLocked.addEventListener("change", () => {
+  updateSelectedDrawingSettings({ locked: drawingLocked.checked });
+});
+drawingVisible.addEventListener("change", () => {
+  updateSelectedDrawingSettings({ visible: drawingVisible.checked });
+});
+drawingText.addEventListener("input", () => {
+  updateSelectedDrawingSettings({ text: drawingText.value });
+});
+drawingFont.addEventListener("change", () => {
+  const value = Number(drawingFont.value);
+  if (Number.isFinite(value) && value >= 8) {
+    updateSelectedDrawingSettings({ fontSize: value });
+  }
+});
+drawingDefaultsButton.addEventListener("click", () => {
+  const drawing = chart.selectedDrawings()[0];
+  if (drawing) {
+    chart.setDrawingDefaults(drawing.toolId, drawing.getOptions());
+    settingsTitle.textContent = `Default saved · ${drawing.toolId}`;
+  }
+});
+drawingDeleteButton.addEventListener("click", () => {
+  for (const drawing of [...chart.selectedDrawings()]) {
+    if (!drawing.getOptions().locked) {
+      drawing.remove();
+    }
+  }
+});
+
+chart.on("drawing-selected", syncDrawingSettings);
+chart.on("drawing-updated", syncDrawingSettings);
+chart.on("drawing-removed", syncDrawingSettings);
+syncDrawingSettings();
 
 let dark = true;
 

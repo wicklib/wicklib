@@ -83,6 +83,33 @@ test("creates an Elliott impulse drawing from the tool menu", async ({ page }) =
   expect(drawing?.anchors).toHaveLength(6);
 });
 
+test("edits the selected drawing through the settings panel", async ({ page }) => {
+  await page.goto("/?test&drawings");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+
+  const id = await page.evaluate(() => {
+    const drawing = window.__wicklibChart?.serializeDrawings().drawings[0];
+    if (drawing) {
+      window.__wicklibChart?.selectDrawing(drawing.id);
+    }
+    return drawing?.id ?? null;
+  });
+  expect(id).not.toBeNull();
+  await expect(page.locator("#drawing-settings")).toBeVisible();
+
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>("#drawing-color");
+    if (input) {
+      input.value = "#112233";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  });
+  const color = await page.evaluate(
+    () => window.__wicklibChart?.selectedDrawing()?.getOptions().color,
+  );
+  expect(color).toBe("#112233");
+});
+
 test("creates brush, path, and text drawings", async ({ page }) => {
   await page.goto("/?test");
   await page.waitForFunction(() => window.__wicklibReady === true);

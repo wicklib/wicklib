@@ -139,3 +139,52 @@ button.active {
   color: var(--text);
   background: color-mix(in srgb, var(--text) 10%, transparent);
 }
+
+.settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.settings[hidden] {
+  display: none;
+}
+
+.settings label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.settings strong {
+  color: var(--text);
+  font-size: 12px;
+  min-width: 190px;
+}
+
+.settings input[type="color"] {
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: transparent;
+}
+
+.settings input[type="number"] {
+  width: 52px;
+}
+
+.settings input[type="text"] {
+  width: 120px;
+}
+
+.settings input[type="range"] {
+  width: 72px;
+}
