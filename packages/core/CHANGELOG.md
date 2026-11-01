@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.8.0
+
+### Minor Changes
+
+- 9f62d6b: Add keyboard drawing navigation, select-all, and a polite ARIA live announcement for drawing selection changes.
+
 ## 0.7.0
 
 ### Minor Changes

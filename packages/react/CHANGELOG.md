@@ -1,5 +1,12 @@
 # @wicklib/react
 
+## 0.8.0
+
+### Patch Changes
+
+- Updated dependencies [9f62d6b]
+  - @wicklib/core@0.8.0
+
 ## 0.7.0
 
 ### Patch Changes
