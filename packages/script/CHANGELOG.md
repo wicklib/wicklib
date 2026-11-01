@@ -1,5 +1,12 @@
 # @wicklib/script
 
+## 0.4.0
+
+### Patch Changes
+
+- Updated dependencies [d85cec7]
+  - @wicklib/core@0.4.0
+
 ## 0.3.0
 
 ### Patch Changes

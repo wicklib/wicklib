@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.4.0
+
+### Minor Changes
+
+- d85cec7: Add brush, highlighter, path, and text drawing tools, and make the first Elliott wave anchor the labelled origin.
+
 ## 0.3.0
 
 ### Minor Changes
