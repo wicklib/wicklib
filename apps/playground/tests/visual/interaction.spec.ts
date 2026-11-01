@@ -56,6 +56,32 @@ test("focuses the chart on pointer down", async ({ page }) => {
   expect(focused).toBe(true);
 });
 
+test("creates an Elliott impulse drawing from the tool menu", async ({ page }) => {
+  await page.goto("/?test");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+
+  const box = await page.locator("#chart").boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) {
+    return;
+  }
+
+  await page.selectOption("#drawing-tool", "elliott-impulse");
+  for (const point of [
+    { x: 180, y: 190 },
+    { x: 280, y: 250 },
+    { x: 380, y: 210 },
+    { x: 480, y: 270 },
+    { x: 580, y: 230 },
+  ]) {
+    await page.mouse.click(box.x + point.x, box.y + point.y);
+  }
+
+  const drawing = await page.evaluate(() => window.__wicklibChart?.serializeDrawings().drawings[0]);
+  expect(drawing?.toolId).toBe("elliott-impulse");
+  expect(drawing?.anchors).toHaveLength(5);
+});
+
 test("selects and deletes multiple drawings with a modifier marquee", async ({ page }) => {
   await page.goto("/?test");
   await page.waitForFunction(() => window.__wicklibReady === true);

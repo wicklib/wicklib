@@ -170,6 +170,14 @@ export interface ChartRenderModel {
 
 const TIME_AXIS_HEIGHT = 28;
 
+const ELLIOTT_LABELS: Readonly<Record<string, readonly string[]>> = {
+  "elliott-impulse": ["1", "2", "3", "4", "5"],
+  "elliott-correction": ["A", "B", "C"],
+  "elliott-triangle": ["A", "B", "C", "D", "E"],
+  "elliott-double-combo": ["W", "X", "Y"],
+  "elliott-triple-combo": ["W", "X", "Y", "X", "Z"],
+};
+
 /**
  * Stateless drawing routines over the canvas stack.
  */
@@ -1240,7 +1248,14 @@ export class ChartRenderer {
         return;
       }
       case "parallel-channel": {
+        if (points.length < 2) {
+          return;
+        }
         if (points.length < 3) {
+          context.beginPath();
+          context.moveTo(points[0]!.x, points[0]!.y);
+          context.lineTo(points[1]!.x, points[1]!.y);
+          context.stroke();
           return;
         }
         const channel = parallelLines(points, plot);
@@ -1356,6 +1371,40 @@ export class ChartRenderer {
               `${level.toFixed(3)}  ${pane.priceScale.formatValue(value, model.locale)}`,
               plot.left + 8,
               y,
+            );
+          }
+        }
+        return;
+      }
+      case "elliott-impulse":
+      case "elliott-correction":
+      case "elliott-triangle":
+      case "elliott-double-combo":
+      case "elliott-triple-combo": {
+        if (points.length < 2) {
+          return;
+        }
+        context.beginPath();
+        context.moveTo(points[0]!.x, points[0]!.y);
+        for (let index = 1; index < points.length; index += 1) {
+          context.lineTo(points[index]!.x, points[index]!.y);
+        }
+        context.stroke();
+
+        if (drawing.options.showLabels) {
+          const labels = ELLIOTT_LABELS[drawing.toolId] ?? [];
+          for (let index = 0; index < points.length; index += 1) {
+            const label = labels[index];
+            if (!label) {
+              continue;
+            }
+            this.drawLabel(
+              context,
+              model,
+              label,
+              points[index]!.x + 7,
+              points[index]!.y - 10,
+              drawing.options.color,
             );
           }
         }

@@ -173,6 +173,66 @@ export const Circle: DrawingToolDefinition = Object.freeze({
   defaultOptions: { fillOpacity: 0.1 },
 });
 
+export const ElliottImpulse: DrawingToolDefinition = Object.freeze({
+  id: "elliott-impulse",
+  meta: {
+    id: "com.wicklib.elliott-impulse",
+    name: "Elliott Impulse Wave",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 5,
+  defaultOptions: { color: "#2962ff" },
+});
+
+export const ElliottCorrection: DrawingToolDefinition = Object.freeze({
+  id: "elliott-correction",
+  meta: {
+    id: "com.wicklib.elliott-correction",
+    name: "Elliott Correction Wave",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 3,
+  defaultOptions: { color: "#2962ff" },
+});
+
+export const ElliottTriangle: DrawingToolDefinition = Object.freeze({
+  id: "elliott-triangle",
+  meta: {
+    id: "com.wicklib.elliott-triangle",
+    name: "Elliott Triangle",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 5,
+  defaultOptions: { color: "#2962ff" },
+});
+
+export const ElliottDoubleCombo: DrawingToolDefinition = Object.freeze({
+  id: "elliott-double-combo",
+  meta: {
+    id: "com.wicklib.elliott-double-combo",
+    name: "Elliott Double Combo",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 3,
+  defaultOptions: { color: "#2962ff" },
+});
+
+export const ElliottTripleCombo: DrawingToolDefinition = Object.freeze({
+  id: "elliott-triple-combo",
+  meta: {
+    id: "com.wicklib.elliott-triple-combo",
+    name: "Elliott Triple Combo",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 5,
+  defaultOptions: { color: "#2962ff" },
+});
+
 export const Rectangle: DrawingToolDefinition = Object.freeze({
   id: "rectangle",
   meta: {
@@ -224,6 +284,11 @@ export const DRAWING_TOOLS: ReadonlyMap<string, DrawingToolDefinition> = new Map
     LongShortPosition,
     PriceDateRange,
     Circle,
+    ElliottImpulse,
+    ElliottCorrection,
+    ElliottTriangle,
+    ElliottDoubleCombo,
+    ElliottTripleCombo,
     Measure,
   ].map((tool) => [tool.id, tool]),
 );
@@ -380,6 +445,13 @@ export function hitTestDrawing(
         pointInRect(point, points[0]!, points[2]!, tolerance)
       );
     }
+    case "elliott-impulse":
+    case "elliott-correction":
+    case "elliott-triangle":
+    case "elliott-double-combo":
+    case "elliott-triple-combo": {
+      return distanceToPolyline(point, points) <= tolerance;
+    }
     default: {
       if (points.length < 2) {
         return false;
@@ -462,6 +534,14 @@ export function clipLineToRect(
     { x: first.x + t0 * dx, y: first.y + t0 * dy },
     { x: first.x + t1 * dx, y: first.y + t1 * dy },
   ];
+}
+
+function distanceToPolyline(point: Point, points: readonly Point[]): number {
+  let distance = Number.POSITIVE_INFINITY;
+  for (let index = 1; index < points.length; index += 1) {
+    distance = Math.min(distance, distanceToSegment(point, points[index - 1]!, points[index]!));
+  }
+  return distance;
 }
 
 function distanceToLine(point: Point, first: Point, second: Point): number {

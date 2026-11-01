@@ -380,7 +380,7 @@ export type DrawingSelectionMode = "replace" | "add" | "toggle";
 
 // @public
 export interface DrawingToolDefinition {
-    readonly anchors: 1 | 2 | 3;
+    readonly anchors: 1 | 2 | 3 | 4 | 5 | 6;
     // (undocumented)
     readonly defaultOptions?: DrawingOptions;
     // (undocumented)
@@ -389,6 +389,21 @@ export interface DrawingToolDefinition {
     readonly meta: ExtensionMeta;
     readonly persist?: boolean;
 }
+
+// @public (undocumented)
+export const ElliottCorrection: DrawingToolDefinition;
+
+// @public (undocumented)
+export const ElliottDoubleCombo: DrawingToolDefinition;
+
+// @public (undocumented)
+export const ElliottImpulse: DrawingToolDefinition;
+
+// @public (undocumented)
+export const ElliottTriangle: DrawingToolDefinition;
+
+// @public (undocumented)
+export const ElliottTripleCombo: DrawingToolDefinition;
 
 // @public
 export type ExtensionKind = "series" | "indicator" | "drawing" | "script-runtime" | "feature";

@@ -131,8 +131,8 @@ revisions, and typed loading/error events.
 - Multi-pane layouts with independent price scales and a shared time axis.
 - Session calendars, DST, holidays, and optional fixed-width closed-session gaps.
 - Drawing tools: trend/horizontal/vertical/cross lines, rays, channels, rectangles,
-  Fibonacci retracement/extension, long/short positions, price/date ranges, circles, and
-  measurements.
+  Fibonacci retracement/extension, long/short positions, price/date ranges, circles, Elliott
+  impulse/correction/triangle/combo patterns, and measurements.
 - Multi-selection: Cmd/Ctrl-click to toggle, Cmd/Ctrl-drag for an additive marquee, group
   move, and group delete. `selectedDrawings()` returns the complete selection.
 - Extension overlays clipped to panes with time/price coordinate helpers.

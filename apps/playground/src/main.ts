@@ -4,6 +4,11 @@ import {
   DarkTheme,
   Circle,
   CrossLine,
+  ElliottCorrection,
+  ElliottDoubleCombo,
+  ElliottImpulse,
+  ElliottTriangle,
+  ElliottTripleCombo,
   FibExtension,
   FibRetracement,
   HorizontalLine,
@@ -134,6 +139,13 @@ app.innerHTML = `
         <option value="long-short-position">Long/short position</option>
         <option value="price-date-range">Price/date range</option>
         <option value="circle">Circle</option>
+        <optgroup label="Elliott wave">
+          <option value="elliott-impulse">Impulse 1–5</option>
+          <option value="elliott-correction">Correction A–C</option>
+          <option value="elliott-triangle">Triangle A–E</option>
+          <option value="elliott-double-combo">Double combo W–Y</option>
+          <option value="elliott-triple-combo">Triple combo W–Z</option>
+        </optgroup>
       </select>
       <button id="clear-drawings" type="button" title="Select a drawing, then press Delete or Backspace. Clear removes all.">Clear</button>
       <button id="theme" type="button">Light</button>
@@ -193,6 +205,11 @@ const drawingTools: Record<string, DrawingToolDefinition> = {
   "long-short-position": LongShortPosition,
   "price-date-range": PriceDateRange,
   circle: Circle,
+  "elliott-impulse": ElliottImpulse,
+  "elliott-correction": ElliottCorrection,
+  "elliott-triangle": ElliottTriangle,
+  "elliott-double-combo": ElliottDoubleCombo,
+  "elliott-triple-combo": ElliottTripleCombo,
 };
 const drawingButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-drawing]"));
 const drawingToolSelect = byId<HTMLSelectElement>("drawing-tool");

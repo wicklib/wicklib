@@ -23,7 +23,8 @@ Never published. Not part of the Changesets group.
 - SPX 5m: load a local one-month Yahoo ^GSPC snapshot.
 - Sessions: a deterministic US equities regular-hours fixture with a DST-aware calendar.
 - SMA / RSI / MACD toggles: overlays and separate indicator panes.
-- Trend, H-Line, Rect, Fib, More, and Clear: interactive drawing tools.
+- Trend, H-Line, Rect, Fib, More, and Clear: interactive drawing tools, including channels,
+  long/short positions, ranges, circles, and Elliott wave patterns.
 - Cmd/Ctrl-click toggles drawings in the selection; Cmd/Ctrl-drag selects all drawings
   intersecting the marquee; selected drawings move and delete as a group.
 - Fit: reset the time scale, capped at 720 bars.

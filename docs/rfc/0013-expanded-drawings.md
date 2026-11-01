@@ -23,7 +23,7 @@ the visual toolbar under host control.
 - A built-in toolbar, menu, icon set, or style panel.
 - Persistence, undo/redo, or collaboration.
 - Custom drawing renderers.
-- Elliott-wave pattern variants until the exact pattern set is approved.
+- Additional Elliott-wave pattern variants beyond the approved set.
 
 ## 4. Tool batches
 
@@ -56,10 +56,16 @@ the visual toolbar under host control.
 
 These need variable anchor counts, freehand capture, and text editing semantics.
 
-### Batch 4 — Elliott wave
+### Batch 4 — implemented
 
-- One tool or a family of tools, depending on the approved pattern list.
-- Pattern variants remain options, not separate renderer forks, where practical.
+- `elliott-impulse` — labels 1, 2, 3, 4, 5.
+- `elliott-correction` — labels A, B, C.
+- `elliott-triangle` — labels A, B, C, D, E.
+- `elliott-double-combo` — labels W, X, Y.
+- `elliott-triple-combo` — labels W, X, Y, X, Z.
+
+Each pattern is a polyline with labelled anchors. Parallel channels show a ghost base line
+before the third anchor is placed.
 
 ## 5. Multi-selection API direction
 

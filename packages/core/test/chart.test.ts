@@ -5,6 +5,11 @@ import {
   Circle,
   createChart,
   CrossLine,
+  ElliottCorrection,
+  ElliottDoubleCombo,
+  ElliottImpulse,
+  ElliottTriangle,
+  ElliottTripleCombo,
   FibExtension,
   HorizontalLine,
   HorizontalRay,
@@ -672,6 +677,13 @@ describe("createChart", () => {
       { time: 10 * MINUTE, price: 108 },
       { time: 20 * MINUTE, price: 103 },
     ];
+    const five = [
+      { time: 0, price: 98 },
+      { time: 10 * MINUTE, price: 108 },
+      { time: 20 * MINUTE, price: 103 },
+      { time: 30 * MINUTE, price: 112 },
+      { time: 40 * MINUTE, price: 109 },
+    ];
     const cases = [
       [HorizontalRay, one],
       [VerticalLine, one],
@@ -681,6 +693,11 @@ describe("createChart", () => {
       [LongShortPosition, three],
       [PriceDateRange, two],
       [Circle, two],
+      [ElliottImpulse, five],
+      [ElliottCorrection, three],
+      [ElliottTriangle, five],
+      [ElliottDoubleCombo, three],
+      [ElliottTripleCombo, five],
     ] as const;
 
     for (const [tool, anchors] of cases) {

@@ -601,7 +601,7 @@ export interface DrawingToolDefinition {
   readonly id: string;
   readonly meta: ExtensionMeta;
   /** Number of anchors required to create the drawing. */
-  readonly anchors: 1 | 2 | 3;
+  readonly anchors: 1 | 2 | 3 | 4 | 5 | 6;
   readonly defaultOptions?: DrawingOptions;
   /** False for transient tools such as measure. Defaults to true. */
   readonly persist?: boolean;

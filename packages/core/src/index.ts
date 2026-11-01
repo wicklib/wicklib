@@ -11,6 +11,11 @@ export { assertFeature } from "./license";
 export {
   Circle,
   CrossLine,
+  ElliottCorrection,
+  ElliottDoubleCombo,
+  ElliottImpulse,
+  ElliottTriangle,
+  ElliottTripleCombo,
   FibExtension,
   FibRetracement,
   HorizontalLine,
