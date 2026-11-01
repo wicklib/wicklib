@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.2.0
+
+### Minor Changes
+
+- 3412efd: Add horizontal ray, vertical line, cross line, parallel channel, Fibonacci extension, long/short position, price/date range, and circle drawing tools, plus additive multi-selection, marquee selection, group move, and group delete.
+
 ## 0.1.0
 
 ### Minor Changes
