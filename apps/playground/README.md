@@ -32,6 +32,10 @@ Never published. Not part of the Changesets group.
   apply to its tool. Filled shapes show fill controls, labelled tools show labels, and only
   the text tool shows text/font fields. “Save as default” applies the current style to future
   drawings of that tool.
+- Undo/Redo: drawing history for creation, editing, deletion, settings, and clearing.
+  Cmd/Ctrl+Z undoes; Cmd/Ctrl+Shift+Z redoes.
+- Save/Load: stores the current drawing document in localStorage for the persistence example.
+  This is a host-side demo only; Wicklib core does not persist drawings.
 - Fit: reset the time scale, capped at 720 bars.
 - Reset: fit the time scale and restore auto-scale on every pane.
 - Fit/reset leave a 30-bar future margin so drawings and dates can extend past the last bar.

@@ -83,6 +83,36 @@ test("creates an Elliott impulse drawing from the tool menu", async ({ page }) =
   expect(drawing?.anchors).toHaveLength(6);
 });
 
+test("undoes, redoes, saves, and loads drawings", async ({ page }) => {
+  await page.goto("/?test");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+
+  const box = await page.locator("#chart").boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) {
+    return;
+  }
+
+  await page.selectOption("#drawing-tool", "vertical-line");
+  await page.mouse.click(box.x + 220, box.y + 220);
+  await page.waitForTimeout(180);
+
+  const count = () =>
+    page.evaluate(() => window.__wicklibChart?.serializeDrawings().drawings.length ?? 0);
+  expect(await count()).toBe(1);
+
+  await page.locator("#undo").click();
+  expect(await count()).toBe(0);
+  await page.locator("#redo").click();
+  expect(await count()).toBe(1);
+
+  await page.locator("#save-drawings").click();
+  await page.locator("#clear-drawings").click();
+  expect(await count()).toBe(0);
+  await page.locator("#load-drawings").click();
+  expect(await count()).toBe(1);
+});
+
 test("edits the selected drawing through the settings panel", async ({ page }) => {
   await page.goto("/?test&drawings");
   await page.waitForFunction(() => window.__wicklibReady === true);

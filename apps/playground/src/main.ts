@@ -127,6 +127,10 @@ app.innerHTML = `
       <button id="series-demo" type="button">Series demo</button>
       <button id="fit" type="button">Fit</button>
       <button id="reset" type="button">Reset</button>
+      <button id="undo" type="button" disabled>Undo</button>
+      <button id="redo" type="button" disabled>Redo</button>
+      <button id="save-drawings" type="button">Save</button>
+      <button id="load-drawings" type="button">Load</button>
       <label class="toggle"><input id="sma" type="checkbox" /> SMA</label>
       <label class="toggle"><input id="rsi" type="checkbox" /> RSI</label>
       <label class="toggle"><input id="macd" type="checkbox" /> MACD</label>
@@ -217,6 +221,10 @@ const spxButton = byId<HTMLButtonElement>("spx");
 const feedStatus = byId<HTMLSpanElement>("feed-status");
 const fitButton = byId<HTMLButtonElement>("fit");
 const resetButton = byId<HTMLButtonElement>("reset");
+const undoButton = byId<HTMLButtonElement>("undo");
+const redoButton = byId<HTMLButtonElement>("redo");
+const saveDrawingsButton = byId<HTMLButtonElement>("save-drawings");
+const loadDrawingsButton = byId<HTMLButtonElement>("load-drawings");
 const smaToggle = byId<HTMLInputElement>("sma");
 const rsiToggle = byId<HTMLInputElement>("rsi");
 const macdToggle = byId<HTMLInputElement>("macd");
@@ -905,6 +913,7 @@ drawingToolSelect.addEventListener("change", () => {
 clearDrawingsButton.addEventListener("click", () => {
   chart.loadDrawings({ version: 1, drawings: [] });
   setActiveDrawingButton(null);
+  queueDrawingHistory();
 });
 
 chart.on("drawing-created", () => {
@@ -1020,6 +1029,126 @@ chart.on("drawing-updated", syncDrawingSettings);
 chart.on("drawing-removed", syncDrawingSettings);
 syncDrawingSettings();
 
+const DRAWING_STORAGE_KEY = "wicklib.playground.drawings";
+const HISTORY_LIMIT = 50;
+let drawingHistory: string[] = [];
+let drawingHistoryIndex = -1;
+let historyTimer: ReturnType<typeof setTimeout> | null = null;
+let applyingHistory = false;
+
+function drawingSnapshot(): string {
+  return JSON.stringify(chart.serializeDrawings());
+}
+
+function updateHistoryButtons(): void {
+  undoButton.disabled = drawingHistoryIndex <= 0;
+  redoButton.disabled = drawingHistoryIndex >= drawingHistory.length - 1;
+}
+
+function resetDrawingHistory(): void {
+  drawingHistory = [drawingSnapshot()];
+  drawingHistoryIndex = 0;
+  updateHistoryButtons();
+}
+
+function queueDrawingHistory(): void {
+  if (applyingHistory) {
+    return;
+  }
+  if (historyTimer !== null) {
+    clearTimeout(historyTimer);
+  }
+  historyTimer = setTimeout(() => {
+    historyTimer = null;
+    const next = drawingSnapshot();
+    if (drawingHistory[drawingHistoryIndex] === next) {
+      return;
+    }
+    drawingHistory = drawingHistory.slice(0, drawingHistoryIndex + 1);
+    drawingHistory.push(next);
+    if (drawingHistory.length > HISTORY_LIMIT) {
+      drawingHistory.shift();
+    }
+    drawingHistoryIndex = drawingHistory.length - 1;
+    updateHistoryButtons();
+  }, 120);
+}
+
+function restoreDrawingHistory(index: number): void {
+  const snapshot = drawingHistory[index];
+  if (!snapshot) {
+    return;
+  }
+  applyingHistory = true;
+  try {
+    chart.loadDrawings(JSON.parse(snapshot) as ReturnType<typeof chart.serializeDrawings>);
+    chart.selectDrawing(null);
+    drawingHistoryIndex = index;
+  } finally {
+    applyingHistory = false;
+  }
+  updateHistoryButtons();
+}
+
+function undoDrawings(): void {
+  if (drawingHistoryIndex > 0) {
+    restoreDrawingHistory(drawingHistoryIndex - 1);
+  }
+}
+
+function redoDrawings(): void {
+  if (drawingHistoryIndex < drawingHistory.length - 1) {
+    restoreDrawingHistory(drawingHistoryIndex + 1);
+  }
+}
+
+undoButton.addEventListener("click", undoDrawings);
+redoButton.addEventListener("click", redoDrawings);
+
+saveDrawingsButton.addEventListener("click", () => {
+  localStorage.setItem(DRAWING_STORAGE_KEY, drawingSnapshot());
+  feedStatus.textContent = "drawings saved";
+});
+
+loadDrawingsButton.addEventListener("click", () => {
+  const stored = localStorage.getItem(DRAWING_STORAGE_KEY);
+  if (!stored) {
+    feedStatus.textContent = "no saved drawings";
+    return;
+  }
+  try {
+    const document = JSON.parse(stored) as ReturnType<typeof chart.serializeDrawings>;
+    applyingHistory = true;
+    chart.loadDrawings(document);
+    applyingHistory = false;
+    queueDrawingHistory();
+    feedStatus.textContent = "drawings loaded";
+  } catch {
+    applyingHistory = false;
+    feedStatus.textContent = "saved drawings are invalid";
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "z") {
+    return;
+  }
+  const target = event.target as HTMLElement | null;
+  if (target?.closest("input, textarea, select, [contenteditable='true']")) {
+    return;
+  }
+  event.preventDefault();
+  if (event.shiftKey) {
+    redoDrawings();
+  } else {
+    undoDrawings();
+  }
+});
+
+chart.on("drawing-created", queueDrawingHistory);
+chart.on("drawing-removed", queueDrawingHistory);
+chart.on("drawing-updated", queueDrawingHistory);
+
 let dark = true;
 
 themeButton.addEventListener("click", () => {
@@ -1134,6 +1263,8 @@ if (params.has("binance")) {
 if (params.has("spx")) {
   void loadSpx();
 }
+
+resetDrawingHistory();
 
 if (testMode) {
   markReady();
