@@ -6,6 +6,8 @@ declare global {
     __wicklibChart?: ChartApi;
     __wicklibSeriesReady?: boolean;
     __wicklibSeriesChart?: ChartApi;
+    __wicklibPanelsReady?: boolean;
+    __wicklibPanels?: readonly ChartApi[];
   }
 }
 
@@ -328,6 +330,71 @@ test("renders the chart with the WebGL2 backend", async ({ page }) => {
   expect(result.canvases).toBe(6);
   expect(result.width).toBeGreaterThan(0);
   expect(result.dataUrl).toBeGreaterThan(1000);
+});
+
+test("renders the series and annotation demo with WebGL2", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/series.html?test&webgl");
+  await page.waitForFunction(() => window.__wicklibSeriesReady === true);
+
+  const result = await page.evaluate(() => {
+    const chart = window.__wicklibSeriesChart;
+    const canvas = chart?.takeScreenshot();
+    return {
+      canvases: document.querySelectorAll("#chart canvas").length,
+      width: canvas?.width ?? 0,
+      dataUrl: canvas?.toDataURL("image/png").length ?? 0,
+      summary: document.querySelector("#summary")?.textContent ?? "",
+    };
+  });
+  expect(errors).toEqual([]);
+  expect(result.canvases).toBe(6);
+  expect(result.width).toBeGreaterThan(0);
+  expect(result.dataUrl).toBeGreaterThan(1000);
+  expect(result.summary).toContain("price lines + markers");
+});
+
+test("draws annotations over the WebGL2 backend", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/?test&webgl&drawings");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+
+  const result = await page.evaluate(() => {
+    const chart = window.__wicklibChart;
+    return {
+      drawings: chart?.serializeDrawings().drawings.length ?? 0,
+      canvases: document.querySelectorAll("#chart canvas").length,
+      width: chart?.takeScreenshot().width ?? 0,
+    };
+  });
+  expect(errors).toEqual([]);
+  expect(result.drawings).toBeGreaterThan(0);
+  expect(result.canvases).toBe(6);
+  expect(result.width).toBeGreaterThan(0);
+});
+
+test("renders four independent chart panels", async ({ page }) => {
+  await page.goto("/panels.html");
+  await page.waitForFunction(() => window.__wicklibPanelsReady === true);
+
+  const result = await page.evaluate(() => {
+    const charts = window.__wicklibPanels ?? [];
+    return {
+      charts: charts.length,
+      canvases: document.querySelectorAll(".panel-chart canvas").length,
+      width: charts[0]?.takeScreenshot().width ?? 0,
+      summary: document.querySelector("#summary")?.textContent ?? "",
+    };
+  });
+  expect(result.charts).toBe(4);
+  expect(result.canvases).toBe(20);
+  expect(result.width).toBeGreaterThan(0);
+  expect(result.summary).toContain("4 panels");
+
+  await page.locator("#theme").click();
+  await expect(page.locator("body")).toHaveAttribute("data-theme", "light");
 });
 
 test("switches themes without recreating or breaking the chart", async ({ page }) => {

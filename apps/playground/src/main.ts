@@ -127,6 +127,7 @@ app.innerHTML = `
       <button id="binance" type="button">Binance 2025</button>
       <button id="spx" type="button">SPX 5m</button>
       <button id="series-demo" type="button">Series demo</button>
+      <button id="panels-demo" type="button">Panels</button>
       <button id="fit" type="button">Fit</button>
       <button id="reset" type="button">Reset</button>
       <button id="undo" type="button" disabled>Undo</button>
@@ -235,6 +236,7 @@ const macdToggle = byId<HTMLInputElement>("macd");
 const themeButton = byId<HTMLButtonElement>("theme");
 const clearDrawingsButton = byId<HTMLButtonElement>("clear-drawings");
 const seriesDemoButton = byId<HTMLButtonElement>("series-demo");
+const panelsDemoButton = byId<HTMLButtonElement>("panels-demo");
 const settingsPanel = byId<HTMLDivElement>("drawing-settings");
 const settingsTitle = byId<HTMLElement>("settings-title");
 const settingsMixed = byId<HTMLSpanElement>("settings-mixed");
@@ -888,6 +890,10 @@ spxButton.addEventListener("click", () => {
 
 seriesDemoButton.addEventListener("click", () => {
   window.location.href = "/series.html";
+});
+
+panelsDemoButton.addEventListener("click", () => {
+  window.location.href = "/panels.html";
 });
 
 fitButton.addEventListener("click", () => {

@@ -74,6 +74,9 @@ authoring types and the TypeScript worker. This is the browser smoke test for
 - `?webgl` — use the experimental hybrid WebGL2 renderer; geometry renders in WebGL2 while
   text, annotations, drawings, and crosshair remain Canvas2D.
 - `/series.html` — line/area/histogram, price-line, marker, theme, and export demo.
+- `/series.html?webgl` — the same series/annotation demo through the hybrid WebGL2 backend.
+- `/panels.html` — four independent charts in a responsive 2×2 grid.
+- `/panels.html?webgl` — the same grid through the hybrid WebGL2 backend.
 
 ## Session fixture
 

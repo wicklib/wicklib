@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wicklib Multi-Panel Demo</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="toolbar">
+        <div class="brand">wicklib <span>multi-panel demo</span></div>
+        <div class="controls">
+          <button id="back" type="button">Back</button>
+          <button id="theme" type="button">Light</button>
+        </div>
+        <div class="metrics"><span id="summary"></span></div>
+      </header>
+      <div class="panel-grid">
+        <section class="panel-cell">
+          <h2 class="panel-label">BTC/USD · candlestick</h2>
+          <div class="panel-chart" data-panel="candles"></div>
+        </section>
+        <section class="panel-cell">
+          <h2 class="panel-label">ETH/USD · line</h2>
+          <div class="panel-chart" data-panel="line"></div>
+        </section>
+        <section class="panel-cell">
+          <h2 class="panel-label">SOL/USD · area</h2>
+          <div class="panel-chart" data-panel="area"></div>
+        </section>
+        <section class="panel-cell">
+          <h2 class="panel-label">Volume · histogram</h2>
+          <div class="panel-chart" data-panel="histogram"></div>
+        </section>
+      </div>
+    </div>
+    <script type="module" src="/src/panels-demo.ts"></script>
+  </body>
+</html>

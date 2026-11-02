@@ -20,6 +20,7 @@ export default defineConfig({
         main: fileURLToPath(new URL("./index.html", import.meta.url)),
         editor: fileURLToPath(new URL("./editor.html", import.meta.url)),
         series: fileURLToPath(new URL("./series.html", import.meta.url)),
+        panels: fileURLToPath(new URL("./panels.html", import.meta.url)),
       },
     },
   },

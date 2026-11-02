@@ -26,6 +26,8 @@ const byId = <T extends HTMLElement>(id: string): T => {
   return element;
 };
 
+const params = new URLSearchParams(window.location.search);
+const webglMode = params.has("webgl");
 const chartElement = byId<HTMLDivElement>("chart");
 const summary = byId<HTMLSpanElement>("summary");
 const themeButton = byId<HTMLButtonElement>("theme");
@@ -50,6 +52,7 @@ const delta: LineData[] = times.map((time, index) => ({
 
 const chart = createChart(chartElement, {
   autoSize: true,
+  ...(webglMode ? { renderer: "webgl2" as const } : {}),
   ...DarkTheme,
   crosshair: { ...DarkTheme.crosshair, mode: "magnet" },
   timeScale: { rightOffset: 4, timeVisible: true, secondsVisible: false },
