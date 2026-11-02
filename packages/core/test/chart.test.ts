@@ -436,6 +436,15 @@ describe("createChart", () => {
     expect(() => series.setData([data[1]!, data[0]!])).toThrow(/strictly ascending/);
   });
 
+  it("falls back to Canvas2D when WebGL2 is unavailable", async () => {
+    const chart = track(createChart(mount(), { renderer: "webgl2" }));
+    chart.addSeries(CandlestickSeries).setData(bars(20));
+    await settle();
+    const screenshot = chart.takeScreenshot();
+    expect(screenshot.width).toBeGreaterThan(0);
+    expect(screenshot.height).toBeGreaterThan(0);
+  });
+
   it("disposes cleanly and is idempotent", () => {
     const chart = createChart(mount());
     const series = chart.addSeries(CandlestickSeries);

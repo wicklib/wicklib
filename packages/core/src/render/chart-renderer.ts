@@ -198,6 +198,80 @@ export class ChartRenderer {
     this.drawOverlay(model);
   }
 
+  /**
+   * Renders everything except series/indicator geometry and annotations.
+   */
+  renderChrome(model: ChartRenderModel): void {
+    this.drawGrid(model);
+    this.drawExtensions(model);
+    this.drawDrawings(model);
+    this.drawOverlay(model);
+  }
+
+  /**
+   * Renders 2D series overlays: markers, price lines, last values, legends, and empty state.
+   */
+  renderSeriesAnnotations(model: ChartRenderModel): void {
+    const context = this.stack.context("series");
+    this.stack.clear("series");
+    context.setTransform(this.stack.getDpr(), 0, 0, this.stack.getDpr(), 0, 0);
+    const range = this.timeScale.visibleIndexRange();
+    let rendered = false;
+
+    for (const pane of model.panes) {
+      if (pane.plot.height <= 0) {
+        continue;
+      }
+
+      context.save();
+      context.beginPath();
+      context.rect(pane.plot.left, pane.plot.top, pane.plot.width, pane.plot.height);
+      context.clip();
+      for (const series of pane.series) {
+        if (series.visible && series.markers.length > 0) {
+          this.drawMarkers(context, model, pane, series, range.first, range.last);
+          rendered = true;
+        }
+      }
+      context.restore();
+
+      let legendOffset = 0;
+      for (const series of pane.series) {
+        if (!series.visible || series.store.length === 0) {
+          continue;
+        }
+        rendered = true;
+        const lastIndex = Math.min(range.last, series.store.length - 1);
+        if (lastIndex < 0) {
+          continue;
+        }
+        this.drawPriceLines(context, model, pane, series);
+        this.drawLastValue(context, model, pane, series, lastIndex);
+        this.drawLegend(context, model, pane, series, lastIndex, legendOffset);
+        legendOffset += model.layout.fontSize + 4;
+      }
+      for (const indicator of pane.indicators) {
+        this.drawIndicatorLegend(context, model, pane, indicator, legendOffset);
+        legendOffset += model.layout.fontSize + 4;
+      }
+    }
+
+    if (!rendered && model.panes[0]) {
+      const pane = model.panes[0];
+      context.fillStyle = model.layout.textColor;
+      context.globalAlpha = 0.5;
+      context.font = this.font(model);
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(
+        "No data",
+        pane.plot.left + pane.plot.width / 2,
+        pane.plot.top + pane.plot.height / 2,
+      );
+      context.globalAlpha = 1;
+    }
+  }
+
   private font(model: ChartRenderModel): string {
     return `${model.layout.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
   }

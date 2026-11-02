@@ -145,6 +145,24 @@ test("extreme zoom-out benchmark", async ({ page }) => {
   expect(result?.p95Ms).toBeLessThan(50);
 });
 
+test("1M bar WebGL benchmark", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/?bench&webgl&bars=1000000");
+  await page.waitForFunction(() => Boolean(window.__wicklibBench), null, {
+    timeout: 90_000,
+  });
+
+  const result = await page.evaluate(() => window.__wicklibBench);
+  console.log("WICKLIB_BENCH_1M", result);
+  const backendCanvases = await page.evaluate(
+    () => document.querySelectorAll("#chart canvas").length,
+  );
+
+  expect(backendCanvases).toBe(6);
+  expect(result?.frames).toBeGreaterThan(100);
+  expect(result?.p95Ms).toBeLessThan(50);
+});
+
 test("100k bar pan benchmark", async ({ page }) => {
   await page.goto("/?bench");
   await page.waitForFunction(() => Boolean(window.__wicklibBench), null, {

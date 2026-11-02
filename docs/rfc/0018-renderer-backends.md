@@ -1,6 +1,6 @@
 # RFC-0018: Renderer backends and target workload
 
-- Status: **Accepted** — backend seam implemented; WebGL2 backend pending
+- Status: **Accepted** — Canvas2D reference and hybrid WebGL2 backend implemented
 - Date: 2026-10-27
 - Depends on: RFC-0001 (accepted)
 
@@ -58,17 +58,21 @@ interface RendererBackend {
 
 - `Chart` depends on `RendererBackend`, not Canvas2D classes.
 - `Canvas2DRenderer` wraps the existing canvas stack and renderer.
-- A future `WebGL2Renderer` will own a hybrid layer stack:
+- `WebGL2Renderer` owns a hybrid layer stack:
   - Canvas2D for grid, axes, text, annotations, drawings, overlays, and crosshair.
-  - WebGL2 for dense series and indicator geometry.
+  - WebGL2 for series and indicator geometry.
 - Both backends consume the same immutable `ChartRenderModel`.
+- `ChartOptions.renderer = "webgl2"` is an experimental opt-in. Canvas2D remains the
+  default and is used automatically when WebGL2 initialization fails.
 
 ## 6. Migration policy
 
 - No public API change is required for the backend seam.
-- Canvas2D remains the default until the WebGL2 backend passes parity and performance tests.
+- Canvas2D remains the default while WebGL2 proves parity across real workloads.
 - If WebGL2 initialization fails, construction falls back to Canvas2D.
-- Backend selection stays internal until a stable public option is justified.
+- Backend selection is exposed as an experimental creation-time option.
+- The 1M-bar WebGL benchmark currently holds 60 fps with p95 around 33 ms on the local
+  baseline; Canvas2D remains faster for fully aggregated views.
 
 ## 7. Acceptance criteria
 

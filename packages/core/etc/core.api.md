@@ -189,6 +189,7 @@ export interface ChartOptions {
     locale?: string;
     // (undocumented)
     priceScale?: PriceScaleOptions;
+    renderer?: "canvas2d" | "webgl2";
     // (undocumented)
     timeScale?: TimeScaleOptions;
     timezone?: string;
@@ -1109,8 +1110,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:900:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:915:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:902:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:917:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

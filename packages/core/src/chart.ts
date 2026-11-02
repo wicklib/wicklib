@@ -14,6 +14,7 @@ import { Indicator } from "./indicator";
 import { Pane, type PaneHost } from "./pane";
 import type { RendererBackend } from "./render/backend";
 import { Canvas2DRenderer } from "./render/canvas2d-renderer";
+import { WebGL2Renderer } from "./render/webgl2-renderer";
 import {
   TIME_AXIS_HEIGHT,
   type ChartRenderModel,
@@ -195,7 +196,11 @@ class Chart implements ChartApi, SeriesHost {
     };
 
     this.timeScaleModel = new TimeScale(source, this.options.timeScale);
-    this.backend = new Canvas2DRenderer(container, this.timeScaleModel);
+    this.backend = createRendererBackend(
+      container,
+      this.timeScaleModel,
+      this.rawOptions.renderer ?? "canvas2d",
+    );
     this.backend.root.style.touchAction = "none";
     this.backend.root.tabIndex = 0;
     this.backend.root.setAttribute("aria-label", "Chart");
@@ -1143,6 +1148,9 @@ class Chart implements ChartApi, SeriesHost {
 
     if (patch.extensions !== undefined) {
       fail("INVALID_ARGUMENT", "extensions cannot be changed after chart creation");
+    }
+    if (patch.renderer !== undefined) {
+      fail("INVALID_ARGUMENT", "renderer cannot be changed after chart creation");
     }
 
     const merged = mergeChartOptions(this.rawOptions, patch);
@@ -2560,6 +2568,21 @@ function computePaneHeights(panes: readonly Pane[], available: number): number[]
   }
 
   return heights;
+}
+
+function createRendererBackend(
+  container: HTMLElement,
+  timeScale: TimeScale,
+  kind: "canvas2d" | "webgl2",
+): RendererBackend {
+  if (kind === "webgl2") {
+    try {
+      return new WebGL2Renderer(container, timeScale);
+    } catch {
+      // Fall back to the reference backend when WebGL2 is unavailable.
+    }
+  }
+  return new Canvas2DRenderer(container, timeScale);
 }
 
 function resolveOptions(options: ChartOptions): ResolvedOptions {

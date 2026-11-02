@@ -95,6 +95,7 @@ if (!app) {
 
 const params = new URLSearchParams(window.location.search);
 const testMode = params.has("test");
+const webglMode = params.has("webgl");
 const benchParam = params.get("bench");
 const benchMode = benchParam !== null;
 const zoomBench = benchParam === "zoom";
@@ -108,6 +109,7 @@ app.innerHTML = `
           <option value="5000">5,000</option>
           <option value="25000">25,000</option>
           <option value="100000" selected>100,000</option>
+          <option value="1000000">1,000,000</option>
         </select>
       </label>
       <label>TF
@@ -283,6 +285,7 @@ function setActiveDrawingButton(toolId: string | null): void {
 
 const chart = createChart(chartElement, {
   autoSize: true,
+  ...(webglMode ? { renderer: "webgl2" as const } : {}),
   ...DarkTheme,
   crosshair: {
     ...DarkTheme.crosshair,
@@ -340,7 +343,11 @@ const newYorkTimeFormatter = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
-let count = 100_000;
+const requestedCount = Number(params.get("bars"));
+let count = Number.isInteger(requestedCount) && requestedCount > 0 ? requestedCount : 100_000;
+if (Array.from(countSelect.options).some((option) => option.value === String(count))) {
+  countSelect.value = String(count);
+}
 let seed = 7;
 let timeframe: Timeframe = "1m";
 let sourceMinutes = 1;

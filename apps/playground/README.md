@@ -70,6 +70,9 @@ authoring types and the TypeScript worker. This is the browser smoke test for
   `window.__wicklibReady` for Playwright.
 - `?bench` — runs a 180-frame 100k-bar pan benchmark and exposes `window.__wicklibBench`.
 - `?bench=zoom` — runs the same benchmark with all 100k bars visible.
+- `?bars=1000000` — generate a one-million-bar dataset.
+- `?webgl` — use the experimental hybrid WebGL2 renderer; geometry renders in WebGL2 while
+  text, annotations, drawings, and crosshair remain Canvas2D.
 - `/series.html` — line/area/histogram, price-line, marker, theme, and export demo.
 
 ## Session fixture

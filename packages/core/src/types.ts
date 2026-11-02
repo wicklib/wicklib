@@ -302,6 +302,8 @@ export interface PaneOptions {
  * Options accepted by {@link createChart}.
  */
 export interface ChartOptions {
+  /** Rendering backend. Experimental; defaults to Canvas2D and falls back if WebGL2 fails. */
+  renderer?: "canvas2d" | "webgl2";
   /** Track the container size. Defaults to true. */
   autoSize?: boolean;
   /** Fixed width when `autoSize` is false. */

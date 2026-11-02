@@ -309,6 +309,27 @@ test("renders the line, area, histogram, price-line, and marker demo", async ({ 
   await expect(page.locator("#summary")).toContainText("price lines + markers");
 });
 
+test("renders the chart with the WebGL2 backend", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/?test&webgl");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+
+  const result = await page.evaluate(() => {
+    const chart = window.__wicklibChart;
+    const canvas = chart?.takeScreenshot();
+    return {
+      canvases: document.querySelectorAll("#chart canvas").length,
+      width: canvas?.width ?? 0,
+      dataUrl: canvas?.toDataURL("image/png").length ?? 0,
+    };
+  });
+  expect(errors).toEqual([]);
+  expect(result.canvases).toBe(6);
+  expect(result.width).toBeGreaterThan(0);
+  expect(result.dataUrl).toBeGreaterThan(1000);
+});
+
 test("switches themes without recreating or breaking the chart", async ({ page }) => {
   await page.goto("/?test");
   await page.waitForFunction(() => window.__wicklibReady === true);

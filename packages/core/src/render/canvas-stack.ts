@@ -112,6 +112,14 @@ export class CanvasStack {
     return this.contexts[layer];
   }
 
+  canvas(layer: Layer): HTMLCanvasElement {
+    return this.canvases[layer];
+  }
+
+  insertBefore(layer: Layer, canvas: HTMLCanvasElement): void {
+    this.root.insertBefore(canvas, this.canvases[layer]);
+  }
+
   announce(message: string): void {
     this.announcer.textContent = message;
   }
