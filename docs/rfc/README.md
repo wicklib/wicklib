@@ -22,6 +22,7 @@ changing its decisions requires a new RFC or an ADR.
 | 0015 | Drawing tool catalog                   | Accepted |
 | 0016 | Drawing keyboard accessibility         | Accepted |
 | 0017 | Drawing double-click event             | Accepted |
+| 0018 | Renderer backends and target workload  | Accepted |
 
 Rules:
 

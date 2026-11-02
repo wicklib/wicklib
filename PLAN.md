@@ -138,7 +138,7 @@ Follow `packages/script/PLAN.md` exactly. No core API changes without an ADR.
 
 ## Phase 5 — performance
 
-1. WebGL2 backend behind the existing `Renderer` interface.
+1. [in progress] Backend-neutral renderer seam implemented. WebGL2 backend remains.
 2. Data decimation for extreme zoom-out.
 3. Worker-based indicator computation.
 4. Memory profiling and bundle budgets.

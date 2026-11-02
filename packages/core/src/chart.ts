@@ -12,9 +12,9 @@ import {
 import { EventBus } from "./events";
 import { Indicator } from "./indicator";
 import { Pane, type PaneHost } from "./pane";
-import { CanvasStack } from "./render/canvas-stack";
+import type { RendererBackend } from "./render/backend";
+import { Canvas2DRenderer } from "./render/canvas2d-renderer";
 import {
-  ChartRenderer,
   TIME_AXIS_HEIGHT,
   type ChartRenderModel,
   type CrosshairRenderPoint,
@@ -115,9 +115,8 @@ class Chart implements ChartApi, SeriesHost {
   private readonly mainPane: Pane;
   private readonly paneHost: PaneHost;
   private readonly drawingHost: DrawingHost;
-  private readonly stack: CanvasStack;
+  private readonly backend: RendererBackend;
   private readonly timeScaleModel: TimeScale;
-  private readonly renderer: ChartRenderer;
   private readonly timeScaleController: TimeScaleApi;
 
   private rawOptions: ChartOptions;
@@ -183,11 +182,6 @@ class Chart implements ChartApi, SeriesHost {
     this.rawOptions = rawOptions;
     this.options = resolveOptions(rawOptions);
 
-    this.stack = new CanvasStack(container);
-    this.stack.root.style.touchAction = "none";
-    this.stack.root.tabIndex = 0;
-    this.stack.root.setAttribute("aria-label", "Chart");
-
     const source: TimeScaleSource = {
       count: () => this.primaryStore()?.length ?? 0,
       timeAt: (index) => {
@@ -201,6 +195,10 @@ class Chart implements ChartApi, SeriesHost {
     };
 
     this.timeScaleModel = new TimeScale(source, this.options.timeScale);
+    this.backend = new Canvas2DRenderer(container, this.timeScaleModel);
+    this.backend.root.style.touchAction = "none";
+    this.backend.root.tabIndex = 0;
+    this.backend.root.setAttribute("aria-label", "Chart");
 
     this.paneHost = {
       assertAlive: () => this.assertAlive(),
@@ -218,8 +216,6 @@ class Chart implements ChartApi, SeriesHost {
 
     this.mainPane = new Pane("main", { priceScale: this.options.priceScale }, false, this.paneHost);
     this.panes.push(this.mainPane);
-
-    this.renderer = new ChartRenderer(this.stack, this.timeScaleModel);
 
     this.timeScaleController = {
       getVisibleRange: () => {
@@ -701,11 +697,13 @@ class Chart implements ChartApi, SeriesHost {
     this.bus.emit("drawing-selection", { drawings });
     this.bus.emit("drawing-selected", { drawing: drawings[0] ?? null });
     if (drawings.length === 0) {
-      this.stack.announce("Drawing selection cleared.");
+      this.backend.announce("Drawing selection cleared.");
     } else if (drawings.length === 1) {
-      this.stack.announce(`${drawings[0]!.definition.meta.name} selected. Press Delete to remove.`);
+      this.backend.announce(
+        `${drawings[0]!.definition.meta.name} selected. Press Delete to remove.`,
+      );
     } else {
-      this.stack.announce(`${drawings.length} drawings selected. Press Delete to remove.`);
+      this.backend.announce(`${drawings.length} drawings selected. Press Delete to remove.`);
     }
     this.requestRender();
   }
@@ -773,7 +771,7 @@ class Chart implements ChartApi, SeriesHost {
     this.lastFreehandPoint = point;
     this.freehandPointerId = event.pointerId;
     try {
-      this.stack.root.setPointerCapture(event.pointerId);
+      this.backend.root.setPointerCapture(event.pointerId);
     } catch {
       // Pointer capture is best-effort.
     }
@@ -1019,7 +1017,7 @@ class Chart implements ChartApi, SeriesHost {
     this.drawingDragPointerId = event.pointerId;
 
     try {
-      this.stack.root.setPointerCapture(event.pointerId);
+      this.backend.root.setPointerCapture(event.pointerId);
     } catch {
       // Pointer capture is best-effort.
     }
@@ -1179,7 +1177,7 @@ class Chart implements ChartApi, SeriesHost {
       this.frame = null;
       this.render();
     }
-    return this.stack.compose();
+    return this.backend.compose();
   }
 
   exportImage(type = "image/png", quality?: number): string {
@@ -1206,15 +1204,15 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     if (this.options.autoSize) {
-      this.stack.root.style.width = "100%";
-      this.stack.root.style.height = "100%";
+      this.backend.root.style.width = "100%";
+      this.backend.root.style.height = "100%";
     } else {
-      this.stack.root.style.width = `${width}px`;
-      this.stack.root.style.height = `${height}px`;
+      this.backend.root.style.width = `${width}px`;
+      this.backend.root.style.height = `${height}px`;
     }
 
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-    this.stack.resize(width, height, dpr);
+    this.backend.resize(width, height, dpr);
     this.relayout();
   }
 
@@ -1223,8 +1221,8 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
-    const width = this.stack.getWidth();
-    const height = this.stack.getHeight();
+    const width = this.backend.getWidth();
+    const height = this.backend.getHeight();
     if (width <= 0 || height <= 0) {
       return;
     }
@@ -1291,7 +1289,7 @@ class Chart implements ChartApi, SeriesHost {
     this.marquee = null;
     this.bus.dispose();
     this.panes.length = 0;
-    this.stack.destroy();
+    this.backend.destroy();
   }
 
   // SeriesHost
@@ -1517,7 +1515,7 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     try {
-      this.stack.root.focus({ preventScroll: true });
+      this.backend.root.focus({ preventScroll: true });
     } catch {
       // Focus is best-effort.
     }
@@ -1546,9 +1544,9 @@ class Chart implements ChartApi, SeriesHost {
         startRange: axisPane.priceScale.getVisibleRange(),
         moved: false,
       };
-      this.stack.root.style.cursor = "ns-resize";
+      this.backend.root.style.cursor = "ns-resize";
       try {
-        this.stack.root.setPointerCapture(event.pointerId);
+        this.backend.root.setPointerCapture(event.pointerId);
       } catch {
         // Pointer capture is best-effort.
       }
@@ -1578,9 +1576,9 @@ class Chart implements ChartApi, SeriesHost {
         anchorX: point.x,
         moved: false,
       };
-      this.stack.root.style.cursor = "ew-resize";
+      this.backend.root.style.cursor = "ew-resize";
       try {
-        this.stack.root.setPointerCapture(event.pointerId);
+        this.backend.root.setPointerCapture(event.pointerId);
       } catch {
         // Pointer capture is best-effort.
       }
@@ -1608,7 +1606,7 @@ class Chart implements ChartApi, SeriesHost {
     this.activePointers.set(event.pointerId, point);
 
     try {
-      this.stack.root.setPointerCapture(event.pointerId);
+      this.backend.root.setPointerCapture(event.pointerId);
     } catch {
       // Pointer capture is best-effort.
     }
@@ -1753,7 +1751,7 @@ class Chart implements ChartApi, SeriesHost {
     if (this.timeAxisDrag && event.pointerId === this.timeAxisDrag.pointerId) {
       const point = this.localPoint(event);
       try {
-        this.stack.root.releasePointerCapture(event.pointerId);
+        this.backend.root.releasePointerCapture(event.pointerId);
       } catch {
         // Pointer capture is best-effort.
       }
@@ -1765,7 +1763,7 @@ class Chart implements ChartApi, SeriesHost {
     if (this.priceAxisDrag && event.pointerId === this.priceAxisDrag.pointerId) {
       const point = this.localPoint(event);
       try {
-        this.stack.root.releasePointerCapture(event.pointerId);
+        this.backend.root.releasePointerCapture(event.pointerId);
       } catch {
         // Pointer capture is best-effort.
       }
@@ -1777,7 +1775,7 @@ class Chart implements ChartApi, SeriesHost {
     if (this.activeTool) {
       if (this.activeTool.capture === "freehand" && event.pointerId === this.freehandPointerId) {
         try {
-          this.stack.root.releasePointerCapture(event.pointerId);
+          this.backend.root.releasePointerCapture(event.pointerId);
         } catch {
           // Pointer capture is best-effort.
         }
@@ -1789,7 +1787,7 @@ class Chart implements ChartApi, SeriesHost {
     if (this.draggingDrawings.length > 0 && event.pointerId === this.drawingDragPointerId) {
       const point = this.localPoint(event);
       try {
-        this.stack.root.releasePointerCapture(event.pointerId);
+        this.backend.root.releasePointerCapture(event.pointerId);
       } catch {
         // Pointer capture is best-effort.
       }
@@ -1801,7 +1799,7 @@ class Chart implements ChartApi, SeriesHost {
     if (this.marquee && event.pointerId === this.marquee.pointerId) {
       const point = this.localPoint(event);
       try {
-        this.stack.root.releasePointerCapture(event.pointerId);
+        this.backend.root.releasePointerCapture(event.pointerId);
       } catch {
         // Pointer capture is best-effort.
       }
@@ -1812,7 +1810,7 @@ class Chart implements ChartApi, SeriesHost {
 
     if (this.pinchDistance !== null) {
       try {
-        this.stack.root.releasePointerCapture(event.pointerId);
+        this.backend.root.releasePointerCapture(event.pointerId);
       } catch {
         // Pointer capture is best-effort.
       }
@@ -1836,7 +1834,7 @@ class Chart implements ChartApi, SeriesHost {
     this.dragPane = null;
 
     try {
-      this.stack.root.releasePointerCapture(event.pointerId);
+      this.backend.root.releasePointerCapture(event.pointerId);
     } catch {
       // Pointer capture is best-effort.
     }
@@ -1863,7 +1861,7 @@ class Chart implements ChartApi, SeriesHost {
       this.resetDrawingTool();
     }
     this.resetDrawingDrag();
-    this.stack.root.style.cursor = "crosshair";
+    this.backend.root.style.cursor = "crosshair";
     this.clearCrosshair();
   };
 
@@ -1874,7 +1872,7 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
     if (!this.priceAxisDrag) {
-      this.stack.root.style.cursor = "crosshair";
+      this.backend.root.style.cursor = "crosshair";
     }
     if (
       !this.dragging &&
@@ -2108,7 +2106,7 @@ class Chart implements ChartApi, SeriesHost {
       this.applyAutoScale();
     }
 
-    this.renderer.renderAll(model);
+    this.backend.render(model);
 
     if (!this.readyEmitted) {
       this.readyEmitted = true;
@@ -2139,8 +2137,8 @@ class Chart implements ChartApi, SeriesHost {
     const timeOptions = this.timeScaleModel.getOptions();
 
     return {
-      width: this.stack.getWidth(),
-      height: this.stack.getHeight(),
+      width: this.backend.getWidth(),
+      height: this.backend.getHeight(),
       panes,
       overlays: this.overlays.map((entry): OverlayRenderData => ({
         id: entry.id,
@@ -2178,8 +2176,8 @@ class Chart implements ChartApi, SeriesHost {
   }
 
   private computeAxisWidth(): number {
-    const context = this.stack.context("grid");
-    context.font = `${this.options.layout.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    const font = `${this.options.layout.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    const measure = (text: string): number => this.backend.measureText(text, font);
     let widest = 0;
 
     for (const pane of this.panes) {
@@ -2190,7 +2188,7 @@ class Chart implements ChartApi, SeriesHost {
       for (const tick of pane.priceScale.ticks(pane.plot.height)) {
         widest = Math.max(
           widest,
-          context.measureText(pane.priceScale.formatValue(tick.value, this.options.locale)).width,
+          measure(pane.priceScale.formatValue(tick.value, this.options.locale)),
         );
       }
 
@@ -2203,7 +2201,7 @@ class Chart implements ChartApi, SeriesHost {
           const last = data.store.valueAt(data.store.length - 1);
           widest = Math.max(
             widest,
-            context.measureText(pane.priceScale.formatValue(last, this.options.locale)).width,
+            measure(pane.priceScale.formatValue(last, this.options.locale)),
           );
         }
         for (const line of data.priceLines) {
@@ -2213,7 +2211,7 @@ class Chart implements ChartApi, SeriesHost {
           const value = pane.priceScale.formatValue(line.price, this.options.locale);
           const label =
             line.title && line.titlePosition === "axis" ? `${line.title} ${value}` : value;
-          widest = Math.max(widest, context.measureText(label).width);
+          widest = Math.max(widest, measure(label));
         }
       }
     }
@@ -2368,7 +2366,7 @@ class Chart implements ChartApi, SeriesHost {
   }
 
   private localPoint(event: { clientX: number; clientY: number }): Point {
-    const rect = this.stack.root.getBoundingClientRect();
+    const rect = this.backend.root.getBoundingClientRect();
     return {
       x: event.clientX - rect.left,
       y: event.clientY - rect.top,
@@ -2478,7 +2476,7 @@ class Chart implements ChartApi, SeriesHost {
   }
 
   private updatePointerCursor(point: Point): void {
-    this.stack.root.style.cursor = this.priceAxisPaneAtPoint(point)
+    this.backend.root.style.cursor = this.priceAxisPaneAtPoint(point)
       ? "ns-resize"
       : this.timeAxisPaneAtPoint(point)
         ? "ew-resize"
@@ -2506,7 +2504,7 @@ class Chart implements ChartApi, SeriesHost {
   }
 
   private attachEvents(): void {
-    const root = this.stack.root;
+    const root = this.backend.root;
     root.addEventListener("pointerdown", this.onPointerDown);
     root.addEventListener("pointermove", this.onPointerMove);
     root.addEventListener("pointerup", this.onPointerUp);
@@ -2518,7 +2516,7 @@ class Chart implements ChartApi, SeriesHost {
   }
 
   private detachEvents(): void {
-    const root = this.stack.root;
+    const root = this.backend.root;
     root.removeEventListener("pointerdown", this.onPointerDown);
     root.removeEventListener("pointermove", this.onPointerMove);
     root.removeEventListener("pointerup", this.onPointerUp);

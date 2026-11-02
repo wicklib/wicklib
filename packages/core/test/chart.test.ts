@@ -933,7 +933,7 @@ describe("createChart", () => {
     chart.selectDrawing(first.id);
     chart.selectDrawing(locked.id, { mode: "add" });
     chart.selectDrawing(second.id, { mode: "add" });
-    const root = (chart as unknown as { stack: { root: HTMLElement } }).stack.root;
+    const root = (document.body.lastElementChild as HTMLElement).firstElementChild as HTMLElement;
     root.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true }));
 
     expect(chart.serializeDrawings().drawings.map((drawing) => drawing.id)).toEqual([locked.id]);
