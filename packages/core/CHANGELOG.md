@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.10.0
+
+### Minor Changes
+
+- 1d45854: Add an experimental hybrid WebGL2 renderer backend with Canvas2D fallback, keeping text, axes, annotations, drawings, overlays, and crosshair on Canvas2D.
+
 ## 0.9.0
 
 ### Minor Changes
