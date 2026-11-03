@@ -1,0 +1,56 @@
+{
+  "name": "@wicklib/layouts",
+  "version": "0.12.0",
+  "description": "Framework-agnostic multi-chart layouts for Wicklib",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wicklib/wicklib.git",
+    "directory": "packages/layouts"
+  },
+  "peerDependencies": {
+    "@wicklib/core": "^0.12.0"
+  },
+  "devDependencies": {
+    "@microsoft/api-extractor": "^7.59.4",
+    "@wicklib/core": "workspace:*",
+    "jsdom": "^30.1.3",
+    "tsup": "^9.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "api": "api-extractor run"
+  }
+}

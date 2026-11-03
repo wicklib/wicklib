@@ -24,6 +24,7 @@ changing its decisions requires a new RFC or an ADR.
 | 0017 | Drawing double-click event             | Accepted |
 | 0018 | Renderer backends and target workload  | Accepted |
 | 0019 | Logarithmic price scale                | Accepted |
+| 0020 | Free chart layouts and licensing split | Accepted |
 
 Rules:
 

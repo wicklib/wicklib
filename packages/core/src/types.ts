@@ -999,8 +999,7 @@ export interface ChartApi {
 /**
  * Features that can be licensed.
  */
-export type Feature =
-  "orderflow" | "volume-profile" | "panes" | "layouts" | "strategy" | "alerts" | "script-functions";
+export type Feature = "orderflow" | "volume-profile" | "strategy" | "alerts" | "script-functions";
 
 /**
  * Runtime license context exposed to commercial extensions.

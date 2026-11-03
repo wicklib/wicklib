@@ -577,7 +577,6 @@ class Chart implements ChartApi, SeriesHost {
       drawing.destroyInternal();
     }
     this.drawings.length = 0;
-    this.overlays.length = 0;
     this.selectedDrawingIds.clear();
     this.resetDrawingTool();
 

@@ -7,6 +7,7 @@
       "@wicklib/core",
       "@wicklib/indicators",
       "@wicklib/react",
+      "@wicklib/layouts",
       "@wicklib/script",
       "@wicklib/script-editor",
       "wicklib"

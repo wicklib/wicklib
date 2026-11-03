@@ -1123,6 +1123,20 @@ describe("createChart", () => {
     expect(draw).not.toHaveBeenCalled();
   });
 
+  it("keeps extension overlays when drawings are loaded", async () => {
+    const chart = track(createChart(mount()));
+    chart.addSeries(CandlestickSeries).setData(bars(20));
+    const draw = vi.fn();
+    chart.addOverlay({ id: "persistent-overlay", draw });
+    await settle();
+
+    chart.loadDrawings({ version: 1, drawings: [] });
+    draw.mockClear();
+    await settle();
+
+    expect(draw).toHaveBeenCalled();
+  });
+
   it("rejects duplicate overlays and removes overlays with their pane", async () => {
     const element = mount();
     const chart = track(createChart(element));

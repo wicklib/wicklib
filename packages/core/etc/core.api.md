@@ -466,7 +466,7 @@ export interface ExtensionMeta {
 }
 
 // @public
-export type Feature = "orderflow" | "volume-profile" | "panes" | "layouts" | "strategy" | "alerts" | "script-functions";
+export type Feature = "orderflow" | "volume-profile" | "strategy" | "alerts" | "script-functions";
 
 // @public (undocumented)
 export const FibExtension: DrawingToolDefinition;

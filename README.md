@@ -25,14 +25,15 @@ selected drawing. Pinch zoom works on touch. Core edits hot-reload.
 
 ## Packages
 
-| Package                  | Status | Description                                                                                                       |
-| ------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------- |
-| `@wicklib/core`          | 0.1.0  | Canvas2D scales, candlestick/line/area/histogram series, panes, indicators, drawings, annotations, export, themes |
-| `@wicklib/indicators`    | 0.1.0  | Built-in indicator catalog                                                                                        |
-| `@wicklib/react`         | 0.1.0  | Thin React mount wrapper and `useChart`                                                                           |
-| `@wicklib/script`        | 0.1.0  | WickScript API v1, compiler, worker runtime                                                                       |
-| `@wicklib/script-editor` | 0.1.0  | Monaco editor with generated WickScript types                                                                     |
-| `wicklib`                | 0.1.0  | Umbrella package: core + indicators                                                                               |
+| Package                  | Status | Description                                                                                                             |
+| ------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `@wicklib/core`          | 0.12.0 | Canvas2D/WebGL scales, candlestick/line/area/histogram series, panes, indicators, drawings, annotations, export, themes |
+| `@wicklib/indicators`    | 0.12.0 | Built-in indicator catalog                                                                                              |
+| `@wicklib/react`         | 0.12.0 | Thin React mount wrapper and `useChart`                                                                                 |
+| `@wicklib/script`        | 0.12.0 | WickScript API v1, compiler, worker runtime                                                                             |
+| `@wicklib/script-editor` | 0.12.0 | Monaco editor with generated WickScript types                                                                           |
+| `@wicklib/layouts`       | 0.12.0 | Free multi-chart grid, time-range sync, and crosshair sync                                                              |
+| `wicklib`                | 0.12.0 | Umbrella package: core + indicators + layouts                                                                           |
 
 The commercial add-on (`@wicklib/pro`) lives in a separate private repository and consumes
 `@wicklib/core` through its published entrypoint only.

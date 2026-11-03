@@ -9,3 +9,4 @@
 
 export * from "@wicklib/core";
 export * from "@wicklib/indicators";
+export * from "@wicklib/layouts";
