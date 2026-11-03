@@ -168,9 +168,10 @@ describe("createChartLayout", () => {
       version: 1,
       columns: 3,
       gap: 4,
+      sync: { timeRange: true, crosshair: "time" },
       slots: [
-        { id: "primary", rowSpan: 2, columnSpan: 2 },
-        { id: "secondary", rowSpan: 1, columnSpan: 1 },
+        { id: "primary", rowSpan: 2, columnSpan: 2, syncGroup: "default" },
+        { id: "secondary", rowSpan: 1, columnSpan: 1, syncGroup: "default" },
       ],
     });
 
@@ -183,6 +184,71 @@ describe("createChartLayout", () => {
     layout.destroy();
     expect(() => layout.chartIds()).toThrow(/disposed/);
     expect(() => layout.addChart()).toThrow(/disposed/);
+  });
+
+  it("updates synchronization at runtime", async () => {
+    const layout = createChartLayout(mount(), { columns: 2 });
+    const first = layout.addChart({ id: "a" });
+    const second = layout.addChart({ id: "b" });
+    sizeSlot(first);
+    sizeSlot(second);
+    first.chart.addSeries(CandlestickSeries).setData(bars());
+    second.chart.addSeries(CandlestickSeries).setData(bars());
+    await settle();
+
+    expect(layout.getSyncOptions()).toEqual({ timeRange: true, crosshair: "time" });
+    layout.setSyncOptions({ timeRange: false, crosshair: "full" });
+    expect(layout.getSyncOptions()).toEqual({ timeRange: false, crosshair: "full" });
+
+    second.chart.timeScale().setVisibleRange({ from: 0, to: 50 * MINUTE });
+    const before = second.chart.timeScale().getVisibleRange();
+    first.chart.timeScale().setVisibleRange({ from: 10 * MINUTE, to: 30 * MINUTE });
+    expect(second.chart.timeScale().getVisibleRange()).toEqual(before);
+
+    layout.setSyncOptions({ crosshair: false });
+    expect(layout.getSyncOptions().crosshair).toBe("off");
+    layout.setSyncOptions({ crosshair: true });
+    expect(layout.getSyncOptions().crosshair).toBe("time");
+    expect(() => layout.setSyncOptions({ crosshair: "diagonal" as never })).toThrow(/crosshair/);
+
+    layout.destroy();
+  });
+
+  it("scopes synchronization to matching groups", async () => {
+    const layout = createChartLayout(mount(), { columns: 3 });
+    const first = layout.addChart({ id: "a", syncGroup: "crypto" });
+    const second = layout.addChart({ id: "b", syncGroup: "crypto" });
+    const third = layout.addChart({ id: "c", syncGroup: "equities" });
+    sizeSlot(first);
+    sizeSlot(second);
+    sizeSlot(third);
+    for (const slot of [first, second, third]) {
+      slot.chart.addSeries(CandlestickSeries).setData(bars());
+      slot.chart.timeScale().setVisibleRange({ from: 0, to: 80 * MINUTE });
+    }
+    await settle();
+
+    const untouched = third.chart.timeScale().getVisibleRange();
+    first.chart.timeScale().setVisibleRange({ from: 10 * MINUTE, to: 30 * MINUTE });
+
+    expect(second.chart.timeScale().getVisibleRange()).toEqual({
+      from: 10 * MINUTE,
+      to: 30 * MINUTE,
+    });
+    expect(third.chart.timeScale().getVisibleRange()).toEqual(untouched);
+    expect(layout.serialize().slots.map((slot) => slot.syncGroup)).toEqual([
+      "crypto",
+      "crypto",
+      "equities",
+    ]);
+
+    layout.destroy();
+  });
+
+  it("validates sync groups", () => {
+    const layout = createChartLayout(mount());
+    expect(() => layout.addChart({ syncGroup: "" })).toThrow(/syncGroup/);
+    layout.destroy();
   });
 
   it("validates grid options and slot ids", () => {

@@ -17,8 +17,8 @@ can build free or paid products on top of it.
 
 - Provide a free companion package, `@wicklib/layouts`.
 - Keep `@wicklib/core` focused on one chart.
-- Support responsive grid placement, active-chart tracking, time-range sync, and a mirrored
-  vertical crosshair.
+- Support responsive grid placement, active-chart tracking, time-range sync, configurable
+  crosshair sync, runtime sync changes, and sync groups.
 - Keep persistence, symbols, data transport, auth, and product UI host-owned.
 - Remove basic layout capabilities from the Pro feature list.
 
@@ -27,7 +27,6 @@ can build free or paid products on top of it.
 - Drag-to-dock or resizable split-pane UI.
 - Symbol pickers, watchlists, or Supabase persistence.
 - Server-synchronized workspaces.
-- Fully synchronized horizontal crosshairs with differing price scales.
 - More than one independent layout implementation in the Wicklib project.
 
 ## 4. Package boundary
@@ -48,9 +47,10 @@ const layout = createChartLayout(container, {
   columns: 2,
   gap: 8,
   chartOptions: { autoSize: true },
-  syncTimeRange: true,
-  syncCrosshair: true,
+  sync: { timeRange: true, crosshair: "full" },
 });
+
+layout.setSyncOptions({ timeRange: false, crosshair: "time" });
 
 const primary = layout.addChart({ id: "primary" });
 const comparison = layout.addChart({ id: "comparison" });
@@ -68,8 +68,11 @@ only; chart state and persistence remain host-owned.
 - `visible-range` events from one chart set the visible range on every other chart.
 - A guard prevents feedback loops.
 - Invalid ranges from incompatible data are ignored per chart.
-- Crosshair sync mirrors a vertical time line through chart overlays. The hovered chart keeps
-  its native crosshair.
+- Crosshair sync supports `off`, `time`, and `full` modes. `time` mirrors the vertical time
+  line; `full` also mirrors a horizontal line at the same relative pane height.
+- The hovered chart keeps its native crosshair; other charts draw overlays.
+- Runtime `setSyncOptions()` changes behavior without recreating charts.
+- Slots can be assigned to sync groups so independent chart groups can coexist.
 - Extension overlays must survive `loadDrawings()`; loading drawings must not clear unrelated
   overlays.
 
@@ -83,7 +86,8 @@ only; chart state and persistence remain host-owned.
 ## 8. Acceptance criteria
 
 - `@wicklib/layouts` builds, publishes, and has an API report.
-- Time ranges synchronize without recursive event loops.
+- Time ranges synchronize without recursive event loops and respect sync groups.
+- Runtime sync changes apply without recreating charts.
 - Crosshair overlays are not removed by drawing loads.
 - Removing or destroying the layout destroys all charts and listeners.
 - Pro no longer advertises layout capabilities.

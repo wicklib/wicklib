@@ -44,13 +44,46 @@ Time-range and crosshair synchronization are enabled by default.
 ```ts
 const layout = createChartLayout(container, {
   columns: 2,
-  syncTimeRange: true,
-  syncCrosshair: true,
+  sync: {
+    timeRange: true,
+    crosshair: "time",
+  },
 });
 ```
 
-Time-range sync uses the chart `visible-range` event. Crosshair sync mirrors the vertical
-time line through chart overlays; the hovered chart keeps its native crosshair.
+Crosshair modes:
+
+- `"off"` — no crosshair sync.
+- `"time"` — mirrors the vertical time line.
+- `"full"` — also mirrors a horizontal line at the same relative pane height.
+
+The hovered chart keeps its native crosshair. Other charts receive an overlay line.
+
+Change synchronization without recreating charts:
+
+```ts
+layout.setSyncOptions({
+  timeRange: false,
+  crosshair: "full",
+});
+
+layout.getSyncOptions();
+```
+
+Boolean crosshair values remain accepted: `true` maps to `"time"` and `false` to `"off"`.
+
+## Sync groups
+
+Cells only synchronize with cells in the same group. The default group is `"default"`.
+
+```ts
+layout.addChart({ id: "btc", syncGroup: "crypto" });
+layout.addChart({ id: "eth", syncGroup: "crypto" });
+layout.addChart({ id: "spx", syncGroup: "equities" });
+```
+
+`btc` and `eth` share ranges and crosshairs; `spx` stays independent. `syncNow()` also respects
+the active chart's group.
 
 ## Persistence
 
@@ -65,15 +98,20 @@ const saved = layout.serialize();
   "version": 1,
   "columns": 2,
   "gap": 8,
+  "sync": {
+    "timeRange": true,
+    "crosshair": "time"
+  },
   "slots": [
-    { "id": "primary", "rowSpan": 1, "columnSpan": 1 },
-    { "id": "comparison", "rowSpan": 1, "columnSpan": 1 }
+    { "id": "primary", "rowSpan": 1, "columnSpan": 1, "syncGroup": "default" },
+    { "id": "comparison", "rowSpan": 1, "columnSpan": 1, "syncGroup": "default" }
   ]
 }
 ```
 
 Persist chart state, symbol metadata, datafeed identity, drawings, and layout structure in
-the host. Drawings can be read with `chart.serializeDrawings()`.
+the host. Old snapshots that omit `sync` or `syncGroup` should fall back to
+`{ timeRange: true, crosshair: "time" }` and `"default"` respectively. Drawings can be read with `chart.serializeDrawings()`.
 
 ## Styling
 

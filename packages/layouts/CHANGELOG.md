@@ -1,5 +1,16 @@
 # @wicklib/layouts
 
+## 0.13.0
+
+### Minor Changes
+
+- Add runtime synchronization controls, `off`/`time`/`full` crosshair modes, horizontal
+  crosshair mirroring, and per-slot sync groups.
+
+### Patch Changes
+
+- @wicklib/core@0.13.0
+
 ## 0.12.0
 
 ### Minor Changes

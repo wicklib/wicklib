@@ -9,9 +9,38 @@ import {
   type ChartOptions,
   type ChartOverlayApi,
   type CrosshairEvent,
+  type OverlayRenderFrame,
   type Unsubscribe,
   type VisibleRangeEvent,
 } from "@wicklib/core";
+
+/**
+ * Crosshair synchronization mode.
+ *
+ * `time` mirrors the vertical time line. `full` also mirrors a horizontal line at the same
+ * relative pane height.
+ */
+export type ChartLayoutCrosshairMode = "off" | "time" | "full";
+
+/**
+ * Resolved synchronization behavior for a layout.
+ */
+export interface ChartLayoutSyncOptions {
+  /** Synchronize visible time ranges. */
+  timeRange: boolean;
+  /** Crosshair synchronization mode. */
+  crosshair: ChartLayoutCrosshairMode;
+}
+
+/**
+ * Partial synchronization update. Boolean crosshair values map to `time` and `off`.
+ */
+export interface ChartLayoutSyncUpdate {
+  /** Synchronize visible time ranges. */
+  timeRange?: boolean;
+  /** Crosshair synchronization mode. */
+  crosshair?: boolean | ChartLayoutCrosshairMode;
+}
 
 /**
  * Options for a layout chart cell.
@@ -25,6 +54,8 @@ export interface ChartLayoutSlotOptions {
   rowSpan?: number;
   /** Number of grid columns covered by the cell. Defaults to 1. */
   columnSpan?: number;
+  /** Synchronization group. Slots only sync with slots in the same group. */
+  syncGroup?: string;
 }
 
 /**
@@ -36,6 +67,7 @@ export interface ChartLayoutSlot {
   readonly element: HTMLElement;
   readonly rowSpan: number;
   readonly columnSpan: number;
+  readonly syncGroup: string;
 }
 
 /**
@@ -45,10 +77,12 @@ export interface ChartLayoutSnapshot {
   version: 1;
   columns: number;
   gap: number;
+  sync: ChartLayoutSyncOptions;
   slots: ReadonlyArray<{
     id: string;
     rowSpan: number;
     columnSpan: number;
+    syncGroup: string;
   }>;
 }
 
@@ -62,10 +96,12 @@ export interface ChartLayoutOptions {
   gap?: number;
   /** Default chart options applied to every slot. */
   chartOptions?: ChartOptions;
+  /** Synchronization options. */
+  sync?: ChartLayoutSyncUpdate;
   /** Synchronize visible time ranges. Defaults to true. */
   syncTimeRange?: boolean;
-  /** Synchronize the vertical crosshair time line. Defaults to true. */
-  syncCrosshair?: boolean;
+  /** Crosshair synchronization. Defaults to `time`. */
+  syncCrosshair?: boolean | ChartLayoutCrosshairMode;
   /** Crosshair line colour. */
   crosshairColor?: string;
   /** Extra class name on the layout root. */
@@ -94,13 +130,17 @@ export interface ChartLayoutApi {
   setColumns(columns: number): void;
   /** Changes the cell gap in CSS pixels. */
   setGap(gap: number): void;
+  /** Changes synchronization behavior without recreating charts. */
+  setSyncOptions(options: ChartLayoutSyncUpdate): void;
+  /** Returns the resolved synchronization behavior. */
+  getSyncOptions(): Readonly<ChartLayoutSyncOptions>;
   /** Marks one chart as active. Pass null to clear. */
   setActiveChart(id: string | null): void;
   /** Returns the active chart id, or null. */
   activeChartId(): string | null;
   /** Subscribes to active chart changes. */
   onActiveChange(handler: (chartId: string | null) => void): Unsubscribe;
-  /** Applies the active chart's visible range to every other chart. */
+  /** Applies the active chart's visible range to every chart in its sync group. */
   syncNow(): void;
   /** Returns structural layout state for host persistence. */
   serialize(): ChartLayoutSnapshot;
@@ -111,13 +151,21 @@ export interface ChartLayoutApi {
 interface InternalSlot {
   readonly slot: ChartLayoutSlot;
   readonly unsubscribe: readonly Unsubscribe[];
-  readonly overlay: ChartOverlayApi | null;
+  overlay: ChartOverlayApi | null;
   readonly onPointerDown: () => void;
   readonly onFocusIn: () => void;
 }
 
+interface CrosshairState {
+  sourceId: string;
+  sourceGroup: string;
+  time: number;
+  yRatio: number | null;
+}
+
 const DEFAULT_COLUMNS = 2;
 const DEFAULT_GAP = 1;
+const DEFAULT_SYNC_GROUP = "default";
 const MAX_COLUMNS = 12;
 const DEFAULT_CROSSHAIR_COLOR = "rgba(139, 149, 167, 0.6)";
 
@@ -125,7 +173,7 @@ const DEFAULT_CROSSHAIR_COLOR = "rgba(139, 149, 167, 0.6)";
  * Creates a framework-agnostic grid of Wicklib charts.
  *
  * The layout owns chart creation, grid placement, time-range synchronization, and a
- * mirrored crosshair line. It does not own data, symbol state, accounts, or persistence.
+ * mirrored crosshair. It does not own data, symbol state, accounts, or persistence.
  */
 export function createChartLayout(
   container: HTMLElement,
@@ -141,15 +189,14 @@ class ChartLayout implements ChartLayoutApi {
   private readonly activeHandlers = new Set<(chartId: string | null) => void>();
   private readonly crosshairOverlays = new Map<string, ChartOverlayApi>();
   private readonly chartOptions: ChartOptions | undefined;
-  private readonly syncTimeRange: boolean;
-  private readonly syncCrosshair: boolean;
   private readonly crosshairColor: string;
   private columns: number;
   private gap: number;
+  private sync: ChartLayoutSyncOptions;
   private activeId: string | null = null;
   private counter = 0;
   private applyingRange = false;
-  private crosshair: { sourceId: string; time: number } | null = null;
+  private crosshair: CrosshairState | null = null;
   private destroyed = false;
 
   constructor(container: HTMLElement, options: ChartLayoutOptions) {
@@ -160,8 +207,7 @@ class ChartLayout implements ChartLayoutApi {
     this.columns = validateColumns(options.columns ?? DEFAULT_COLUMNS);
     this.gap = validateGap(options.gap ?? DEFAULT_GAP);
     this.chartOptions = options.chartOptions;
-    this.syncTimeRange = options.syncTimeRange ?? true;
-    this.syncCrosshair = options.syncCrosshair ?? true;
+    this.sync = resolveSyncOptions(options);
     this.crosshairColor = options.crosshairColor ?? DEFAULT_CROSSHAIR_COLOR;
     if (options.onActiveChange) {
       this.activeHandlers.add(options.onActiveChange);
@@ -190,6 +236,7 @@ class ChartLayout implements ChartLayoutApi {
     }
     const rowSpan = validateSpan(options.rowSpan ?? 1, "rowSpan");
     const columnSpan = validateSpan(options.columnSpan ?? 1, "columnSpan");
+    const syncGroup = validateSyncGroup(options.syncGroup ?? DEFAULT_SYNC_GROUP);
 
     const element = document.createElement("div");
     element.className = "wicklib-chart-layout__cell";
@@ -222,51 +269,23 @@ class ChartLayout implements ChartLayoutApi {
       chart.on("crosshair", (event) => this.handleCrosshair(id, event)),
     ];
 
-    let overlay: ChartOverlayApi | null = null;
-    if (this.syncCrosshair) {
-      overlay = chart.addOverlay({
-        id: "wicklib-layout-crosshair",
-        draw: (context, frame) => {
-          const current = this.crosshair;
-          if (!current || current.sourceId === id) {
-            return;
-          }
-          const x = frame.timeToX(current.time);
-          if (x === null || x < frame.plot.left || x > frame.plot.right) {
-            return;
-          }
-          const crispX = Math.round(x) + 0.5;
-          context.save();
-          context.beginPath();
-          context.rect(frame.plot.left, frame.plot.top, frame.plot.width, frame.plot.height);
-          context.clip();
-          context.strokeStyle = this.crosshairColor;
-          context.lineWidth = 1;
-          context.setLineDash([3, 4]);
-          context.beginPath();
-          context.moveTo(crispX, frame.plot.top);
-          context.lineTo(crispX, frame.plot.bottom);
-          context.stroke();
-          context.restore();
-        },
-      });
-      this.crosshairOverlays.set(id, overlay);
-    }
-
     const slot: ChartLayoutSlot = {
       id,
       chart,
       element,
       rowSpan,
       columnSpan,
+      syncGroup,
     };
-    this.slots.push({
+    const entry: InternalSlot = {
       slot,
       unsubscribe: unsubscribes,
-      overlay,
+      overlay: null,
       onPointerDown,
       onFocusIn,
-    });
+    };
+    this.slots.push(entry);
+    this.ensureCrosshairOverlay(entry);
 
     if (this.activeId === null) {
       this.setActiveChart(id);
@@ -320,6 +339,33 @@ class ChartLayout implements ChartLayoutApi {
     this.element.style.gap = `${this.gap}px`;
   }
 
+  setSyncOptions(options: ChartLayoutSyncUpdate): void {
+    this.assertAlive();
+    const next: ChartLayoutSyncOptions = {
+      timeRange: options.timeRange ?? this.sync.timeRange,
+      crosshair:
+        options.crosshair === undefined
+          ? this.sync.crosshair
+          : normalizeCrosshair(options.crosshair),
+    };
+    if (next.timeRange === this.sync.timeRange && next.crosshair === this.sync.crosshair) {
+      return;
+    }
+    this.sync = next;
+    for (const entry of this.slots) {
+      this.ensureCrosshairOverlay(entry);
+    }
+    if (next.crosshair === "off" && this.crosshair !== null) {
+      this.crosshair = null;
+    }
+    this.requestCrosshairRender();
+  }
+
+  getSyncOptions(): Readonly<ChartLayoutSyncOptions> {
+    this.assertAlive();
+    return { ...this.sync };
+  }
+
   setActiveChart(id: string | null): void {
     this.assertAlive();
     if (id !== null && !this.findSlot(id)) {
@@ -362,7 +408,11 @@ class ChartLayout implements ChartLayoutApi {
     if (!source) {
       return;
     }
-    this.applyRange(source.slot.id, source.slot.chart.timeScale().getVisibleRange());
+    this.applyRange(
+      source.slot.id,
+      source.slot.syncGroup,
+      source.slot.chart.timeScale().getVisibleRange(),
+    );
   }
 
   serialize(): ChartLayoutSnapshot {
@@ -371,10 +421,12 @@ class ChartLayout implements ChartLayoutApi {
       version: 1,
       columns: this.columns,
       gap: this.gap,
+      sync: { ...this.sync },
       slots: this.slots.map((entry) => ({
         id: entry.slot.id,
         rowSpan: entry.slot.rowSpan,
         columnSpan: entry.slot.columnSpan,
+        syncGroup: entry.slot.syncGroup,
       })),
     };
   }
@@ -405,20 +457,28 @@ class ChartLayout implements ChartLayoutApi {
   }
 
   private handleVisibleRange(sourceId: string, event: VisibleRangeEvent): void {
-    if (!this.syncTimeRange || this.applyingRange) {
+    if (!this.sync.timeRange || this.applyingRange) {
       return;
     }
-    this.applyRange(sourceId, { from: event.from, to: event.to });
+    const source = this.findSlot(sourceId);
+    if (!source) {
+      return;
+    }
+    this.applyRange(sourceId, source.slot.syncGroup, { from: event.from, to: event.to });
   }
 
-  private applyRange(sourceId: string, range: { from: number; to: number }): void {
+  private applyRange(
+    sourceId: string,
+    syncGroup: string,
+    range: { from: number; to: number },
+  ): void {
     if (!Number.isFinite(range.from) || !Number.isFinite(range.to) || range.to <= range.from) {
       return;
     }
     this.applyingRange = true;
     try {
       for (const entry of this.slots) {
-        if (entry.slot.id === sourceId) {
+        if (entry.slot.id === sourceId || entry.slot.syncGroup !== syncGroup) {
           continue;
         }
         try {
@@ -433,7 +493,7 @@ class ChartLayout implements ChartLayoutApi {
   }
 
   private handleCrosshair(sourceId: string, event: CrosshairEvent): void {
-    if (!this.syncCrosshair) {
+    if (this.sync.crosshair === "off") {
       return;
     }
     if (event.time === null || event.point === null) {
@@ -443,7 +503,18 @@ class ChartLayout implements ChartLayoutApi {
       }
       return;
     }
-    this.crosshair = { sourceId, time: event.time };
+    const source = this.findSlot(sourceId);
+    if (!source) {
+      return;
+    }
+    const height = source.slot.element.clientHeight;
+    const yRatio = height > 0 ? Math.min(1, Math.max(0, event.point.y / height)) : null;
+    this.crosshair = {
+      sourceId,
+      sourceGroup: source.slot.syncGroup,
+      time: event.time,
+      yRatio,
+    };
     this.requestCrosshairRender();
   }
 
@@ -453,6 +524,72 @@ class ChartLayout implements ChartLayoutApi {
     }
   }
 
+  private ensureCrosshairOverlay(entry: InternalSlot): void {
+    if (this.sync.crosshair === "off") {
+      if (entry.overlay) {
+        entry.overlay.remove();
+        entry.overlay = null;
+        this.crosshairOverlays.delete(entry.slot.id);
+      }
+      return;
+    }
+    if (entry.overlay) {
+      return;
+    }
+    const id = entry.slot.id;
+    const group = entry.slot.syncGroup;
+    entry.overlay = entry.slot.chart.addOverlay({
+      id: "wicklib-layout-crosshair",
+      draw: (context, frame) => this.drawCrosshair(context, frame, id, group),
+    });
+    this.crosshairOverlays.set(id, entry.overlay);
+  }
+
+  private drawCrosshair(
+    context: CanvasRenderingContext2D,
+    frame: OverlayRenderFrame,
+    id: string,
+    group: string,
+  ): void {
+    const current = this.crosshair;
+    if (
+      !current ||
+      current.sourceId === id ||
+      current.sourceGroup !== group ||
+      this.sync.crosshair === "off"
+    ) {
+      return;
+    }
+    const x = frame.timeToX(current.time);
+    if (x === null || x < frame.plot.left || x > frame.plot.right) {
+      return;
+    }
+    context.save();
+    context.beginPath();
+    context.rect(frame.plot.left, frame.plot.top, frame.plot.width, frame.plot.height);
+    context.clip();
+    context.strokeStyle = this.crosshairColor;
+    context.lineWidth = 1;
+    context.setLineDash([3, 4]);
+
+    const crispX = Math.round(x) + 0.5;
+    context.beginPath();
+    context.moveTo(crispX, frame.plot.top);
+    context.lineTo(crispX, frame.plot.bottom);
+    context.stroke();
+
+    if (this.sync.crosshair === "full" && current.yRatio !== null) {
+      const y = frame.plot.top + current.yRatio * frame.plot.height;
+      const crispY = Math.round(y) + 0.5;
+      context.beginPath();
+      context.moveTo(frame.plot.left, crispY);
+      context.lineTo(frame.plot.right, crispY);
+      context.stroke();
+    }
+
+    context.restore();
+  }
+
   private disposeSlot(entry: InternalSlot): void {
     entry.slot.element.removeEventListener("pointerdown", entry.onPointerDown, true);
     entry.slot.element.removeEventListener("focusin", entry.onFocusIn);
@@ -460,6 +597,7 @@ class ChartLayout implements ChartLayoutApi {
       unsubscribe();
     }
     entry.overlay?.remove();
+    entry.overlay = null;
     this.crosshairOverlays.delete(entry.slot.id);
     entry.slot.chart.destroy();
     entry.slot.element.remove();
@@ -470,6 +608,28 @@ class ChartLayout implements ChartLayoutApi {
       throw new WickError("DISPOSED", "Chart layout is disposed");
     }
   }
+}
+
+function resolveSyncOptions(options: ChartLayoutOptions): ChartLayoutSyncOptions {
+  return {
+    timeRange: options.sync?.timeRange ?? options.syncTimeRange ?? true,
+    crosshair: normalizeCrosshair(options.sync?.crosshair ?? options.syncCrosshair ?? "time"),
+  };
+}
+
+function normalizeCrosshair(
+  value: boolean | ChartLayoutCrosshairMode | undefined,
+): ChartLayoutCrosshairMode {
+  if (value === undefined || value === true || value === "time") {
+    return "time";
+  }
+  if (value === false || value === "off") {
+    return "off";
+  }
+  if (value === "full") {
+    return "full";
+  }
+  throw new WickError("INVALID_ARGUMENT", "crosshair must be off, time, or full");
 }
 
 function mergeChartOptions(
@@ -502,6 +662,13 @@ function validateGap(gap: number): number {
 function validateSpan(value: number, name: string): number {
   if (!Number.isInteger(value) || value < 1) {
     throw new WickError("INVALID_ARGUMENT", `${name} must be a positive integer`);
+  }
+  return value;
+}
+
+function validateSyncGroup(value: string): string {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new WickError("INVALID_ARGUMENT", "syncGroup must be a non-empty string");
   }
   return value;
 }

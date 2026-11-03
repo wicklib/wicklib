@@ -17,14 +17,19 @@ export interface ChartLayoutApi {
     readonly element: HTMLElement;
     getChart(id: string): ChartApi | null;
     getSlots(): readonly ChartLayoutSlot[];
+    getSyncOptions(): Readonly<ChartLayoutSyncOptions>;
     onActiveChange(handler: (chartId: string | null) => void): Unsubscribe;
     removeChart(id: string): void;
     serialize(): ChartLayoutSnapshot;
     setActiveChart(id: string | null): void;
     setColumns(columns: number): void;
     setGap(gap: number): void;
+    setSyncOptions(options: ChartLayoutSyncUpdate): void;
     syncNow(): void;
 }
+
+// @public
+export type ChartLayoutCrosshairMode = "off" | "time" | "full";
 
 // @public
 export interface ChartLayoutOptions {
@@ -34,7 +39,8 @@ export interface ChartLayoutOptions {
     crosshairColor?: string;
     gap?: number;
     onActiveChange?: (chartId: string | null) => void;
-    syncCrosshair?: boolean;
+    sync?: ChartLayoutSyncUpdate;
+    syncCrosshair?: boolean | ChartLayoutCrosshairMode;
     syncTimeRange?: boolean;
 }
 
@@ -50,6 +56,8 @@ export interface ChartLayoutSlot {
     readonly id: string;
     // (undocumented)
     readonly rowSpan: number;
+    // (undocumented)
+    readonly syncGroup: string;
 }
 
 // @public
@@ -58,6 +66,7 @@ export interface ChartLayoutSlotOptions {
     columnSpan?: number;
     id?: string;
     rowSpan?: number;
+    syncGroup?: string;
 }
 
 // @public
@@ -71,9 +80,24 @@ export interface ChartLayoutSnapshot {
         id: string;
         rowSpan: number;
         columnSpan: number;
+        syncGroup: string;
     }>;
     // (undocumented)
+    sync: ChartLayoutSyncOptions;
+    // (undocumented)
     version: 1;
+}
+
+// @public
+export interface ChartLayoutSyncOptions {
+    crosshair: ChartLayoutCrosshairMode;
+    timeRange: boolean;
+}
+
+// @public
+export interface ChartLayoutSyncUpdate {
+    crosshair?: boolean | ChartLayoutCrosshairMode;
+    timeRange?: boolean;
 }
 
 // @public

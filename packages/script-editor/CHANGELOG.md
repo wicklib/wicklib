@@ -1,5 +1,12 @@
 # @wicklib/script-editor
 
+## 0.13.0
+
+### Patch Changes
+
+- @wicklib/core@0.13.0
+  - @wicklib/script@0.13.0
+
 ## 0.12.0
 
 ### Patch Changes
