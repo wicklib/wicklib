@@ -12,6 +12,14 @@ export interface TimeScaleSource {
   nearestIndex(time: Time): number;
 }
 
+/**
+ * Layout-level view anchor used to keep existing bars stable during realtime appends.
+ */
+export interface TimeScaleView {
+  barSpacing: number;
+  rightEdgeLayout: number;
+}
+
 const DEFAULT_OPTIONS: Required<Omit<TimeScaleOptions, "calendar">> = {
   barSpacing: 8,
   rightOffset: 2,
@@ -78,6 +86,27 @@ export class TimeScale {
 
   getRightOffset(): number {
     return this.rightOffset;
+  }
+
+  /** Captures the layout anchor without converting it to time values. */
+  captureView(): TimeScaleView {
+    return {
+      barSpacing: this.barSpacing,
+      rightEdgeLayout: this.rightEdgeLayout(),
+    };
+  }
+
+  /** Restores a captured layout anchor, preserving bar positions across data changes. */
+  restoreView(view: TimeScaleView): void {
+    if (!Number.isFinite(view.barSpacing) || view.barSpacing <= 0) {
+      return;
+    }
+    if (!Number.isFinite(view.rightEdgeLayout)) {
+      return;
+    }
+    this.barSpacing = clamp(view.barSpacing, this.minimumBarSpacing(), this.maxBarSpacing);
+    this.rightOffset = view.rightEdgeLayout - this.lastIndex() - this.totalGaps * this.gapUnits();
+    this.clamp();
   }
 
   getOptions(): Required<Omit<TimeScaleOptions, "calendar">> {

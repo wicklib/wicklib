@@ -1,5 +1,13 @@
 # @wicklib/core
 
+## 0.13.1
+
+### Patch Changes
+
+- Preserve bar spacing and the right-edge layout anchor during realtime datafeed updates, so
+  appends and revisions no longer lose positive right padding or shift existing bars while the
+  view is panned away from the latest bar.
+
 ## 0.13.0
 
 No changes in this release.

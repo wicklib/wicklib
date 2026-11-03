@@ -66,6 +66,8 @@ function createFeed() {
 function createHost(store: OhlcStore) {
   let view: VisibleRange = { from: 0, to: 0 };
   let restored: VisibleRange | null = null;
+  let restoredView: { barSpacing: number; rightEdgeLayout: number } | null = null;
+  let capturedView = 0;
   let fitted = 0;
   let fitAlways = 0;
   let changed = 0;
@@ -78,6 +80,13 @@ function createHost(store: OhlcStore) {
     restoreVisibleRange: (range) => {
       view = range;
       restored = range;
+    },
+    captureTimeView: () => {
+      capturedView += 1;
+      return { barSpacing: 8, rightEdgeLayout: 100 };
+    },
+    restoreTimeView: (next) => {
+      restoredView = next;
     },
     isAtRightEdge: () => atRight,
     fitContent: () => {
@@ -119,6 +128,12 @@ function createHost(store: OhlcStore) {
     },
     get restored(): VisibleRange | null {
       return restored;
+    },
+    get restoredView(): { barSpacing: number; rightEdgeLayout: number } | null {
+      return restoredView;
+    },
+    get capturedView(): number {
+      return capturedView;
     },
     get fitted(): number {
       return fitted;
@@ -363,11 +378,11 @@ describe("DatafeedController", () => {
     expect(store.length).toBe(4);
 
     host.setAtRight(false);
-    const anchoredView = { from: BASE, to: BASE + 3 * MINUTE };
-    host.setView(anchoredView);
+    host.setView({ from: BASE, to: BASE + 3 * MINUTE });
     listener(bar(BASE + 4 * MINUTE));
     expect(store.length).toBe(5);
-    expect(host.restored).toEqual(anchoredView);
+    expect(host.capturedView).toBe(3);
+    expect(host.restoredView).toEqual({ barSpacing: 8, rightEdgeLayout: 100 });
 
     controller.stop();
     expect(feed.unsubscribed).toBe(1);

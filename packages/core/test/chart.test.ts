@@ -621,6 +621,37 @@ describe("createChart", () => {
     expect(range.from).toBeGreaterThanOrEqual(secondBase);
   });
 
+  it("preserves right padding when realtime bars append away from the edge", async () => {
+    const chart = track(createChart(mount()));
+    const series = chart.addSeries(CandlestickSeries);
+    let listener: ((bar: OhlcData) => void) | null = null;
+    const data = bars(50);
+
+    series.setDatafeed(
+      {
+        async getData() {
+          return { data };
+        },
+        subscribe(_request, next) {
+          listener = next;
+          return () => undefined;
+        },
+      },
+      { symbol: "BTC", interval: "1m", initialBars: 50 },
+    );
+    await settle();
+
+    chart.timeScale().setOptions({ barSpacing: 8, rightOffset: 20 });
+    const before = chart.timeScale().getOptions();
+
+    listener!(bars(51)[50]!);
+    await settle();
+
+    const after = chart.timeScale().getOptions();
+    expect(after.barSpacing).toBe(before.barSpacing);
+    expect(after.rightOffset).toBeCloseTo(19, 5);
+  });
+
   it("adds an indicator overlay and updates inputs", () => {
     const chart = track(createChart(mount()));
     const series = chart.addSeries(CandlestickSeries);

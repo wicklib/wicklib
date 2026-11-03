@@ -26,7 +26,7 @@ import {
   type ResolvedGrid,
   type ResolvedLayout,
 } from "./render/chart-renderer";
-import { TimeScale, type TimeScaleSource } from "./scale/time-scale";
+import { TimeScale, type TimeScaleSource, type TimeScaleView } from "./scale/time-scale";
 import { Series, type SeriesHost } from "./series";
 import type {
   AddDrawingOptions,
@@ -1340,6 +1340,15 @@ class Chart implements ChartApi, SeriesHost {
     } catch {
       // The stored data may no longer cover the previous range; keep the current one.
     }
+    this.requestRender();
+  }
+
+  captureTimeView(): TimeScaleView {
+    return this.timeScaleModel.captureView();
+  }
+
+  restoreTimeView(view: TimeScaleView): void {
+    this.timeScaleModel.restoreView(view);
     this.requestRender();
   }
 

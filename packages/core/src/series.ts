@@ -24,6 +24,7 @@ import type {
 } from "./types";
 import { mergeDefined } from "./util";
 import { VERSION } from "./version";
+import type { TimeScaleView } from "./scale/time-scale";
 
 export type SeriesKind = "candlestick" | "line" | "area" | "histogram";
 
@@ -195,6 +196,8 @@ export interface SeriesHost {
   removeSeries(series: Series): void;
   getVisibleRange(): VisibleRange;
   restoreVisibleRange(range: VisibleRange): void;
+  captureTimeView(): TimeScaleView;
+  restoreTimeView(view: TimeScaleView): void;
   isAtRightEdge(): boolean;
   fitContent(): void;
   fitContentIfDefault(): void;
@@ -300,6 +303,8 @@ export class Series {
     const host: DatafeedControllerHost<SeriesData> = {
       getVisibleRange: () => this.host.getVisibleRange(),
       restoreVisibleRange: (range) => this.host.restoreVisibleRange(range),
+      captureTimeView: () => this.host.captureTimeView(),
+      restoreTimeView: (view) => this.host.restoreTimeView(view),
       isAtRightEdge: () => this.host.isAtRightEdge(),
       fitContent: () => this.host.fitContent(),
       fitContentIfDefault: () => this.host.fitContentIfDefault(),

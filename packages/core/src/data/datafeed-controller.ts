@@ -19,6 +19,8 @@ const MAX_CONSECUTIVE_RANGE_REQUESTS = 4;
 export interface DatafeedControllerHost<TData extends SeriesData> {
   getVisibleRange(): VisibleRange;
   restoreVisibleRange(range: VisibleRange): void;
+  captureTimeView(): { barSpacing: number; rightEdgeLayout: number };
+  restoreTimeView(view: { barSpacing: number; rightEdgeLayout: number }): void;
   isAtRightEdge(): boolean;
   fitContent(): void;
   fitContentIfDefault(): void;
@@ -326,7 +328,7 @@ export class DatafeedController<TData extends SeriesData> {
     }
 
     const atRightEdge = this.host.isAtRightEdge();
-    const before = this.host.getVisibleRange();
+    const view = this.host.captureTimeView();
 
     try {
       this.host.updateData(data);
@@ -336,7 +338,7 @@ export class DatafeedController<TData extends SeriesData> {
     }
 
     if (!atRightEdge) {
-      this.host.restoreVisibleRange(before);
+      this.host.restoreTimeView(view);
     }
 
     this.host.onSeriesDataChanged();
