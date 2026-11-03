@@ -68,7 +68,37 @@ export class Pane implements PaneApi {
         host.assertAlive();
         return this.priceScale.isAutoScale();
       },
+      setOptions: (options) => {
+        host.assertAlive();
+        this.priceScale.setOptions(options);
+        host.requestRender();
+      },
+      getOptions: () => {
+        host.assertAlive();
+        return this.priceScale.getOptions();
+      },
     };
+  }
+
+  getHeight(): number | null {
+    this.host.assertAlive();
+    return this.preferredHeight;
+  }
+
+  getOptions(): Readonly<PaneOptions> {
+    this.host.assertAlive();
+    const options: PaneOptions = {
+      priceScale: this.priceScale.getOptions(),
+    };
+    if (this.preferredHeight !== null) {
+      options.height = this.preferredHeight;
+    }
+    return options;
+  }
+
+  getPriceScale(): PriceScaleApi {
+    this.host.assertAlive();
+    return this.priceScaleApi;
   }
 
   setHeight(height: number): void {

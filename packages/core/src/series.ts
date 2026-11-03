@@ -196,6 +196,7 @@ export interface SeriesHost {
   getVisibleRange(): VisibleRange;
   restoreVisibleRange(range: VisibleRange): void;
   isAtRightEdge(): boolean;
+  fitContent(): void;
   fitContentIfDefault(): void;
   emitDataLoading(seriesId: string, loading: boolean): void;
   emitDatafeedError(seriesId: string, error: WickError): void;
@@ -206,6 +207,7 @@ export interface SeriesHost {
  */
 export class Series {
   readonly id: string;
+  readonly typeId: string;
   readonly paneId: string;
   readonly kind: SeriesKind;
 
@@ -227,6 +229,7 @@ export class Series {
   ) {
     this.host = host;
     this.id = id;
+    this.typeId = type.id;
     this.paneId = paneId;
 
     const kind = SERIES_KINDS.get(type.id);
@@ -244,6 +247,16 @@ export class Series {
       kind,
       (options ?? {}) as SeriesOptions & Record<string, unknown>,
     );
+  }
+
+  getOptions(): Readonly<SeriesOptions> {
+    this.assertAlive();
+    return { ...this.options };
+  }
+
+  getDatafeedOptions(): Readonly<SeriesDatafeedOptions> | null {
+    this.assertAlive();
+    return this.datafeedController?.getOptions() ?? null;
   }
 
   setData(data: readonly SeriesData[]): void {
@@ -288,6 +301,7 @@ export class Series {
       getVisibleRange: () => this.host.getVisibleRange(),
       restoreVisibleRange: (range) => this.host.restoreVisibleRange(range),
       isAtRightEdge: () => this.host.isAtRightEdge(),
+      fitContent: () => this.host.fitContent(),
       fitContentIfDefault: () => this.host.fitContentIfDefault(),
       getDataBounds: () => {
         const first = this.store.firstTime();

@@ -71,6 +71,7 @@ export interface ChartApi {
     destroy(): void;
     drawingDefaults(toolId: string): DrawingOptions;
     exportImage(type?: string, quality?: number): string;
+    getPanes(): readonly PaneApi[];
     // (undocumented)
     loadDrawings(document: DrawingDocument): void;
     // (undocumented)
@@ -310,6 +311,9 @@ export interface DatafeedContext {
 }
 
 // @public
+export type DatafeedInitialView = "auto" | "fit" | "preserve";
+
+// @public
 export interface DataLoadingEvent {
     // (undocumented)
     loading: boolean;
@@ -505,6 +509,8 @@ export const HorizontalRay: DrawingToolDefinition;
 
 // @public
 export interface IndicatorApi<TInputs extends IndicatorInputs = IndicatorInputs> {
+    getInputs(): Readonly<TInputs>;
+    getPlotOptions(plotId: string): Readonly<IndicatorPlotOptions>;
     // (undocumented)
     readonly id: string;
     // (undocumented)
@@ -797,6 +803,10 @@ export interface OverlayRenderFrame {
 
 // @public
 export interface PaneApi {
+    getHeight(): number | null;
+    getOptions(): Readonly<PaneOptions>;
+    // (undocumented)
+    getPriceScale(): PriceScaleApi;
     // (undocumented)
     readonly id: string;
     // (undocumented)
@@ -827,6 +837,12 @@ export interface Point {
 
 // @public (undocumented)
 export const PriceDateRange: DrawingToolDefinition;
+
+// @public
+export interface PriceFormatOptions {
+    minMove?: number;
+    precision?: number;
+}
 
 // @public
 export interface PriceLineApi {
@@ -868,11 +884,13 @@ export interface PriceRange {
 
 // @public
 export interface PriceScaleApi {
+    getOptions(): Readonly<PriceScaleOptions>;
     // (undocumented)
     getVisibleRange(): PriceRange;
     isAutoScale(): boolean;
     // (undocumented)
     setAutoScale(enabled: boolean): void;
+    setOptions(options: Partial<PriceScaleOptions>): void;
     // (undocumented)
     setVisibleRange(range: PriceRange): void;
 }
@@ -883,6 +901,7 @@ export interface PriceScaleOptions {
     borderVisible?: boolean;
     invertScale?: boolean;
     mode?: "normal" | "logarithmic";
+    priceFormat?: PriceFormatOptions;
     scaleMargins?: {
         top: number;
         bottom: number;
@@ -918,6 +937,8 @@ export interface SerializedDrawing {
 export interface SeriesApi<TData extends SeriesData = SeriesData, TOptions extends SeriesOptions = SeriesOptions> {
     clearDatafeed(): void;
     createPriceLine(options: PriceLineOptions): PriceLineApi;
+    getDatafeedOptions(): Readonly<SeriesDatafeedOptions> | null;
+    getOptions(): Readonly<TOptions>;
     // (undocumented)
     readonly id: string;
     isLoading(): boolean;
@@ -934,6 +955,8 @@ export interface SeriesApi<TData extends SeriesData = SeriesData, TOptions exten
     // (undocumented)
     setOptions(options: Partial<TOptions>): void;
     // (undocumented)
+    readonly typeId: string;
+    // (undocumented)
     update(data: TData): void;
 }
 
@@ -946,6 +969,7 @@ export interface SeriesData {
 // @public
 export interface SeriesDatafeedOptions {
     initialBars?: number;
+    initialView?: DatafeedInitialView;
     // (undocumented)
     interval: Interval;
     // (undocumented)
@@ -1026,6 +1050,7 @@ export type Time = number;
 export interface TimeScaleApi {
     // (undocumented)
     fitContent(): void;
+    getOptions(): Readonly<TimeScaleOptions>;
     // (undocumented)
     getVisibleRange(): VisibleRange;
     // (undocumented)
@@ -1110,8 +1135,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:902:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:917:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:950:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:965:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -162,6 +162,20 @@ export class Indicator<
     this.values = values;
   }
 
+  getInputs(): Readonly<TInputs> {
+    this.assertAlive();
+    return { ...this.inputs };
+  }
+
+  getPlotOptions(plotId: string): Readonly<IndicatorPlotOptions> {
+    this.assertAlive();
+    const plot = this.definition.plots.find((candidate) => candidate.id === plotId);
+    if (!plot) {
+      fail("INVALID_ARGUMENT", `Unknown plot id: ${plotId}`);
+    }
+    return { ...this.plotOptions[plotId]! };
+  }
+
   setInputs(inputs: Partial<TInputs>): void {
     this.assertAlive();
     this.inputs = resolveIndicatorInputs<TInputs>(this.definition.inputs, {

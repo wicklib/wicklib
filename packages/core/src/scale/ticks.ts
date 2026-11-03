@@ -30,6 +30,70 @@ export function nicePriceTicks(min: number, max: number, target = 6): PriceTick[
   return ticks;
 }
 
+const LOG_TICK_MULTIPLIERS = [
+  [1, 2, 3, 4, 5, 6, 7, 8, 9],
+  [1, 2, 3, 5, 7],
+  [1, 2, 5],
+  [1, 5],
+  [1],
+] as const;
+
+/**
+ * Chooses logarithmically spaced ticks for a strictly positive range.
+ *
+ * Narrow ranges fall back to linear ticks because the two layouts are visually close
+ * and familiar decimal prices read better.
+ */
+export function logarithmicPriceTicks(min: number, max: number, target = 6): PriceTick[] {
+  if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= min) {
+    return [];
+  }
+
+  if (max / min < 4) {
+    return nicePriceTicks(min, max, target);
+  }
+
+  const limit = Math.max(3, Math.ceil(target * 1.6));
+  const firstExponent = Math.floor(Math.log10(min));
+  const lastExponent = Math.floor(Math.log10(max));
+
+  for (const multipliers of LOG_TICK_MULTIPLIERS) {
+    const ticks: PriceTick[] = [];
+    for (let exponent = firstExponent; exponent <= lastExponent; exponent += 1) {
+      const magnitude = 10 ** exponent;
+      for (const multiplier of multipliers) {
+        const value = multiplier * magnitude;
+        if (value < min || value > max) {
+          continue;
+        }
+        ticks.push({ value: Number(value.toPrecision(12)) });
+      }
+    }
+    if (ticks.length <= limit) {
+      return ticks;
+    }
+  }
+
+  return [];
+}
+
+/**
+ * Decimal precision implied by a minimum price movement.
+ */
+export function precisionForMinMove(minMove: number): number {
+  if (!Number.isFinite(minMove) || minMove <= 0) {
+    return 2;
+  }
+
+  let scaled = minMove;
+  let precision = 0;
+  while (precision < 12 && Math.abs(scaled - Math.round(scaled)) > 1e-9) {
+    scaled *= 10;
+    precision += 1;
+  }
+  return precision;
+}
+
 /**
  * Decimal precision implied by a tick step.
  */

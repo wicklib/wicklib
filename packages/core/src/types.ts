@@ -95,6 +95,14 @@ export interface Datafeed<TData extends SeriesData = SeriesData> {
 }
 
 /**
+ * How the time view is positioned after a datafeed's initial load.
+ *
+ * `auto` fits only when the host has not chosen a view. `fit` always fits the loaded
+ * data. `preserve` keeps the current view.
+ */
+export type DatafeedInitialView = "auto" | "fit" | "preserve";
+
+/**
  * Options for attaching a datafeed to a series.
  */
 export interface SeriesDatafeedOptions {
@@ -102,6 +110,8 @@ export interface SeriesDatafeedOptions {
   interval: Interval;
   /** Points requested on the initial load. Defaults to 500. */
   initialBars?: number;
+  /** Initial time view behavior. Defaults to `auto`. */
+  initialView?: DatafeedInitialView;
 }
 
 /**
@@ -270,10 +280,26 @@ export interface TimeScaleOptions {
 }
 
 /**
+ * Price label formatting for instrument-specific precision.
+ */
+export interface PriceFormatOptions {
+  /**
+   * Fixed number of decimal places. Overrides precision inferred from `minMove` or
+   * generated ticks.
+   */
+  precision?: number;
+  /**
+   * Smallest price increment. Used to infer decimal precision when `precision` is
+   * omitted. Does not constrain generated tick values.
+   */
+  minMove?: number;
+}
+
+/**
  * Price scale options.
  */
 export interface PriceScaleOptions {
-  /** `logarithmic` is not implemented in Phase 2 and throws. */
+  /** Linear or logarithmic price mapping. Defaults to linear. */
   mode?: "normal" | "logarithmic";
   /** Recompute the range from visible data. */
   autoScale?: boolean;
@@ -286,6 +312,8 @@ export interface PriceScaleOptions {
   };
   /** Draw the border between the plot and the price axis. */
   borderVisible?: boolean;
+  /** Instrument-specific price label formatting. */
+  priceFormat?: PriceFormatOptions;
 }
 
 /**
@@ -564,6 +592,10 @@ export interface IndicatorApi<TInputs extends IndicatorInputs = IndicatorInputs>
   readonly id: string;
   readonly sourceSeriesId: string;
   readonly paneId: string;
+  /** Read-only copy of the resolved inputs. */
+  getInputs(): Readonly<TInputs>;
+  /** Read-only copy of the effective options for one plot. */
+  getPlotOptions(plotId: string): Readonly<IndicatorPlotOptions>;
   setInputs(inputs: Partial<TInputs>): void;
   setPlotOptions(plotId: string, options: IndicatorPlotOptions): void;
   remove(): void;
@@ -851,6 +883,8 @@ export interface TimeScaleApi {
   fitContent(): void;
   scrollToTime(time: Time): void;
   setOptions(options: Partial<TimeScaleOptions>): void;
+  /** Read-only copy of the resolved time scale options. */
+  getOptions(): Readonly<TimeScaleOptions>;
 }
 
 /**
@@ -862,6 +896,10 @@ export interface PriceScaleApi {
   setAutoScale(enabled: boolean): void;
   /** True while the scale follows the visible data. */
   isAutoScale(): boolean;
+  /** Applies a partial price scale option update. */
+  setOptions(options: Partial<PriceScaleOptions>): void;
+  /** Read-only copy of the resolved price scale options. */
+  getOptions(): Readonly<PriceScaleOptions>;
 }
 
 /**
@@ -869,6 +907,11 @@ export interface PriceScaleApi {
  */
 export interface PaneApi {
   readonly id: string;
+  /** Preferred height in CSS pixels, or null when the pane shares remaining space. */
+  getHeight(): number | null;
+  /** Read-only copy of the pane's current options. */
+  getOptions(): Readonly<PaneOptions>;
+  getPriceScale(): PriceScaleApi;
   setHeight(height: number): void;
   remove(): void;
 }
@@ -881,7 +924,12 @@ export interface SeriesApi<
   TOptions extends SeriesOptions = SeriesOptions,
 > {
   readonly id: string;
+  readonly typeId: string;
   readonly paneId: string;
+  /** Read-only copy of the resolved series options. */
+  getOptions(): Readonly<TOptions>;
+  /** Current datafeed identity, or null when the series uses manual data. */
+  getDatafeedOptions(): Readonly<SeriesDatafeedOptions> | null;
   setData(data: readonly TData[]): void;
   update(data: TData): void;
   setOptions(options: Partial<TOptions>): void;
@@ -907,6 +955,8 @@ export interface ChartApi {
     type: SeriesType<TData, TOptions>,
     options?: TOptions,
   ): SeriesApi<TData, TOptions>;
+  /** All panes in layout order. The returned array is a copy. */
+  getPanes(): readonly PaneApi[];
   addPane(options?: PaneOptions): PaneApi;
   addIndicator<TInputs extends IndicatorInputs>(
     definition: IndicatorDefinition<TInputs>,

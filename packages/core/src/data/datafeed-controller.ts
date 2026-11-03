@@ -1,6 +1,7 @@
 import { fail, WickError } from "../errors";
 import type {
   Datafeed,
+  DatafeedInitialView,
   DataRequest,
   DataResponse,
   SeriesData,
@@ -19,6 +20,7 @@ export interface DatafeedControllerHost<TData extends SeriesData> {
   getVisibleRange(): VisibleRange;
   restoreVisibleRange(range: VisibleRange): void;
   isAtRightEdge(): boolean;
+  fitContent(): void;
   fitContentIfDefault(): void;
   getDataBounds(): { first: Time; last: Time } | null;
   mergeData(data: readonly TData[]): void;
@@ -43,6 +45,7 @@ export class DatafeedController<TData extends SeriesData> {
   private readonly symbol: string;
   private readonly interval: string;
   private readonly initialBars: number;
+  private readonly initialView: DatafeedInitialView;
 
   private stopped = false;
   private loading = false;
@@ -77,6 +80,12 @@ export class DatafeedController<TData extends SeriesData> {
     this.symbol = options.symbol;
     this.interval = options.interval;
     this.initialBars = Math.min(MAX_INITIAL_BARS, Math.floor(requested));
+
+    const initialView = options.initialView ?? "auto";
+    if (initialView !== "auto" && initialView !== "fit" && initialView !== "preserve") {
+      fail("INVALID_ARGUMENT", "datafeed initialView must be auto, fit, or preserve");
+    }
+    this.initialView = initialView;
   }
 
   start(): void {
@@ -116,6 +125,15 @@ export class DatafeedController<TData extends SeriesData> {
     return this.loading;
   }
 
+  getOptions(): SeriesDatafeedOptions {
+    return {
+      symbol: this.symbol,
+      interval: this.interval,
+      initialBars: this.initialBars,
+      initialView: this.initialView,
+    };
+  }
+
   onViewChange(): void {
     if (this.stopped || !this.initialLoaded) {
       return;
@@ -142,7 +160,7 @@ export class DatafeedController<TData extends SeriesData> {
       this.applyResponse(response);
       this.initialLoaded = true;
       this.host.onSeriesDataChanged();
-      this.host.fitContentIfDefault();
+      this.applyInitialView();
       this.startSubscription();
       this.setLoading(false);
       this.scheduleRangeLoad();
@@ -322,6 +340,14 @@ export class DatafeedController<TData extends SeriesData> {
     }
 
     this.host.onSeriesDataChanged();
+  }
+
+  private applyInitialView(): void {
+    if (this.initialView === "fit") {
+      this.host.fitContent();
+    } else if (this.initialView === "auto") {
+      this.host.fitContentIfDefault();
+    }
   }
 
   private scheduleRangeLoad(): void {

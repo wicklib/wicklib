@@ -566,6 +566,61 @@ describe("createChart", () => {
     expect(() => series.setData(bars(2))).not.toThrow();
   });
 
+  it("switches datafeeds and fits the replacement when requested", async () => {
+    const chart = track(createChart(mount()));
+    const series = chart.addSeries(CandlestickSeries);
+    const firstTimes = bars(30);
+    const secondBase = firstTimes.at(-1)!.time + 30 * MINUTE;
+    const secondTimes = Array.from({ length: 20 }, (_, index) => ({
+      ...firstTimes[index % firstTimes.length]!,
+      time: secondBase + index * MINUTE,
+    }));
+    let firstUnsubscribed = false;
+    let secondSubscribed = false;
+
+    const firstFeed: Datafeed<OhlcData> = {
+      async getData() {
+        return { data: firstTimes };
+      },
+      subscribe() {
+        return () => {
+          firstUnsubscribed = true;
+        };
+      },
+    };
+    const secondFeed: Datafeed<OhlcData> = {
+      async getData() {
+        return { data: secondTimes };
+      },
+      subscribe() {
+        secondSubscribed = true;
+        return () => undefined;
+      },
+    };
+
+    series.setDatafeed(firstFeed, { symbol: "BTC/USD", interval: "1m" });
+    await settle();
+    expect(firstUnsubscribed).toBe(false);
+
+    series.setDatafeed(secondFeed, {
+      symbol: "ETH/USD",
+      interval: "5m",
+      initialView: "fit",
+    });
+    await settle();
+
+    expect(firstUnsubscribed).toBe(true);
+    expect(secondSubscribed).toBe(true);
+    expect(series.getDatafeedOptions()).toEqual({
+      symbol: "ETH/USD",
+      interval: "5m",
+      initialBars: 500,
+      initialView: "fit",
+    });
+    const range = chart.timeScale().getVisibleRange();
+    expect(range.from).toBeGreaterThanOrEqual(secondBase);
+  });
+
   it("adds an indicator overlay and updates inputs", () => {
     const chart = track(createChart(mount()));
     const series = chart.addSeries(CandlestickSeries);
@@ -1098,6 +1153,84 @@ describe("createChart", () => {
     expect(scale.getVisibleRange()).toEqual({ min: 50, max: 150 });
 
     scale.setAutoScale(true);
+  });
+
+  it("exposes workspace state through read-only getters", () => {
+    const chart = track(createChart(mount(), { timeScale: { timeVisible: false } }));
+    const series = chart.addSeries(CandlestickSeries, { title: "BTC/USD" });
+    series.setData(bars(20));
+
+    const pane = chart.addPane({ height: 120 });
+    expect(chart.getPanes().map((candidate) => candidate.id)).toEqual(["main", pane.id]);
+    expect(pane.getHeight()).toBe(120);
+    expect(pane.getOptions().height).toBe(120);
+    expect(pane.getPriceScale()).toBe(pane.getPriceScale());
+
+    expect(series.typeId).toBe(CandlestickSeries.id);
+    expect(series.getOptions()).toMatchObject({ title: "BTC/USD" });
+    expect(series.getDatafeedOptions()).toBeNull();
+
+    series.setDatafeed(
+      {
+        getData: async () => ({ data: [] }),
+      },
+      { symbol: "BTC/USD", interval: "1m", initialBars: 250 },
+    );
+    expect(series.getDatafeedOptions()).toEqual({
+      symbol: "BTC/USD",
+      interval: "1m",
+      initialBars: 250,
+      initialView: "auto",
+    });
+    series.clearDatafeed();
+    expect(series.getDatafeedOptions()).toBeNull();
+
+    expect(chart.timeScale().getOptions().timeVisible).toBe(false);
+
+    const indicator = chart.addIndicator(MultiplierIndicator, { inputs: { multiplier: 3 } });
+    expect(indicator.getInputs()).toEqual({ multiplier: 3 });
+    indicator.setInputs({ multiplier: 4 });
+    expect(indicator.getInputs()).toEqual({ multiplier: 4 });
+    expect(indicator.getPlotOptions("line")).toMatchObject({ visible: true });
+    indicator.setPlotOptions("line", { color: "#123456", visible: false });
+    expect(indicator.getPlotOptions("line")).toMatchObject({
+      color: "#123456",
+      visible: false,
+    });
+    expect(() => indicator.getPlotOptions("missing")).toThrow(/Unknown plot/);
+  });
+
+  it("supports logarithmic price scale changes", () => {
+    const chart = track(createChart(mount(), { priceScale: { mode: "logarithmic" } }));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(40));
+
+    const scale = series.priceScale();
+    expect(scale.getOptions().mode).toBe("logarithmic");
+    expect(scale.getVisibleRange().min).toBeGreaterThan(0);
+
+    scale.setOptions({ mode: "normal" });
+    expect(scale.getOptions().mode).toBe("normal");
+
+    chart.setOptions({ priceScale: { mode: "logarithmic" } });
+    expect(scale.getOptions().mode).toBe("logarithmic");
+  });
+
+  it("updates instrument price formatting through chart and scale APIs", () => {
+    const chart = track(createChart(mount(), { priceScale: { priceFormat: { precision: 4 } } }));
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars(20));
+    const scale = series.priceScale();
+
+    expect(scale.getOptions().priceFormat).toEqual({ precision: 4 });
+
+    chart.setOptions({ priceScale: { priceFormat: { minMove: 0.25 } } });
+    expect(scale.getOptions().priceFormat).toEqual({ precision: 4, minMove: 0.25 });
+
+    scale.setOptions({ priceFormat: { precision: 2 } });
+    expect(scale.getOptions().priceFormat).toEqual({ precision: 2, minMove: 0.25 });
+
+    expect(() => scale.setOptions({ priceFormat: { precision: 13 } })).toThrow(/precision/);
   });
 });
 

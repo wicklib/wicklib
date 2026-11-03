@@ -67,6 +67,7 @@ function createHost(store: OhlcStore) {
   let view: VisibleRange = { from: 0, to: 0 };
   let restored: VisibleRange | null = null;
   let fitted = 0;
+  let fitAlways = 0;
   let changed = 0;
   let atRight = true;
   const loading: boolean[] = [];
@@ -79,6 +80,9 @@ function createHost(store: OhlcStore) {
       restored = range;
     },
     isAtRightEdge: () => atRight,
+    fitContent: () => {
+      fitAlways += 1;
+    },
     fitContentIfDefault: () => {
       fitted += 1;
     },
@@ -118,6 +122,9 @@ function createHost(store: OhlcStore) {
     },
     get fitted(): number {
       return fitted;
+    },
+    get fitAlways(): number {
+      return fitAlways;
     },
     get changed(): number {
       return changed;
@@ -167,8 +174,15 @@ describe("DatafeedController", () => {
     expect(controller.isLoading()).toBe(false);
     expect(host.loading).toEqual([true, false]);
     expect(host.fitted).toBe(1);
+    expect(host.fitAlways).toBe(0);
     expect(host.changed).toBe(1);
     expect(feed.listeners).toHaveLength(1);
+    expect(controller.getOptions()).toEqual({
+      symbol: "BTC",
+      interval: "1m",
+      initialBars: 3,
+      initialView: "auto",
+    });
 
     controller.stop();
   });
@@ -242,6 +256,63 @@ describe("DatafeedController", () => {
     });
 
     controller.stop();
+  });
+
+  it("always fits the initial view when requested", async () => {
+    const store = new OhlcStore();
+    const host = createHost(store);
+    const feed = createFeed();
+    const controller = new DatafeedController(host.host, feed.feed, {
+      symbol: "BTC",
+      interval: "1m",
+      initialBars: 3,
+      initialView: "fit",
+    });
+
+    controller.start();
+    feed.pending.shift()!.resolve({ data: [bar(BASE)] });
+    await flush();
+
+    expect(host.fitAlways).toBe(1);
+    expect(host.fitted).toBe(0);
+
+    controller.stop();
+  });
+
+  it("preserves the initial view when requested", async () => {
+    const store = new OhlcStore();
+    const host = createHost(store);
+    const feed = createFeed();
+    const controller = new DatafeedController(host.host, feed.feed, {
+      symbol: "BTC",
+      interval: "1m",
+      initialBars: 3,
+      initialView: "preserve",
+    });
+
+    controller.start();
+    feed.pending.shift()!.resolve({ data: [bar(BASE)] });
+    await flush();
+
+    expect(host.fitAlways).toBe(0);
+    expect(host.fitted).toBe(0);
+
+    controller.stop();
+  });
+
+  it("rejects an invalid initial view", () => {
+    const store = new OhlcStore();
+    const host = createHost(store);
+    const feed = createFeed();
+
+    expect(
+      () =>
+        new DatafeedController(host.host, feed.feed, {
+          symbol: "BTC",
+          interval: "1m",
+          initialView: "sideways" as never,
+        }),
+    ).toThrow(/initialView/);
   });
 
   it("aborts in-flight requests on stop", async () => {

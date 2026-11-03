@@ -23,6 +23,7 @@ changing its decisions requires a new RFC or an ADR.
 | 0016 | Drawing keyboard accessibility         | Accepted |
 | 0017 | Drawing double-click event             | Accepted |
 | 0018 | Renderer backends and target workload  | Accepted |
+| 0019 | Logarithmic price scale                | Accepted |
 
 Rules:
 

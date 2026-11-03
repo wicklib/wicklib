@@ -165,6 +165,7 @@ app.innerHTML = `
         </optgroup>
       </select>
       <button id="clear-drawings" type="button" title="Select a drawing, then press Delete or Backspace. Clear removes all.">Clear</button>
+      <label class="toggle"><input id="log-scale" type="checkbox" /> Log</label>
       <button id="theme" type="button">Light</button>
     </div>
     <div class="metrics"><span id="fps">— fps</span></div>
@@ -234,6 +235,7 @@ const smaToggle = byId<HTMLInputElement>("sma");
 const rsiToggle = byId<HTMLInputElement>("rsi");
 const macdToggle = byId<HTMLInputElement>("macd");
 const themeButton = byId<HTMLButtonElement>("theme");
+const logScaleToggle = byId<HTMLInputElement>("log-scale");
 const clearDrawingsButton = byId<HTMLButtonElement>("clear-drawings");
 const seriesDemoButton = byId<HTMLButtonElement>("series-demo");
 const panelsDemoButton = byId<HTMLButtonElement>("panels-demo");
@@ -1221,6 +1223,14 @@ chart.on("drawing-removed", queueDrawingHistory);
 chart.on("drawing-updated", queueDrawingHistory);
 
 let dark = true;
+
+logScaleToggle.addEventListener("change", () => {
+  chart.setOptions({
+    priceScale: {
+      mode: logScaleToggle.checked ? "logarithmic" : "normal",
+    },
+  });
+});
 
 themeButton.addEventListener("click", () => {
   dark = !dark;

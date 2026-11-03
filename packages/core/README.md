@@ -121,9 +121,100 @@ The feed owns transport, authentication, retries, and reconnection. Core handles
 loads, debounced range loads, prefetch, aborting stale requests, prepend anchoring, realtime
 revisions, and typed loading/error events.
 
+Calling `setDatafeed()` again stops the previous subscription, aborts its pending requests,
+clears loaded bars, and starts the replacement. The previous feed is unsubscribed.
+
+```ts
+series.setDatafeed(feed, {
+  symbol: "ETH/USD",
+  interval: "5m",
+  initialView: "fit",
+});
+```
+
+`initialView` controls the time view after the first load: `auto` fits only when the host has
+not chosen a view, `fit` always fits the new data, and `preserve` keeps the current view.
+`getDatafeedOptions()` returns the active symbol, interval, initial bar count, and view mode.
+
+## Price formatting
+
+Price labels use the generated tick step by default. Instrument-specific precision can be set
+for the whole chart or updated at runtime:
+
+```ts
+const chart = createChart(container, {
+  priceScale: {
+    priceFormat: {
+      precision: 2,
+      minMove: 0.01,
+    },
+  },
+});
+
+const scale = series.priceScale();
+scale.setOptions({ priceFormat: { precision: 4 } });
+
+const current = scale.getOptions().priceFormat;
+```
+
+`precision` controls the displayed decimal places. When omitted, `minMove` determines the
+precision, for example `0.25` renders two decimals. If neither is set, Wicklib infers
+precision from the generated ticks. The format applies to axis ticks, crosshair labels,
+drawing labels, price lines, and last-value labels.
+
+## Price scales
+
+Price scales are linear by default. A pane can use a logarithmic scale without recreating the
+chart:
+
+```ts
+chart.setOptions({ priceScale: { mode: "logarithmic" } });
+
+// Or update only one pane.
+series.priceScale().setOptions({ mode: "logarithmic" });
+```
+
+Logarithmic scales require positive prices. Explicit non-positive ranges throw
+`INVALID_ARGUMENT`; automatic ranges containing non-positive values are ignored so the last
+valid range stays visible. Margins are applied in log space, and narrow ranges fall back to
+linear price ticks for familiar labels.
+
+## Workspace state
+
+Wicklib does not persist application state. The host can read the state it needs to save:
+
+```ts
+const workspace = {
+  visibleRange: chart.timeScale().getVisibleRange(),
+  timeScale: chart.timeScale().getOptions(),
+  panes: chart.getPanes().map((pane) => ({
+    id: pane.id,
+    height: pane.getHeight(),
+    options: pane.getOptions(),
+  })),
+  series: [
+    {
+      id: series.id,
+      type: series.typeId,
+      options: series.getOptions(),
+      datafeed: series.getDatafeedOptions(),
+    },
+  ],
+  indicator: {
+    inputs: indicator.getInputs(),
+    plot: indicator.getPlotOptions("line"),
+  },
+  drawings: chart.serializeDrawings(),
+};
+```
+
+Bar data, symbol lists, and the indicator definition registry remain host-owned. Restore by
+recreating the chart and series with the host's stored configuration, reattaching datafeeds,
+and calling `loadDrawings()`.
+
 ## Interaction and layout
 
-- Continuous index-based time scale and linear price scale.
+- Continuous index-based time scale and linear or logarithmic price scale.
 - Time-axis drag zooms; price-axis drag scales the price range.
 - Wheel zoom, trackpad pan, drag pan, and two-pointer pinch zoom.
 - Keyboard pan/zoom/fit, `Delete`/`Backspace`, `[`/`]` drawing navigation, Cmd/Ctrl+A
@@ -181,7 +272,6 @@ are ignored.
 
 - Host persistence, accounts, data vendors, or server-side rendering.
 - Custom series renderers, multiple price axes, or indicator input over line series.
-- Logarithmic price scale (accepted option, currently throws).
 - WebGL rendering.
 
 ## Rules

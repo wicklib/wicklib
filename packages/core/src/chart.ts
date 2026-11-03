@@ -257,6 +257,10 @@ class Chart implements ChartApi, SeriesHost {
         this.emitVisibleRange();
         this.notifyViewChange();
       },
+      getOptions: () => {
+        this.assertAlive();
+        return this.timeScaleModel.getOptions();
+      },
     };
 
     this.attachEvents();
@@ -284,6 +288,11 @@ class Chart implements ChartApi, SeriesHost {
     this.emitVisibleRange();
 
     return series as unknown as SeriesApi<TData, TOptions>;
+  }
+
+  getPanes(): readonly PaneApi[] {
+    this.assertAlive();
+    return [...this.panes];
   }
 
   addPane(options: PaneOptions = {}): PaneApi {
@@ -1157,7 +1166,9 @@ class Chart implements ChartApi, SeriesHost {
     const next = resolveOptions(merged);
 
     if (patch.priceScale !== undefined) {
-      this.mainPane.priceScale.setOptions(next.priceScale);
+      for (const pane of this.panes) {
+        pane.priceScale.setOptions(next.priceScale);
+      }
     }
     if (patch.timeScale !== undefined) {
       this.timeScaleModel.setOptions(next.timeScale);
@@ -1337,13 +1348,17 @@ class Chart implements ChartApi, SeriesHost {
     return this.timeScaleModel.isAtRightEdge();
   }
 
+  fitContent(): void {
+    this.timeScaleModel.fitContent();
+    this.requestRender();
+    this.emitVisibleRange();
+  }
+
   fitContentIfDefault(): void {
     if (this.timeScaleModel.hasExplicitRange()) {
       return;
     }
-    this.timeScaleModel.fitContent();
-    this.requestRender();
-    this.emitVisibleRange();
+    this.fitContent();
   }
 
   emitDataLoading(seriesId: string, loading: boolean): void {
@@ -2656,6 +2671,10 @@ function mergeChartOptions(base: ChartOptions, patch: Partial<ChartOptions>): Ch
   merged.interaction = mergeDefined<InteractionOptions>(base.interaction ?? {}, patch.interaction);
   merged.timeScale = mergeDefined<TimeScaleOptions>(base.timeScale ?? {}, patch.timeScale);
   merged.priceScale = mergeDefined<PriceScaleOptions>(base.priceScale ?? {}, patch.priceScale);
+  merged.priceScale.priceFormat = mergeDefined(
+    base.priceScale?.priceFormat ?? {},
+    patch.priceScale?.priceFormat,
+  );
   merged.extensions = base.extensions ?? [];
 
   return merged;
