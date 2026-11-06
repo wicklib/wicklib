@@ -1,5 +1,12 @@
 # @wicklib/core
 
+## 0.13.2
+
+### Patch Changes
+
+- 68b2269: Render synchronously after ResizeObserver-driven canvas resizes so cleared backing stores are
+  never painted before the deferred repaint during continuous panel resizing.
+
 ## 0.13.1
 
 ### Patch Changes
