@@ -2523,6 +2523,13 @@ class Chart implements ChartApi, SeriesHost {
 
     this.observer = new ResizeObserver(() => {
       this.resize();
+      // Resizing clears the canvas backing stores. Render in this observer turn,
+      // before paint, so a cleared frame is never presented while dragging.
+      if (this.frame !== null) {
+        cancelFrame(this.frame);
+        this.frame = null;
+      }
+      this.render();
     });
     this.observer.observe(this.container);
   }
