@@ -176,6 +176,105 @@ test("edits the selected drawing through the settings panel", async ({ page }) =
   expect(color).toBe("#112233");
 });
 
+test("creates ray, extended line, angle, arrow, and stats line drawings", async ({ page }) => {
+  await page.goto("/?test");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+
+  const box = await page.locator("#chart").boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) {
+    return;
+  }
+
+  const tools = ["ray", "extended-line", "trend-angle", "arrow", "stats-line"];
+  for (const [index, toolId] of tools.entries()) {
+    await page.selectOption("#drawing-tool", toolId);
+    const y = 130 + index * 30;
+    await page.mouse.click(box.x + 180, box.y + y);
+    await page.mouse.click(box.x + 360, box.y + y + 50);
+  }
+
+  const drawings = await page.evaluate(
+    () => window.__wicklibChart?.serializeDrawings().drawings ?? [],
+  );
+  for (const toolId of tools) {
+    expect(drawings.find((drawing) => drawing.toolId === toolId)?.anchors).toHaveLength(2);
+  }
+});
+
+test("creates regression, flat, disjoint, and fib channel drawings", async ({ page }) => {
+  await page.goto("/?test");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+
+  const box = await page.locator("#chart").boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) {
+    return;
+  }
+
+  const tools: Record<string, number> = {
+    "regression-trend": 2,
+    "flat-top-bottom": 3,
+    "disjoint-channel": 4,
+    "fib-channel": 3,
+  };
+  let y = 150;
+  for (const [toolId, points] of Object.entries(tools)) {
+    await page.selectOption("#drawing-tool", toolId);
+    for (let index = 0; index < points; index += 1) {
+      await page.mouse.click(box.x + 180 + index * 110, box.y + y + index * 35);
+    }
+    y += 80;
+  }
+
+  const drawings = await page.evaluate(
+    () => window.__wicklibChart?.serializeDrawings().drawings ?? [],
+  );
+  expect(drawings.find((drawing) => drawing.toolId === "regression-trend")?.anchors).toHaveLength(
+    2,
+  );
+  expect(drawings.find((drawing) => drawing.toolId === "flat-top-bottom")?.anchors).toHaveLength(3);
+  expect(drawings.find((drawing) => drawing.toolId === "disjoint-channel")?.anchors).toHaveLength(
+    4,
+  );
+  expect(drawings.find((drawing) => drawing.toolId === "fib-channel")?.anchors).toHaveLength(3);
+});
+
+test("creates Fib time zone, pitchfork, Gann fan, and speed lines", async ({ page }) => {
+  await page.goto("/?test");
+  await page.waitForFunction(() => window.__wicklibReady === true);
+
+  const box = await page.locator("#chart").boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) {
+    return;
+  }
+
+  const tools: Record<string, number> = {
+    "fib-time-zone": 2,
+    pitchfork: 3,
+    "schiff-pitchfork": 3,
+    "modified-schiff-pitchfork": 3,
+    "gann-fan": 2,
+    "speed-lines": 3,
+  };
+  let y = 120;
+  for (const [toolId, points] of Object.entries(tools)) {
+    await page.selectOption("#drawing-tool", toolId);
+    for (let index = 0; index < points; index += 1) {
+      await page.mouse.click(box.x + 220 + index * 100, box.y + y + index * 40);
+    }
+    y += 65;
+  }
+
+  const drawings = await page.evaluate(
+    () => window.__wicklibChart?.serializeDrawings().drawings ?? [],
+  );
+  for (const [toolId, points] of Object.entries(tools)) {
+    expect(drawings.find((drawing) => drawing.toolId === toolId)?.anchors).toHaveLength(points);
+  }
+});
+
 test("creates brush, path, and text drawings", async ({ page }) => {
   await page.goto("/?test");
   await page.waitForFunction(() => window.__wicklibReady === true);

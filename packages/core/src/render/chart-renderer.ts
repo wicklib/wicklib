@@ -6,7 +6,14 @@ import {
   clipLineToRect,
   FIB_EXTENSION_LEVELS,
   FIB_LEVELS,
+  disjointChannelGeometry,
+  fibTimeZoneValues,
+  flatChannelLines,
+  gannFanLines,
   parallelLines,
+  pitchforkLines,
+  pointOnLine,
+  speedLineLines,
   type ResolvedDrawingOptions,
 } from "../drawings";
 import type { IndicatorRenderData, IndicatorPlotRenderData } from "../indicator";
@@ -1274,6 +1281,85 @@ export class ChartRenderer {
         context.stroke();
         return;
       }
+      case "ray": {
+        if (points.length < 2) {
+          return;
+        }
+        const clipped = clipRayToPlot(points[0]!, points[1]!, plot);
+        if (!clipped) {
+          return;
+        }
+        context.beginPath();
+        context.moveTo(clipped[0].x, clipped[0].y);
+        context.lineTo(clipped[1].x, clipped[1].y);
+        context.stroke();
+        return;
+      }
+      case "extended-line": {
+        if (points.length < 2) {
+          return;
+        }
+        const clipped = clipExtendedLineToPlot(points[0]!, points[1]!, plot);
+        if (!clipped) {
+          return;
+        }
+        context.beginPath();
+        context.moveTo(clipped[0].x, clipped[0].y);
+        context.lineTo(clipped[1].x, clipped[1].y);
+        context.stroke();
+        return;
+      }
+      case "arrow": {
+        if (points.length < 2) {
+          return;
+        }
+        const first = points[0]!;
+        const second = points[1]!;
+        const clipped = clipLineToRect(first, second, plot);
+        if (!clipped) {
+          return;
+        }
+        context.beginPath();
+        context.moveTo(clipped[0].x, clipped[0].y);
+        context.lineTo(clipped[1].x, clipped[1].y);
+        context.stroke();
+        if (
+          second.x >= plot.left &&
+          second.x <= plot.right &&
+          second.y >= plot.top &&
+          second.y <= plot.bottom
+        ) {
+          const angle = Math.atan2(second.y - first.y, second.x - first.x);
+          drawArrowHead(context, second, angle);
+        }
+        return;
+      }
+      case "trend-angle": {
+        if (points.length < 2) {
+          return;
+        }
+        const first = points[0]!;
+        const second = points[1]!;
+        const clipped = clipLineToRect(first, second, plot);
+        if (!clipped) {
+          return;
+        }
+        context.beginPath();
+        context.moveTo(clipped[0].x, clipped[0].y);
+        context.lineTo(clipped[1].x, clipped[1].y);
+        context.stroke();
+        if (drawing.options.showLabels) {
+          const angle = (Math.atan2(-(second.y - first.y), second.x - first.x) * 180) / Math.PI;
+          this.drawLabel(
+            context,
+            model,
+            `${angle.toFixed(1)}°`,
+            (first.x + second.x) / 2 + 8,
+            (first.y + second.y) / 2 - 8,
+          );
+        }
+        return;
+      }
       case "rectangle":
       case "price-date-range": {
         if (points.length < 2) {
@@ -1289,7 +1375,11 @@ export class ChartRenderer {
         context.globalAlpha = drawing.preview ? 0.65 : 1;
         context.strokeRect(x, y, width, height);
 
-        if (drawing.toolId === "price-date-range" && drawing.options.showLabels) {
+        if (
+          drawing.toolId === "price-date-range" &&
+          drawing.options.showLabels &&
+          drawing.anchors[1]
+        ) {
           const firstPrice = pane.priceScale.yToPrice(points[0]!.y, plot.top, plot.height);
           const priceDelta =
             pane.priceScale.yToPrice(points[1]!.y, plot.top, plot.height) - firstPrice;
@@ -1347,6 +1437,174 @@ export class ChartRenderer {
           context.beginPath();
           context.moveTo(line[0].x, line[0].y);
           context.lineTo(line[1].x, line[1].y);
+          context.stroke();
+        }
+        return;
+      }
+      case "regression-trend": {
+        if (points.length < 2) {
+          return;
+        }
+        const regression = regressionChannel(pane, drawing, this.timeScale);
+        if (!regression) {
+          return;
+        }
+        drawChannelPolygon(context, drawing, regression.channel);
+        context.beginPath();
+        context.moveTo(regression.line[0].x, regression.line[0].y);
+        context.lineTo(regression.line[1].x, regression.line[1].y);
+        context.stroke();
+        return;
+      }
+      case "flat-top-bottom": {
+        if (points.length < 3) {
+          return;
+        }
+        drawChannelPolygon(context, drawing, flatChannelLines(points));
+        return;
+      }
+      case "disjoint-channel": {
+        if (points.length < 4) {
+          return;
+        }
+        const geometry = disjointChannelGeometry(points);
+        if (geometry.right > geometry.left) {
+          const polygon = [
+            pointOnLine(geometry.first, geometry.left),
+            pointOnLine(geometry.first, geometry.right),
+            pointOnLine(geometry.second, geometry.right),
+            pointOnLine(geometry.second, geometry.left),
+          ];
+          context.beginPath();
+          context.moveTo(polygon[0]!.x, polygon[0]!.y);
+          for (let index = 1; index < polygon.length; index += 1) {
+            context.lineTo(polygon[index]!.x, polygon[index]!.y);
+          }
+          context.closePath();
+          context.globalAlpha = drawing.preview ? 0.15 : drawing.options.fillOpacity;
+          context.fill();
+          context.globalAlpha = drawing.preview ? 0.65 : 1;
+        }
+        context.beginPath();
+        context.moveTo(geometry.first[0].x, geometry.first[0].y);
+        context.lineTo(geometry.first[1].x, geometry.first[1].y);
+        context.moveTo(geometry.second[0].x, geometry.second[0].y);
+        context.lineTo(geometry.second[1].x, geometry.second[1].y);
+        context.stroke();
+        return;
+      }
+      case "fib-channel": {
+        if (points.length < 3) {
+          return;
+        }
+        const channel = parallelLines(points);
+        drawChannelPolygon(context, drawing, channel);
+        for (const level of FIB_LEVELS) {
+          const start = {
+            x: channel[0][0].x,
+            y: channel[0][0].y + (channel[1][0].y - channel[0][0].y) * level,
+          };
+          const end = {
+            x: channel[0][1].x,
+            y: channel[0][1].y + (channel[1][1].y - channel[0][1].y) * level,
+          };
+          context.beginPath();
+          context.moveTo(start.x, start.y);
+          context.lineTo(end.x, end.y);
+          context.stroke();
+
+          if (drawing.options.showLabels) {
+            this.drawLabel(context, model, level.toFixed(3), start.x + 8, start.y);
+          }
+        }
+        return;
+      }
+      case "fib-time-zone": {
+        if (points.length < 2) {
+          return;
+        }
+        for (const entry of fibTimeZoneValues(points)) {
+          if (entry.x < plot.left || entry.x > plot.right) {
+            continue;
+          }
+          const x = crisp(entry.x);
+          context.beginPath();
+          context.moveTo(x, plot.top);
+          context.lineTo(x, plot.bottom);
+          context.stroke();
+          if (drawing.options.showLabels) {
+            this.drawLabel(
+              context,
+              model,
+              String(entry.ratio),
+              x + 5,
+              plot.top + model.layout.fontSize,
+            );
+          }
+        }
+        return;
+      }
+      case "pitchfork":
+      case "schiff-pitchfork":
+      case "modified-schiff-pitchfork": {
+        if (points.length < 3) {
+          return;
+        }
+        const variant =
+          drawing.toolId === "pitchfork"
+            ? "andrews"
+            : drawing.toolId === "schiff-pitchfork"
+              ? "schiff"
+              : "modified-schiff";
+        for (const line of pitchforkLines(points, variant)) {
+          const clipped = clipExtendedLineToPlot(line[0], line[1], plot);
+          if (!clipped) {
+            continue;
+          }
+          context.beginPath();
+          context.moveTo(clipped[0].x, clipped[0].y);
+          context.lineTo(clipped[1].x, clipped[1].y);
+          context.stroke();
+        }
+        return;
+      }
+      case "gann-fan": {
+        if (points.length < 2) {
+          return;
+        }
+        for (const entry of gannFanLines(points)) {
+          const clipped = clipRayToPlot(entry.line[0], entry.line[1], plot);
+          if (!clipped) {
+            continue;
+          }
+          context.beginPath();
+          context.moveTo(clipped[0].x, clipped[0].y);
+          context.lineTo(clipped[1].x, clipped[1].y);
+          context.stroke();
+          if (drawing.options.showLabels) {
+            this.drawLabel(
+              context,
+              model,
+              entry.label,
+              Math.min(plot.right - 8, clipped[1].x + 8),
+              clipped[1].y,
+            );
+          }
+        }
+        return;
+      }
+      case "speed-lines": {
+        if (points.length < 3) {
+          return;
+        }
+        for (const line of speedLineLines(points)) {
+          const clipped = clipRayToPlot(line[0], line[1], plot);
+          if (!clipped) {
+            continue;
+          }
+          context.beginPath();
+          context.moveTo(clipped[0].x, clipped[0].y);
+          context.lineTo(clipped[1].x, clipped[1].y);
           context.stroke();
         }
         return;
@@ -1514,7 +1772,8 @@ export class ChartRenderer {
         context.fillText(text, points[0]!.x, points[0]!.y);
         return;
       }
-      case "measure": {
+      case "measure":
+      case "stats-line": {
         if (points.length < 2) {
           return;
         }
@@ -1523,17 +1782,22 @@ export class ChartRenderer {
         const priceDelta =
           pane.priceScale.yToPrice(second.y, plot.top, plot.height) -
           pane.priceScale.yToPrice(first.y, plot.top, plot.height);
-        const color = priceDelta >= 0 ? "#26a69a" : "#ef5350";
-        context.strokeStyle = color;
+        const lineColor =
+          drawing.toolId === "measure"
+            ? priceDelta >= 0
+              ? "#26a69a"
+              : "#ef5350"
+            : drawing.options.color;
+        context.strokeStyle = lineColor;
         context.beginPath();
         context.moveTo(first.x, first.y);
         context.lineTo(second.x, second.y);
         context.stroke();
 
-        if (drawing.options.showLabels) {
+        if (drawing.options.showLabels && drawing.anchors[1]) {
           const firstPrice = pane.priceScale.yToPrice(first.y, plot.top, plot.height);
           const percent = firstPrice === 0 ? 0 : (priceDelta / Math.abs(firstPrice)) * 100;
-          const seconds = Math.abs(drawing.anchors[1]!.time - drawing.anchors[0]!.time) / 1000;
+          const seconds = Math.abs(drawing.anchors[1].time - drawing.anchors[0]!.time) / 1000;
           const deltaText = formatDuration(seconds);
           const label = `${priceDelta >= 0 ? "+" : ""}${pane.priceScale.formatValue(priceDelta, model.locale)} (${percent.toFixed(2)}%)  ${deltaText}`;
           this.drawLabel(
@@ -1542,7 +1806,7 @@ export class ChartRenderer {
             label,
             (first.x + second.x) / 2 + 8,
             (first.y + second.y) / 2 - 8,
-            color,
+            drawing.toolId === "measure" ? lineColor : undefined,
           );
         }
         return;
@@ -1662,6 +1926,187 @@ export class ChartRenderer {
     }
 
     context.restore();
+  }
+}
+
+function drawChannelPolygon(
+  context: CanvasRenderingContext2D,
+  drawing: DrawingRenderData,
+  channel: [[Point, Point], [Point, Point]],
+): void {
+  context.beginPath();
+  context.moveTo(channel[0][0].x, channel[0][0].y);
+  context.lineTo(channel[0][1].x, channel[0][1].y);
+  context.lineTo(channel[1][1].x, channel[1][1].y);
+  context.lineTo(channel[1][0].x, channel[1][0].y);
+  context.closePath();
+  context.globalAlpha = drawing.preview ? 0.15 : drawing.options.fillOpacity;
+  context.fill();
+  context.globalAlpha = drawing.preview ? 0.65 : 1;
+  for (const line of channel) {
+    context.beginPath();
+    context.moveTo(line[0].x, line[0].y);
+    context.lineTo(line[1].x, line[1].y);
+    context.stroke();
+  }
+}
+
+function regressionChannel(
+  pane: PaneRenderModel,
+  drawing: DrawingRenderData,
+  timeScale: TimeScale,
+): { line: [Point, Point]; channel: [[Point, Point], [Point, Point]] } | null {
+  if (drawing.anchors.length < 2) {
+    return null;
+  }
+  const series =
+    pane.series.find((candidate) => candidate.visible && candidate.store.length > 0) ??
+    pane.series.find((candidate) => candidate.store.length > 0);
+  if (!series) {
+    return null;
+  }
+  const store = series.store;
+  const fromTime = Math.min(drawing.anchors[0]!.time, drawing.anchors[1]!.time);
+  const toTime = Math.max(drawing.anchors[0]!.time, drawing.anchors[1]!.time);
+  const startIndex = store.nearestIndex(fromTime);
+  const endIndex = store.nearestIndex(toTime);
+  const first = Math.min(startIndex, endIndex);
+  const last = Math.max(startIndex, endIndex);
+  if (first < 0 || last <= first) {
+    return null;
+  }
+
+  const step = Math.max(1, Math.ceil((last - first + 1) / 2_000));
+  let count = 0;
+  let sumX = 0;
+  let sumY = 0;
+  let sumXX = 0;
+  let sumXY = 0;
+  for (let index = first; index <= last; index += step) {
+    const x = index - first;
+    const y = store.valueAt(index);
+    if (!Number.isFinite(y)) {
+      continue;
+    }
+    count += 1;
+    sumX += x;
+    sumY += y;
+    sumXX += x * x;
+    sumXY += x * y;
+  }
+  if (count < 2) {
+    return null;
+  }
+  const denominator = count * sumXX - sumX * sumX;
+  if (denominator === 0) {
+    return null;
+  }
+  const slope = (count * sumXY - sumX * sumY) / denominator;
+  const intercept = (sumY - slope * sumX) / count;
+
+  let residualSum = 0;
+  for (let index = first; index <= last; index += step) {
+    const y = store.valueAt(index);
+    if (!Number.isFinite(y)) {
+      continue;
+    }
+    const residual = y - (intercept + slope * (index - first));
+    residualSum += residual * residual;
+  }
+  const deviation = Math.sqrt(residualSum / count);
+
+  const firstX = timeScale.timeToX(store.timeAt(first));
+  const lastX = timeScale.timeToX(store.timeAt(last));
+  if (firstX === null || lastX === null) {
+    return null;
+  }
+  const firstPrice = intercept;
+  const lastPrice = intercept + slope * (last - first);
+  const firstY = pane.priceScale.priceToY(firstPrice, pane.plot.top, pane.plot.height);
+  const lastY = pane.priceScale.priceToY(lastPrice, pane.plot.top, pane.plot.height);
+  const firstUpper = pane.priceScale.priceToY(
+    firstPrice + deviation,
+    pane.plot.top,
+    pane.plot.height,
+  );
+  const lastUpper = pane.priceScale.priceToY(
+    lastPrice + deviation,
+    pane.plot.top,
+    pane.plot.height,
+  );
+  const firstLower = pane.priceScale.priceToY(
+    firstPrice - deviation,
+    pane.plot.top,
+    pane.plot.height,
+  );
+  const lastLower = pane.priceScale.priceToY(
+    lastPrice - deviation,
+    pane.plot.top,
+    pane.plot.height,
+  );
+
+  return {
+    line: [
+      { x: firstX, y: firstY },
+      { x: lastX, y: lastY },
+    ],
+    channel: [
+      [
+        { x: firstX, y: firstUpper },
+        { x: lastX, y: lastUpper },
+      ],
+      [
+        { x: firstX, y: firstLower },
+        { x: lastX, y: lastLower },
+      ],
+    ],
+  };
+}
+
+function clipRayToPlot(
+  first: Point,
+  second: Point,
+  plot: { left: number; top: number; right: number; bottom: number; width: number; height: number },
+): [Point, Point] | null {
+  const far = extendPoint(first, second, (plot.width + plot.height) * 2);
+  return far ? clipLineToRect(first, far, plot) : null;
+}
+
+function clipExtendedLineToPlot(
+  first: Point,
+  second: Point,
+  plot: { left: number; top: number; right: number; bottom: number; width: number; height: number },
+): [Point, Point] | null {
+  const forward = extendPoint(first, second, (plot.width + plot.height) * 2);
+  const backward = extendPoint(second, first, (plot.width + plot.height) * 2);
+  return forward && backward ? clipLineToRect(backward, forward, plot) : null;
+}
+
+function extendPoint(first: Point, second: Point, distance: number): Point | null {
+  const dx = second.x - first.x;
+  const dy = second.y - first.y;
+  const length = Math.hypot(dx, dy);
+  if (length === 0) {
+    return null;
+  }
+  const scale = distance / length;
+  return { x: second.x + dx * scale, y: second.y + dy * scale };
+}
+
+function drawArrowHead(
+  context: CanvasRenderingContext2D,
+  point: Point,
+  angle: number,
+  size = 9,
+): void {
+  for (const offset of [-0.45, 0.45]) {
+    context.beginPath();
+    context.moveTo(point.x, point.y);
+    context.lineTo(
+      point.x - Math.cos(angle + offset) * size,
+      point.y - Math.sin(angle + offset) * size,
+    );
+    context.stroke();
   }
 }
 

@@ -1,27 +1,42 @@
 import {
+  Arrow,
   CandlestickSeries,
   createChart,
   DarkTheme,
   Brush,
   Circle,
   CrossLine,
+  DisjointChannel,
   ElliottCorrection,
   ElliottDoubleCombo,
   ElliottImpulse,
   ElliottTriangle,
   ElliottTripleCombo,
+  ExtendedLine,
+  FibChannel,
   FibExtension,
   FibRetracement,
+  FibTimeZone,
+  FlatTopBottom,
+  GannFan,
   Highlighter,
   HorizontalLine,
   HorizontalRay,
   LightTheme,
   LongShortPosition,
+  ModifiedSchiffPitchfork,
   ParallelChannel,
   Path,
+  Pitchfork,
   PriceDateRange,
+  Ray,
+  SchiffPitchfork,
   Rectangle,
+  RegressionTrend,
+  StatsLine,
+  SpeedLines,
   Text,
+  TrendAngle,
   TrendLine,
   VerticalLine,
   drawingToolSettings,
@@ -144,10 +159,25 @@ app.innerHTML = `
       <button type="button" data-drawing="fib-retracement" title="Fibonacci retracement">Fib</button>
       <select id="drawing-tool" title="More drawing tools">
         <option value="">More…</option>
+        <option value="ray">Ray</option>
+        <option value="extended-line">Extended line</option>
+        <option value="trend-angle">Trend angle</option>
+        <option value="arrow">Arrow</option>
+        <option value="stats-line">Stats line</option>
         <option value="horizontal-ray">Horizontal ray</option>
         <option value="vertical-line">Vertical line</option>
         <option value="cross-line">Cross line</option>
         <option value="parallel-channel">Parallel channel</option>
+        <option value="regression-trend">Regression trend</option>
+        <option value="flat-top-bottom">Flat top/bottom</option>
+        <option value="disjoint-channel">Disjoint channel</option>
+        <option value="fib-channel">Fib channel</option>
+        <option value="fib-time-zone">Fib time zone</option>
+        <option value="pitchfork">Pitchfork</option>
+        <option value="schiff-pitchfork">Schiff pitchfork</option>
+        <option value="modified-schiff-pitchfork">Modified Schiff pitchfork</option>
+        <option value="gann-fan">Gann fan</option>
+        <option value="speed-lines">Speed lines</option>
         <option value="fib-extension">Fib extension</option>
         <option value="long-short-position">Long/short position</option>
         <option value="price-date-range">Price/date range</option>
@@ -257,6 +287,10 @@ const drawingDeleteButton = byId<HTMLButtonElement>("drawing-delete");
 
 const drawingTools: Record<string, DrawingToolDefinition> = {
   "trend-line": TrendLine,
+  ray: Ray,
+  "extended-line": ExtendedLine,
+  "trend-angle": TrendAngle,
+  arrow: Arrow,
   "horizontal-line": HorizontalLine,
   rectangle: Rectangle,
   "fib-retracement": FibRetracement,
@@ -264,6 +298,16 @@ const drawingTools: Record<string, DrawingToolDefinition> = {
   "vertical-line": VerticalLine,
   "cross-line": CrossLine,
   "parallel-channel": ParallelChannel,
+  "regression-trend": RegressionTrend,
+  "flat-top-bottom": FlatTopBottom,
+  "disjoint-channel": DisjointChannel,
+  "fib-channel": FibChannel,
+  "fib-time-zone": FibTimeZone,
+  pitchfork: Pitchfork,
+  "schiff-pitchfork": SchiffPitchfork,
+  "modified-schiff-pitchfork": ModifiedSchiffPitchfork,
+  "gann-fan": GannFan,
+  "speed-lines": SpeedLines,
   "fib-extension": FibExtension,
   "long-short-position": LongShortPosition,
   "price-date-range": PriceDateRange,
@@ -272,6 +316,7 @@ const drawingTools: Record<string, DrawingToolDefinition> = {
   highlighter: Highlighter,
   path: Path,
   text: Text,
+  "stats-line": StatsLine,
   "elliott-impulse": ElliottImpulse,
   "elliott-correction": ElliottCorrection,
   "elliott-triangle": ElliottTriangle,

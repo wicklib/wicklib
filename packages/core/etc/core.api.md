@@ -31,6 +31,9 @@ export interface AreaSeriesOptions extends LineSeriesOptions {
     topColor?: string;
 }
 
+// @public (undocumented)
+export const Arrow: DrawingToolDefinition;
+
 // @public
 export function assertFeature(context: LicenseContext, feature: Feature): void;
 
@@ -340,6 +343,9 @@ export interface DataResponse<TData extends SeriesData = SeriesData> {
     noDataBefore?: boolean;
 }
 
+// @public (undocumented)
+export const DisjointChannel: DrawingToolDefinition;
+
 // @public
 export const DRAWING_TOOL_CATALOG: readonly DrawingToolCatalogEntry[];
 
@@ -454,6 +460,9 @@ export const ElliottTriangle: DrawingToolDefinition;
 // @public (undocumented)
 export const ElliottTripleCombo: DrawingToolDefinition;
 
+// @public (undocumented)
+export const ExtendedLine: DrawingToolDefinition;
+
 // @public
 export type ExtensionKind = "series" | "indicator" | "drawing" | "script-runtime" | "feature";
 
@@ -469,10 +478,22 @@ export interface ExtensionMeta {
 export type Feature = "orderflow" | "volume-profile" | "strategy" | "alerts" | "script-functions";
 
 // @public (undocumented)
+export const FibChannel: DrawingToolDefinition;
+
+// @public (undocumented)
 export const FibExtension: DrawingToolDefinition;
 
 // @public (undocumented)
 export const FibRetracement: DrawingToolDefinition;
+
+// @public (undocumented)
+export const FibTimeZone: DrawingToolDefinition;
+
+// @public (undocumented)
+export const FlatTopBottom: DrawingToolDefinition;
+
+// @public (undocumented)
+export const GannFan: DrawingToolDefinition;
 
 // @public
 export interface GridLineOptions {
@@ -756,6 +777,9 @@ export function mapLightweightChartOptions(options: LightweightChartOptions): Ch
 // @public (undocumented)
 export const Measure: DrawingToolDefinition;
 
+// @public (undocumented)
+export const ModifiedSchiffPitchfork: DrawingToolDefinition;
+
 // @public
 export interface OhlcData extends SeriesData {
     // (undocumented)
@@ -826,6 +850,9 @@ export const ParallelChannel: DrawingToolDefinition;
 
 // @public (undocumented)
 export const Path: DrawingToolDefinition;
+
+// @public (undocumented)
+export const Pitchfork: DrawingToolDefinition;
 
 // @public
 export interface Point {
@@ -908,11 +935,20 @@ export interface PriceScaleOptions {
     };
 }
 
+// @public (undocumented)
+export const Ray: DrawingToolDefinition;
+
 // @public
 export type ReadyEvent = void;
 
 // @public (undocumented)
 export const Rectangle: DrawingToolDefinition;
+
+// @public (undocumented)
+export const RegressionTrend: DrawingToolDefinition;
+
+// @public (undocumented)
+export const SchiffPitchfork: DrawingToolDefinition;
 
 // @public
 export interface SelectDrawingOptions {
@@ -1031,6 +1067,12 @@ export interface SessionWindow {
 // @public
 export type SourceValue = "open" | "high" | "low" | "close" | "hl2" | "hlc3" | "ohlc4";
 
+// @public (undocumented)
+export const SpeedLines: DrawingToolDefinition;
+
+// @public (undocumented)
+export const StatsLine: DrawingToolDefinition;
+
 // @public
 export interface SubscriptionRequest {
     // (undocumented)
@@ -1082,6 +1124,9 @@ export interface TradingCalendar {
     sessions: readonly SessionWindow[];
     timezone: string;
 }
+
+// @public (undocumented)
+export const TrendAngle: DrawingToolDefinition;
 
 // @public (undocumented)
 export const TrendLine: DrawingToolDefinition;

@@ -222,8 +222,10 @@ and calling `loadDrawings()`.
 - Automatic price-axis width from rendered labels.
 - Multi-pane layouts with independent price scales and a shared time axis.
 - Session calendars, DST, holidays, and optional fixed-width closed-session gaps.
-- Drawing tools: trend/horizontal/vertical/cross lines, rays, channels, rectangles,
-  Fibonacci retracement/extension, long/short positions, price/date ranges, circles, Elliott
+- Drawing tools: trend/horizontal/vertical/cross lines, diagonal rays, extended lines,
+  trend angles, arrows, stats lines, parallel/regression/flat/disjoint/Fib channels,
+  rectangles, Fibonacci retracement/extension/time zones, pitchforks, Gann fans, speed
+  lines, long/short positions, price/date ranges, circles, Elliott
   impulse/correction/triangle/combo patterns, brush/highlighter/path freehand tools, text,
   and measurements. The first Elliott click is the labelled origin.
 - Multi-selection: Cmd/Ctrl-click to toggle, Cmd/Ctrl-drag for an additive marquee, group

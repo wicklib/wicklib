@@ -100,11 +100,25 @@ const TEXT_SETTINGS: readonly DrawingSetting[] = Object.freeze([
 
 const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Object.freeze({
   "trend-line": STROKE_SETTINGS,
+  ray: STROKE_SETTINGS,
+  "extended-line": STROKE_SETTINGS,
+  "trend-angle": LABEL_SETTINGS,
+  arrow: STROKE_SETTINGS,
   "horizontal-line": STROKE_SETTINGS,
   "horizontal-ray": STROKE_SETTINGS,
   "vertical-line": STROKE_SETTINGS,
   "cross-line": STROKE_SETTINGS,
   "parallel-channel": FILL_SETTINGS,
+  "regression-trend": FILL_SETTINGS,
+  "flat-top-bottom": FILL_SETTINGS,
+  "disjoint-channel": FILL_SETTINGS,
+  "fib-channel": LABEL_FILL_SETTINGS,
+  "fib-time-zone": LABEL_SETTINGS,
+  pitchfork: STROKE_SETTINGS,
+  "schiff-pitchfork": STROKE_SETTINGS,
+  "modified-schiff-pitchfork": STROKE_SETTINGS,
+  "gann-fan": LABEL_SETTINGS,
+  "speed-lines": STROKE_SETTINGS,
   rectangle: FILL_SETTINGS,
   "fib-retracement": LABEL_SETTINGS,
   "fib-extension": LABEL_SETTINGS,
@@ -121,6 +135,7 @@ const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Objec
   path: STROKE_SETTINGS,
   text: TEXT_SETTINGS,
   measure: LABEL_SETTINGS,
+  "stats-line": LABEL_SETTINGS,
 });
 
 const DEFAULTS: DrawingOptions = {
@@ -140,6 +155,51 @@ export const TrendLine: DrawingToolDefinition = Object.freeze({
   meta: {
     id: "com.wicklib.trend-line",
     name: "Trend Line",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+});
+
+export const Ray: DrawingToolDefinition = Object.freeze({
+  id: "ray",
+  meta: {
+    id: "com.wicklib.ray",
+    name: "Ray",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+});
+
+export const ExtendedLine: DrawingToolDefinition = Object.freeze({
+  id: "extended-line",
+  meta: {
+    id: "com.wicklib.extended-line",
+    name: "Extended Line",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+});
+
+export const TrendAngle: DrawingToolDefinition = Object.freeze({
+  id: "trend-angle",
+  meta: {
+    id: "com.wicklib.trend-angle",
+    name: "Trend Angle",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+  defaultOptions: { showLabels: true },
+});
+
+export const Arrow: DrawingToolDefinition = Object.freeze({
+  id: "arrow",
+  meta: {
+    id: "com.wicklib.arrow",
+    name: "Arrow",
     version: VERSION,
     license: "free" as const,
   },
@@ -204,6 +264,122 @@ export const ParallelChannel: DrawingToolDefinition = Object.freeze({
   },
   anchors: 3,
   defaultOptions: { fillOpacity: 0.1 },
+});
+
+export const RegressionTrend: DrawingToolDefinition = Object.freeze({
+  id: "regression-trend",
+  meta: {
+    id: "com.wicklib.regression-trend",
+    name: "Regression Trend",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+  defaultOptions: { fillOpacity: 0.08 },
+});
+
+export const FlatTopBottom: DrawingToolDefinition = Object.freeze({
+  id: "flat-top-bottom",
+  meta: {
+    id: "com.wicklib.flat-top-bottom",
+    name: "Flat Top/Bottom",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 3,
+  defaultOptions: { fillOpacity: 0.1 },
+});
+
+export const DisjointChannel: DrawingToolDefinition = Object.freeze({
+  id: "disjoint-channel",
+  meta: {
+    id: "com.wicklib.disjoint-channel",
+    name: "Disjoint Channel",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 4,
+  defaultOptions: { fillOpacity: 0.1 },
+});
+
+export const FibChannel: DrawingToolDefinition = Object.freeze({
+  id: "fib-channel",
+  meta: {
+    id: "com.wicklib.fib-channel",
+    name: "Fib Channel",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 3,
+  defaultOptions: { fillOpacity: 0.08, showLabels: true },
+});
+
+export const FibTimeZone: DrawingToolDefinition = Object.freeze({
+  id: "fib-time-zone",
+  meta: {
+    id: "com.wicklib.fib-time-zone",
+    name: "Fib Time Zone",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+  defaultOptions: { showLabels: true },
+});
+
+export const Pitchfork: DrawingToolDefinition = Object.freeze({
+  id: "pitchfork",
+  meta: {
+    id: "com.wicklib.pitchfork",
+    name: "Pitchfork",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 3,
+});
+
+export const SchiffPitchfork: DrawingToolDefinition = Object.freeze({
+  id: "schiff-pitchfork",
+  meta: {
+    id: "com.wicklib.schiff-pitchfork",
+    name: "Schiff Pitchfork",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 3,
+});
+
+export const ModifiedSchiffPitchfork: DrawingToolDefinition = Object.freeze({
+  id: "modified-schiff-pitchfork",
+  meta: {
+    id: "com.wicklib.modified-schiff-pitchfork",
+    name: "Modified Schiff Pitchfork",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 3,
+});
+
+export const GannFan: DrawingToolDefinition = Object.freeze({
+  id: "gann-fan",
+  meta: {
+    id: "com.wicklib.gann-fan",
+    name: "Gann Fan",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+  defaultOptions: { showLabels: true },
+});
+
+export const SpeedLines: DrawingToolDefinition = Object.freeze({
+  id: "speed-lines",
+  meta: {
+    id: "com.wicklib.speed-lines",
+    name: "Speed Lines",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 3,
 });
 
 export const FibExtension: DrawingToolDefinition = Object.freeze({
@@ -389,6 +565,18 @@ export const Text: DrawingToolDefinition = Object.freeze({
   defaultOptions: { text: "Text", showLabels: true },
 });
 
+export const StatsLine: DrawingToolDefinition = Object.freeze({
+  id: "stats-line",
+  meta: {
+    id: "com.wicklib.stats-line",
+    name: "Stats Line",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+  defaultOptions: { showLabels: true },
+});
+
 export const Measure: DrawingToolDefinition = Object.freeze({
   id: "measure",
   meta: {
@@ -405,11 +593,25 @@ export const Measure: DrawingToolDefinition = Object.freeze({
 export const DRAWING_TOOLS: ReadonlyMap<string, DrawingToolDefinition> = new Map(
   [
     TrendLine,
+    Ray,
+    ExtendedLine,
+    TrendAngle,
+    Arrow,
     HorizontalLine,
     HorizontalRay,
     VerticalLine,
     CrossLine,
     ParallelChannel,
+    RegressionTrend,
+    FlatTopBottom,
+    DisjointChannel,
+    FibChannel,
+    FibTimeZone,
+    Pitchfork,
+    SchiffPitchfork,
+    ModifiedSchiffPitchfork,
+    GannFan,
+    SpeedLines,
     Rectangle,
     FibRetracement,
     FibExtension,
@@ -426,6 +628,7 @@ export const DRAWING_TOOLS: ReadonlyMap<string, DrawingToolDefinition> = new Map
     Path,
     Text,
     Measure,
+    StatsLine,
   ].map((tool) => [tool.id, tool]),
 );
 
@@ -449,11 +652,25 @@ export type DrawingToolCategory =
 
 const TOOL_CATEGORIES: Readonly<Record<string, DrawingToolCategory>> = Object.freeze({
   "trend-line": "lines",
+  ray: "lines",
+  "extended-line": "lines",
+  "trend-angle": "lines",
+  arrow: "lines",
   "horizontal-line": "lines",
   "horizontal-ray": "lines",
   "vertical-line": "lines",
   "cross-line": "lines",
   "parallel-channel": "channels",
+  "regression-trend": "channels",
+  "flat-top-bottom": "channels",
+  "disjoint-channel": "channels",
+  "fib-channel": "channels",
+  "fib-time-zone": "fibonacci",
+  pitchfork: "channels",
+  "schiff-pitchfork": "channels",
+  "modified-schiff-pitchfork": "channels",
+  "gann-fan": "lines",
+  "speed-lines": "lines",
   "fib-retracement": "fibonacci",
   "fib-extension": "fibonacci",
   rectangle: "shapes",
@@ -470,6 +687,7 @@ const TOOL_CATEGORIES: Readonly<Record<string, DrawingToolCategory>> = Object.fr
   path: "freehand",
   text: "text",
   measure: "measurement",
+  "stats-line": "measurement",
 });
 
 /**
@@ -602,7 +820,21 @@ export function hitTestDrawing(
         Math.abs(point.y - points[0]!.y) <= tolerance
       );
     }
+    case "ray": {
+      if (points.length < 2) {
+        return false;
+      }
+      return distanceToRay(point, points[0]!, points[1]!) <= tolerance;
+    }
+    case "extended-line": {
+      if (points.length < 2) {
+        return false;
+      }
+      return distanceToLine(point, points[0]!, points[1]!) <= tolerance;
+    }
     case "trend-line":
+    case "trend-angle":
+    case "arrow":
     case "parallel-channel": {
       if (points.length < 2) {
         return false;
@@ -616,6 +848,102 @@ export function hitTestDrawing(
         );
       }
       return distanceToLine(point, points[0]!, points[1]!) <= tolerance;
+    }
+    case "regression-trend": {
+      if (points.length < 2) {
+        return false;
+      }
+      return distanceToLine(point, points[0]!, points[1]!) <= tolerance;
+    }
+    case "fib-time-zone": {
+      if (points.length < 2) {
+        return false;
+      }
+      return fibTimeZoneValues(points).some((entry) => Math.abs(point.x - entry.x) <= tolerance);
+    }
+    case "pitchfork":
+    case "schiff-pitchfork":
+    case "modified-schiff-pitchfork": {
+      if (points.length < 3) {
+        return false;
+      }
+      const variant =
+        target.toolId === "pitchfork"
+          ? "andrews"
+          : target.toolId === "schiff-pitchfork"
+            ? "schiff"
+            : "modified-schiff";
+      return pitchforkLines(points, variant).some(
+        (line) => distanceToLine(point, line[0], line[1]) <= tolerance,
+      );
+    }
+    case "gann-fan": {
+      if (points.length < 2) {
+        return false;
+      }
+      return gannFanLines(points).some(
+        (entry) => distanceToLine(point, entry.line[0], entry.line[1]) <= tolerance,
+      );
+    }
+    case "speed-lines": {
+      if (points.length < 3) {
+        return false;
+      }
+      return speedLineLines(points).some(
+        (line) => distanceToLine(point, line[0], line[1]) <= tolerance,
+      );
+    }
+    case "flat-top-bottom": {
+      if (points.length < 3) {
+        return false;
+      }
+      const channel = flatChannelLines(points);
+      return (
+        distanceToLine(point, channel[0][0], channel[0][1]) <= tolerance ||
+        distanceToLine(point, channel[1][0], channel[1][1]) <= tolerance ||
+        pointInChannel(point, channel, tolerance)
+      );
+    }
+    case "disjoint-channel": {
+      if (points.length < 4) {
+        return false;
+      }
+      const geometry = disjointChannelGeometry(points);
+      if (
+        distanceToSegment(point, geometry.first[0], geometry.first[1]) <= tolerance ||
+        distanceToSegment(point, geometry.second[0], geometry.second[1]) <= tolerance
+      ) {
+        return true;
+      }
+      if (geometry.right > geometry.left) {
+        const polygon = [
+          pointOnLine(geometry.first, geometry.left),
+          pointOnLine(geometry.first, geometry.right),
+          pointOnLine(geometry.second, geometry.right),
+          pointOnLine(geometry.second, geometry.left),
+        ];
+        if (
+          pointInPolygon(point, polygon) ||
+          polygon.some((candidate, index) => {
+            const next = polygon[(index + 1) % polygon.length]!;
+            return distanceToSegment(point, candidate, next) <= tolerance;
+          })
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+    case "fib-channel": {
+      if (points.length < 3) {
+        return false;
+      }
+      const channel = parallelLines(points);
+      return (
+        distanceToLine(point, channel[0][0], channel[0][1]) <= tolerance ||
+        distanceToLine(point, channel[1][0], channel[1][1]) <= tolerance ||
+        pointInChannel(point, channel, tolerance)
+      );
     }
     case "rectangle":
     case "price-date-range": {
@@ -769,6 +1097,20 @@ function distanceToPolyline(point: Point, points: readonly Point[]): number {
   return distance;
 }
 
+function distanceToRay(point: Point, first: Point, second: Point): number {
+  const dx = second.x - first.x;
+  const dy = second.y - first.y;
+  const lengthSquared = dx * dx + dy * dy;
+  if (lengthSquared === 0) {
+    return Math.hypot(point.x - first.x, point.y - first.y);
+  }
+  const t = ((point.x - first.x) * dx + (point.y - first.y) * dy) / lengthSquared;
+  if (t < 0) {
+    return Math.hypot(point.x - first.x, point.y - first.y);
+  }
+  return distanceToLine(point, first, second);
+}
+
 function distanceToLine(point: Point, first: Point, second: Point): number {
   const dx = second.x - first.x;
   const dy = second.y - first.y;
@@ -808,8 +1150,8 @@ export function parallelLines(points: readonly Point[]): [[Point, Point], [Point
   const first = points[0]!;
   const second = points[1]!;
   const third = points[2]!;
-  const left = Math.min(first.x, second.x, third.x);
-  const right = Math.max(first.x, second.x, third.x);
+  const left = Math.min(first.x, second.x);
+  const right = Math.max(first.x, second.x);
   const dx = second.x - first.x;
 
   if (Math.abs(dx) < 0.0001) {
@@ -837,6 +1179,134 @@ export function parallelLines(points: readonly Point[]): [[Point, Point], [Point
       { x: left, y: baseAt(left) + offset },
       { x: right, y: baseAt(right) + offset },
     ],
+  ];
+}
+
+export function flatChannelLines(points: readonly Point[]): [[Point, Point], [Point, Point]] {
+  const first = points[0]!;
+  const second = points[1]!;
+  const third = points[2]!;
+  const left = Math.min(first.x, second.x);
+  const right = Math.max(first.x, second.x);
+  const dx = second.x - first.x;
+  const slope = Math.abs(dx) < 0.0001 ? 0 : (second.y - first.y) / dx;
+  const baseAt = (x: number): number => first.y + slope * (x - first.x);
+  return [
+    [
+      { x: left, y: baseAt(left) },
+      { x: right, y: baseAt(right) },
+    ],
+    [
+      { x: left, y: third.y },
+      { x: right, y: third.y },
+    ],
+  ];
+}
+
+export interface DisjointChannelGeometry {
+  first: [Point, Point];
+  second: [Point, Point];
+  left: number;
+  right: number;
+}
+
+export function disjointChannelGeometry(points: readonly Point[]): DisjointChannelGeometry {
+  const first: [Point, Point] = [points[0]!, points[1]!];
+  const second: [Point, Point] = [points[2]!, points[3]!];
+  return {
+    first,
+    second,
+    left: Math.max(Math.min(first[0].x, first[1].x), Math.min(second[0].x, second[1].x)),
+    right: Math.min(Math.max(first[0].x, first[1].x), Math.max(second[0].x, second[1].x)),
+  };
+}
+
+export function pointOnLine(line: [Point, Point], x: number): Point {
+  const [first, second] = line;
+  const dx = second.x - first.x;
+  if (dx === 0) {
+    return { x, y: first.y };
+  }
+  const ratio = (x - first.x) / dx;
+  return { x, y: first.y + (second.y - first.y) * ratio };
+}
+
+export const FIB_TIME_RATIOS: readonly number[] = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+
+export function fibTimeZoneValues(points: readonly Point[]): Array<{ ratio: number; x: number }> {
+  const first = points[0]!;
+  const second = points[1]!;
+  return FIB_TIME_RATIOS.map((ratio) => ({
+    ratio,
+    x: first.x + (second.x - first.x) * ratio,
+  }));
+}
+
+export type PitchforkVariant = "andrews" | "schiff" | "modified-schiff";
+
+export function pitchforkLines(
+  points: readonly Point[],
+  variant: PitchforkVariant,
+): Array<[Point, Point]> {
+  const first = points[0]!;
+  const second = points[1]!;
+  const third = points[2]!;
+  const midpoint = { x: (second.x + third.x) / 2, y: (second.y + third.y) / 2 };
+  let origin = first;
+  if (variant === "schiff") {
+    origin = { x: first.x, y: (first.y + second.y) / 2 };
+  } else if (variant === "modified-schiff") {
+    origin = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+  }
+  const dx = midpoint.x - origin.x;
+  const dy = midpoint.y - origin.y;
+  return [
+    [origin, midpoint],
+    [second, { x: second.x + dx, y: second.y + dy }],
+    [third, { x: third.x + dx, y: third.y + dy }],
+  ];
+}
+
+export function gannFanLines(
+  points: readonly Point[],
+): Array<{ ratio: number; label: string; line: [Point, Point] }> {
+  const first = points[0]!;
+  const second = points[1]!;
+  const dx = second.x - first.x;
+  const dy = second.y - first.y;
+  return [
+    [1 / 8, "1x8"],
+    [1 / 4, "1x4"],
+    [1 / 3, "1x3"],
+    [1 / 2, "1x2"],
+    [1, "1x1"],
+    [2, "2x1"],
+    [3, "3x1"],
+    [4, "4x1"],
+    [8, "8x1"],
+  ].map(([ratio, label]) => ({
+    ratio: ratio as number,
+    label: label as string,
+    line: [first, { x: first.x + dx, y: first.y + dy * (ratio as number) }],
+  }));
+}
+
+export function speedLineLines(points: readonly Point[]): Array<[Point, Point]> {
+  const first = points[0]!;
+  const second = points[1]!;
+  const third = points[2]!;
+  const thirdPoint = {
+    x: second.x + (third.x - second.x) / 3,
+    y: second.y + (third.y - second.y) / 3,
+  };
+  const twoThirdsPoint = {
+    x: second.x + ((third.x - second.x) * 2) / 3,
+    y: second.y + ((third.y - second.y) * 2) / 3,
+  };
+  return [
+    [first, second],
+    [first, thirdPoint],
+    [first, twoThirdsPoint],
   ];
 }
 
