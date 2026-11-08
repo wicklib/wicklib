@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.22.0
+
+### Minor Changes
+
+- 22c9cdc: Add a duration stats field with compact locale-aware elapsed-time formatting.
+
 ## 0.21.0
 
 ### Minor Changes
