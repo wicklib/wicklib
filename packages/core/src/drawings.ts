@@ -1,6 +1,7 @@
 import { fail } from "./errors";
 import type {
   DrawingAnchor,
+  DrawingLabelPlacement,
   DrawingLineStyle,
   DrawingOptions,
   DrawingSetting,
@@ -18,6 +19,7 @@ export interface ResolvedDrawingOptions {
   showLabels: boolean;
   text: string;
   labels?: readonly string[];
+  labelPlacement: DrawingLabelPlacement;
   labelFontSize?: number;
   labelBackgroundVisible: boolean;
   fontSize: number;
@@ -63,6 +65,7 @@ const LABEL_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "lineWidth",
   "lineStyle",
   "showLabels",
+  "labelPlacement",
   "labelFontSize",
   "labelBackgroundVisible",
   "locked",
@@ -84,6 +87,7 @@ const LABEL_FILL_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "fillColor",
   "fillOpacity",
   "showLabels",
+  "labelPlacement",
   "labelFontSize",
   "labelBackgroundVisible",
   "locked",
@@ -95,6 +99,7 @@ const LONG_SHORT_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "lineStyle",
   "fillOpacity",
   "showLabels",
+  "labelPlacement",
   "labelFontSize",
   "labelBackgroundVisible",
   "locked",
@@ -155,6 +160,7 @@ const DEFAULTS: DrawingOptions = {
   fillOpacity: 0.12,
   showLabels: true,
   text: "",
+  labelPlacement: "auto",
   labelBackgroundVisible: true,
   fontSize: 13,
   locked: false,
@@ -744,6 +750,7 @@ export function resolveDrawingOptions(
     fillOpacity: merged.fillOpacity ?? 0.12,
     showLabels: merged.showLabels ?? true,
     text: merged.text ?? "",
+    labelPlacement: normalizedLabelPlacement(merged.labelPlacement),
     labelBackgroundVisible: merged.labelBackgroundVisible ?? true,
     fontSize: merged.fontSize ?? 13,
     locked: merged.locked ?? false,
@@ -770,6 +777,7 @@ export function mergeDrawingOptions(
     fillOpacity: patch.fillOpacity ?? base.fillOpacity,
     showLabels: patch.showLabels ?? base.showLabels,
     text: patch.text ?? base.text,
+    labelPlacement: patch.labelPlacement ?? base.labelPlacement,
     labelBackgroundVisible: patch.labelBackgroundVisible ?? base.labelBackgroundVisible,
     fontSize: patch.fontSize ?? base.fontSize,
     locked: patch.locked ?? base.locked,
@@ -786,6 +794,46 @@ export function mergeDrawingOptions(
     merged.labelFontSize = base.labelFontSize;
   }
   return merged;
+}
+
+function normalizedLabelPlacement(value: DrawingLabelPlacement | undefined): DrawingLabelPlacement {
+  if (value === undefined || value === "auto" || value === "above" || value === "below") {
+    return value ?? "auto";
+  }
+  fail("INVALID_ARGUMENT", "labelPlacement must be auto, above, or below");
+}
+
+export function elliottLabelPlacement(
+  points: readonly Point[],
+  index: number,
+  placement: DrawingLabelPlacement,
+): "above" | "below" {
+  if (placement === "above" || placement === "below") {
+    return placement;
+  }
+  const current = points[index];
+  if (!current) {
+    return "above";
+  }
+  const neighbors = [points[index - 1], points[index + 1]].filter(
+    (point): point is Point => point !== undefined,
+  );
+  if (neighbors.length === 0) {
+    return "above";
+  }
+  const high = neighbors.every((point) => current.y <= point.y + 0.001);
+  const low = neighbors.every((point) => current.y >= point.y - 0.001);
+  if (high && low) {
+    return "above";
+  }
+  if (high) {
+    return "above";
+  }
+  if (low) {
+    return "below";
+  }
+  const next = points[index + 1];
+  return next !== undefined && next.y < current.y ? "below" : "above";
 }
 
 function validateLabelFontSize(value: number): number {

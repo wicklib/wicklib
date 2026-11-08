@@ -636,6 +636,11 @@ export interface DrawingAnchor {
 export type DrawingLineStyle = "solid" | "dotted" | "dashed";
 
 /**
+ * Placement of drawing labels relative to their anchor.
+ */
+export type DrawingLabelPlacement = "auto" | "above" | "below";
+
+/**
  * A setting that can be edited for a drawing tool.
  */
 export type DrawingSetting =
@@ -645,6 +650,7 @@ export type DrawingSetting =
   | "fillColor"
   | "fillOpacity"
   | "showLabels"
+  | "labelPlacement"
   | "labelFontSize"
   | "labelBackgroundVisible"
   | "text"
@@ -666,6 +672,8 @@ export interface DrawingOptions {
   text?: string;
   /** Custom label sequence for drawing tools that render one label per anchor. */
   labels?: readonly string[];
+  /** Label placement relative to its anchor. Defaults to `auto`. */
+  labelPlacement?: DrawingLabelPlacement;
   /** Label font size in CSS pixels. Defaults to the chart layout font size. */
   labelFontSize?: number;
   /** Draw a background behind labels. Defaults to true. */

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DRAWING_TOOL_CATALOG,
   drawingToolSettings,
+  elliottLabelPlacement,
   hitTestDrawing,
   parallelLines,
   resolveDrawingOptions,
@@ -86,6 +87,7 @@ describe("drawing settings", () => {
     expect(drawingToolSettings("pitchfork")).not.toContain("showLabels");
     expect(drawingToolSettings("gann-fan")).toContain("showLabels");
     expect(drawingToolSettings("speed-lines")).not.toContain("showLabels");
+    expect(drawingToolSettings("elliott-impulse")).toContain("labelPlacement");
     expect(drawingToolSettings("elliott-impulse")).toContain("labelFontSize");
     expect(drawingToolSettings("elliott-impulse")).toContain("labelBackgroundVisible");
     expect(drawingToolSettings("fib-channel")).toContain("labelFontSize");
@@ -101,6 +103,73 @@ describe("drawing labels", () => {
     expect(resolved.labels).toEqual(["0", "i", "ii", "iii", "iv", "v"]);
     expect(() => resolveDrawingOptions(undefined, { labels: ["0", 1 as never] })).toThrow(/labels/);
   });
+
+  it("resolves per-drawing label styling", () => {
+    const resolved = resolveDrawingOptions(undefined, {
+      labelPlacement: "above",
+      labelFontSize: 24,
+      labelBackgroundVisible: false,
+    });
+    expect(resolved.labelPlacement).toBe("above");
+    expect(resolved.labelFontSize).toBe(24);
+    expect(resolved.labelBackgroundVisible).toBe(false);
+    expect(() => resolveDrawingOptions(undefined, { labelFontSize: 0 })).toThrow(/labelFontSize/);
+    expect(() => resolveDrawingOptions(undefined, { labelPlacement: "right" as never })).toThrow(
+      /labelPlacement/,
+    );
+  });
+});
+
+describe("Elliott label placement", () => {
+  const patterns: Record<string, Array<{ x: number; y: number }>> = {
+    "elliott-impulse": [
+      { x: 0, y: 100 },
+      { x: 10, y: 50 },
+      { x: 20, y: 80 },
+      { x: 30, y: 30 },
+      { x: 40, y: 70 },
+      { x: 50, y: 20 },
+    ],
+    "elliott-correction": [
+      { x: 0, y: 100 },
+      { x: 10, y: 50 },
+      { x: 20, y: 80 },
+      { x: 30, y: 30 },
+    ],
+    "elliott-triangle": [
+      { x: 0, y: 100 },
+      { x: 10, y: 50 },
+      { x: 20, y: 80 },
+      { x: 30, y: 30 },
+      { x: 40, y: 70 },
+      { x: 50, y: 20 },
+    ],
+    "elliott-double-combo": [
+      { x: 0, y: 100 },
+      { x: 10, y: 50 },
+      { x: 20, y: 80 },
+      { x: 30, y: 30 },
+    ],
+    "elliott-triple-combo": [
+      { x: 0, y: 100 },
+      { x: 10, y: 50 },
+      { x: 20, y: 80 },
+      { x: 30, y: 30 },
+      { x: 40, y: 70 },
+      { x: 50, y: 20 },
+    ],
+  };
+
+  for (const [toolId, points] of Object.entries(patterns)) {
+    it(`places ${toolId} labels above highs and below lows`, () => {
+      for (let index = 0; index < points.length; index += 1) {
+        const expected = index % 2 === 0 ? "below" : "above";
+        expect(elliottLabelPlacement(points, index, "auto")).toBe(expected);
+      }
+      expect(elliottLabelPlacement(points, 2, "above")).toBe("above");
+      expect(elliottLabelPlacement(points, 2, "below")).toBe("below");
+    });
+  }
 });
 
 describe("drawing geometry", () => {
@@ -128,6 +197,7 @@ describe("line drawing hit testing", () => {
     fillOpacity: 0.12,
     showLabels: true,
     text: "",
+    labelPlacement: "auto",
     labelBackgroundVisible: true,
     fontSize: 13,
     locked: false,

@@ -7,6 +7,7 @@ import {
   FIB_EXTENSION_LEVELS,
   FIB_LEVELS,
   disjointChannelGeometry,
+  elliottLabelPlacement,
   fibTimeZoneValues,
   flatChannelLines,
   gannFanLines,
@@ -1778,19 +1779,32 @@ export class ChartRenderer {
 
         if (drawing.options.showLabels) {
           const labels = drawing.options.labels ?? ELLIOTT_LABELS[drawing.toolId] ?? [];
+          const fontSize = drawing.options.labelFontSize ?? model.layout.fontSize;
+          const boxHeight = fontSize + 6;
           for (let index = 0; index < points.length; index += 1) {
             const label = labels[index];
             if (!label) {
               continue;
             }
+            let side = elliottLabelPlacement(points, index, drawing.options.labelPlacement);
+            if (side === "above" && points[index]!.y - boxHeight - 4 < plot.top) {
+              side = "below";
+            } else if (side === "below" && points[index]!.y + boxHeight + 4 > plot.bottom) {
+              side = "above";
+            }
+            const labelY =
+              side === "above"
+                ? points[index]!.y - boxHeight / 2 - 4
+                : points[index]!.y + boxHeight / 2 + 4;
             this.drawLabel(
               context,
               model,
               label,
-              points[index]!.x + 7,
-              points[index]!.y - 10,
+              points[index]!.x,
+              Math.max(plot.top, Math.min(plot.bottom, labelY)),
               drawing.options,
               drawing.options.color,
+              "center",
             );
           }
         }
@@ -1879,14 +1893,16 @@ export class ChartRenderer {
     y: number,
     options: ResolvedDrawingOptions,
     color?: string,
+    align: "left" | "center" = "left",
   ): void {
     const fontSize = options.labelFontSize ?? model.layout.fontSize;
     context.font = this.font(model, fontSize);
     context.textAlign = "left";
     context.textBaseline = "middle";
-    const width = context.measureText(text).width + 10;
+    const textWidth = context.measureText(text).width;
+    const width = textWidth + 10;
     const height = fontSize + 6;
-    const left = Math.max(0, x - 5);
+    const left = align === "center" ? Math.max(0, x - width / 2) : Math.max(0, x - 5);
     const top = y - height / 2;
 
     if (options.labelBackgroundVisible) {
@@ -1898,7 +1914,7 @@ export class ChartRenderer {
     }
 
     context.fillStyle = color ?? options.color;
-    context.fillText(text, Math.max(0, x), y);
+    context.fillText(text, align === "center" ? Math.max(0, x - textWidth / 2) : Math.max(0, x), y);
   }
 
   private drawOverlay(model: ChartRenderModel): void {

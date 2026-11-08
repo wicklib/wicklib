@@ -71,6 +71,7 @@ export type {
   DrawingAnchor,
   DrawingApi,
   DrawingDocument,
+  DrawingLabelPlacement,
   DrawingLineStyle,
   DrawingOptions,
   DrawingSelectionMode,
