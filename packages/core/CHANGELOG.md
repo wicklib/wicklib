@@ -1,5 +1,12 @@
 # @wicklib/core
 
+## 0.18.1
+
+### Patch Changes
+
+- a2ae0ab: Do not render Elliott labels when their anchor is outside the visible plot. Visible anchors
+  still flip and clamp inside the pane.
+
 ## 0.18.0
 
 ### Minor Changes
