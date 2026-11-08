@@ -658,6 +658,9 @@ export type Interval = string;
 export function isWickError(value: unknown): value is WickError;
 
 // @public
+export type LastValueMode = "visible" | "data" | "both";
+
+// @public
 export interface LayoutOptions {
     background?: string;
     fontSize?: number;
@@ -978,6 +981,7 @@ export interface SeriesApi<TData extends SeriesData = SeriesData, TOptions exten
     // (undocumented)
     readonly id: string;
     isLoading(): boolean;
+    lastValue(): SeriesValueInfo | null;
     // (undocumented)
     readonly paneId: string;
     // (undocumented)
@@ -994,6 +998,7 @@ export interface SeriesApi<TData extends SeriesData = SeriesData, TOptions exten
     readonly typeId: string;
     // (undocumented)
     update(data: TData): void;
+    visibleLastValue(): SeriesValueInfo | null;
 }
 
 // @public
@@ -1037,6 +1042,7 @@ export type SeriesMarkerShape = "circle" | "square" | "arrowUp" | "arrowDown";
 
 // @public
 export interface SeriesOptions {
+    lastValueMode?: LastValueMode;
     lastValueVisible?: boolean;
     paneId?: string;
     priceLineVisible?: boolean;
@@ -1051,6 +1057,17 @@ export interface SeriesType<TData extends SeriesData = SeriesData, TOptions exte
     readonly id: string;
     // (undocumented)
     readonly meta: ExtensionMeta;
+}
+
+// @public
+export interface SeriesValueInfo {
+    // (undocumented)
+    index: number;
+    // (undocumented)
+    time: Time;
+    // (undocumented)
+    value: number;
+    visible: boolean;
 }
 
 // @public
@@ -1180,8 +1197,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:950:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:965:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:973:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:988:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

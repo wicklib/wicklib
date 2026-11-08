@@ -23,6 +23,7 @@ import { formatCrosshairTime, formatTimeLabel } from "../scale/ticks";
 import type {
   ChartOverlay,
   DrawingAnchor,
+  LastValueMode,
   OverlayRenderFrame,
   Point,
   PriceLineOptions,
@@ -73,6 +74,7 @@ interface SeriesRenderBase {
   visible: boolean;
   title: string;
   lastValueVisible: boolean;
+  lastValueMode: LastValueMode;
   priceLineVisible: boolean;
   priceLines: readonly PriceLineRenderData[];
   markers: readonly SeriesMarker[];
@@ -1022,25 +1024,20 @@ export class ChartRenderer {
     model: ChartRenderModel,
     pane: PaneRenderModel,
     series: SeriesRenderData,
-    lastIndex: number,
+    visibleIndex: number,
   ): void {
-    const value = series.store.valueAt(lastIndex);
     const { plot } = pane;
-    const y = pane.priceScale.priceToY(value, plot.top, plot.height);
-    if (y < plot.top || y > plot.bottom) {
-      return;
-    }
+    const visibleValue = series.store.valueAt(visibleIndex);
+    const visibleY = pane.priceScale.priceToY(visibleValue, plot.top, plot.height);
 
-    const color = this.seriesColor(series, lastIndex);
-
-    if (series.priceLineVisible) {
+    if (series.priceLineVisible && visibleY >= plot.top && visibleY <= plot.bottom) {
       context.save();
-      context.strokeStyle = color;
+      context.strokeStyle = this.seriesColor(series, visibleIndex);
       context.lineWidth = 1;
       context.setLineDash([4, 4]);
       context.beginPath();
-      context.moveTo(plot.left, crisp(y));
-      context.lineTo(plot.right, crisp(y));
+      context.moveTo(plot.left, crisp(visibleY));
+      context.lineTo(plot.right, crisp(visibleY));
       context.stroke();
       context.restore();
     }
@@ -1049,11 +1046,59 @@ export class ChartRenderer {
       return;
     }
 
-    const label = pane.priceScale.formatValue(value, model.locale);
-    const boxHeight = model.layout.fontSize + 6;
-    const top = Math.max(plot.top, Math.min(plot.bottom - boxHeight, y - boxHeight / 2));
+    const dataIndex = series.store.length - 1;
+    const mode = series.lastValueMode;
+    let visibleTop: number | null = null;
 
-    context.fillStyle = color;
+    if (mode === "visible" || mode === "both" || dataIndex === visibleIndex) {
+      visibleTop = this.drawLastValueLabel(context, model, pane, series, visibleIndex, false, null);
+    }
+
+    if ((mode === "data" || mode === "both") && dataIndex !== visibleIndex) {
+      this.drawLastValueLabel(context, model, pane, series, dataIndex, true, visibleTop);
+    }
+  }
+
+  private drawLastValueLabel(
+    context: CanvasRenderingContext2D,
+    model: ChartRenderModel,
+    pane: PaneRenderModel,
+    series: SeriesRenderData,
+    index: number,
+    clamp: boolean,
+    avoidTop: number | null,
+  ): number | null {
+    const { plot } = pane;
+    const value = series.store.valueAt(index);
+    const y = pane.priceScale.priceToY(value, plot.top, plot.height);
+    const boxHeight = model.layout.fontSize + 6;
+    let top = y - boxHeight / 2;
+    let marker = "";
+
+    if (top < plot.top || top + boxHeight > plot.bottom) {
+      if (!clamp) {
+        return null;
+      }
+      marker = top < plot.top ? "▲ " : "▼ ";
+      top = top < plot.top ? plot.top : plot.bottom - boxHeight;
+    }
+
+    top = Math.max(plot.top, Math.min(plot.bottom - boxHeight, top));
+
+    if (avoidTop !== null && Math.abs(top - avoidTop) < boxHeight) {
+      const above = avoidTop - boxHeight - 2;
+      const below = avoidTop + boxHeight + 2;
+      if (top <= avoidTop && above >= plot.top) {
+        top = above;
+      } else if (below <= plot.bottom - boxHeight) {
+        top = below;
+      } else {
+        top = Math.max(plot.top, above);
+      }
+    }
+
+    const label = `${marker}${pane.priceScale.formatValue(value, model.locale)}`;
+    context.fillStyle = this.seriesColor(series, index);
     context.fillRect(plot.right, top, model.axisWidth, boxHeight);
 
     context.fillStyle = "#ffffff";
@@ -1061,6 +1106,7 @@ export class ChartRenderer {
     context.textAlign = "left";
     context.textBaseline = "middle";
     context.fillText(label, plot.right + 8, top + boxHeight / 2);
+    return top;
   }
 
   private drawLegend(

@@ -68,6 +68,41 @@ afterAll(() => {
   vi.unstubAllGlobals();
 });
 
+function longBars(count = 100): OhlcData[] {
+  return Array.from({ length: count }, (_, index) => ({
+    time: index * 60_000,
+    open: 100 + index,
+    high: 102 + index,
+    low: 98 + index,
+    close: 100 + index,
+  }));
+}
+
+it("draws both visible and current data labels when panned back", async () => {
+  fillText.mockClear();
+  const chart = createChart(mount());
+  charts.push(chart);
+  const series = chart.addSeries(CandlestickSeries);
+  series.setData(longBars());
+  chart.timeScale().setVisibleRange({ from: 0, to: 19 * 60_000 });
+  await settle();
+
+  const dataValue = series.lastValue();
+  const visibleValue = series.visibleLastValue();
+  expect(dataValue).toMatchObject({ value: 199, index: 99, visible: false });
+  expect(visibleValue).toMatchObject({ value: 119, index: 19, visible: true });
+
+  fillText.mockClear();
+  series.setOptions({ lastValueMode: "both" });
+  await settle();
+
+  const labels = fillText.mock.calls.map(([text]) => String(text));
+  expect(labels.some((text) => text.includes("199"))).toBe(true);
+  expect(labels.some((text) => text.includes("119"))).toBe(true);
+  const currentLabel = fillText.mock.calls.find(([text]) => String(text).includes("199"));
+  expect(currentLabel?.[2]).toBeLessThan(30);
+});
+
 describe("price-line titles", () => {
   it("draws a plot title inside the plot and leaves the axis label to the price", async () => {
     const chart = createChart(mount());

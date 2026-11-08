@@ -9,6 +9,7 @@ import type {
   CandlestickSeriesOptions,
   Datafeed,
   HistogramSeriesOptions,
+  LastValueMode,
   LineData,
   LineSeriesOptions,
   OhlcData,
@@ -20,6 +21,7 @@ import type {
   SeriesMarker,
   SeriesOptions,
   SeriesType,
+  SeriesValueInfo,
   VisibleRange,
 } from "./types";
 import { mergeDefined } from "./util";
@@ -97,6 +99,7 @@ interface ResolvedCommonOptions {
   paneId: string;
   priceScaleId: "right";
   lastValueVisible: boolean;
+  lastValueMode: LastValueMode;
   priceLineVisible: boolean;
 }
 
@@ -134,6 +137,7 @@ const COMMON_DEFAULTS: ResolvedCommonOptions = {
   paneId: "main",
   priceScaleId: "right",
   lastValueVisible: true,
+  lastValueMode: "visible",
   priceLineVisible: true,
 };
 
@@ -260,6 +264,44 @@ export class Series {
   getDatafeedOptions(): Readonly<SeriesDatafeedOptions> | null {
     this.assertAlive();
     return this.datafeedController?.getOptions() ?? null;
+  }
+
+  lastValue(): SeriesValueInfo | null {
+    this.assertAlive();
+    if (this.store.length === 0) {
+      return null;
+    }
+    const index = this.store.length - 1;
+    const time = this.store.timeAt(index);
+    const range = this.host.getVisibleRange();
+    return {
+      value: this.store.valueAt(index),
+      time,
+      index,
+      visible: time >= range.from && time <= range.to,
+    };
+  }
+
+  visibleLastValue(): SeriesValueInfo | null {
+    this.assertAlive();
+    if (this.store.length === 0) {
+      return null;
+    }
+    const range = this.host.getVisibleRange();
+    const index = this.store.nearestIndex(range.to);
+    if (index < 0) {
+      return null;
+    }
+    const time = this.store.timeAt(index);
+    if (time < range.from || time > range.to) {
+      return null;
+    }
+    return {
+      value: this.store.valueAt(index),
+      time,
+      index,
+      visible: true,
+    };
   }
 
   setData(data: readonly SeriesData[]): void {
@@ -432,6 +474,7 @@ export class Series {
       visible: this.options.visible,
       title: this.options.title,
       lastValueVisible: this.options.lastValueVisible,
+      lastValueMode: this.options.lastValueMode,
       priceLineVisible: this.options.priceLineVisible,
       priceLines: Array.from(this.priceLines.values(), (entry) => entry.options),
       markers: this.markers,
@@ -525,6 +568,17 @@ export class Series {
   }
 }
 
+function lastValueModeOption(input: SeriesOptions, fallback: LastValueMode): LastValueMode {
+  const value = input.lastValueMode;
+  if (value === undefined) {
+    return fallback;
+  }
+  if (value === "visible" || value === "data" || value === "both") {
+    return value;
+  }
+  fail("INVALID_ARGUMENT", "lastValueMode must be visible, data, or both");
+}
+
 function resolveSeriesOptions(
   kind: SeriesKind,
   input: SeriesOptions & Record<string, unknown>,
@@ -535,6 +589,7 @@ function resolveSeriesOptions(
     paneId: stringOption(input, "paneId", COMMON_DEFAULTS.paneId),
     priceScaleId: "right",
     lastValueVisible: booleanOption(input, "lastValueVisible", COMMON_DEFAULTS.lastValueVisible),
+    lastValueMode: lastValueModeOption(input, COMMON_DEFAULTS.lastValueMode),
     priceLineVisible: booleanOption(input, "priceLineVisible", COMMON_DEFAULTS.priceLineVisible),
   };
 

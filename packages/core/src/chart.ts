@@ -2209,6 +2209,7 @@ class Chart implements ChartApi, SeriesHost {
   private computeAxisWidth(): number {
     const font = `${this.options.layout.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
     const measure = (text: string): number => this.backend.measureText(text, font);
+    const visible = this.timeScaleModel.visibleIndexRange();
     let widest = 0;
 
     for (const pane of this.panes) {
@@ -2229,11 +2230,19 @@ class Chart implements ChartApi, SeriesHost {
         }
         const data = series.toRenderData();
         if (data.store.length > 0 && data.lastValueVisible) {
-          const last = data.store.valueAt(data.store.length - 1);
-          widest = Math.max(
-            widest,
-            measure(pane.priceScale.formatValue(last, this.options.locale)),
-          );
+          const indices = new Set([data.store.length - 1]);
+          if (data.lastValueMode !== "data") {
+            indices.add(Math.min(visible.last, data.store.length - 1));
+          }
+          for (const index of indices) {
+            if (index < 0) {
+              continue;
+            }
+            widest = Math.max(
+              widest,
+              measure(pane.priceScale.formatValue(data.store.valueAt(index), this.options.locale)),
+            );
+          }
         }
         for (const line of data.priceLines) {
           if (!line.axisLabelVisible) {

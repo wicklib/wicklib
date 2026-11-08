@@ -420,6 +420,25 @@ export interface SeriesMarker {
 }
 
 /**
+ * Which price the last-value label represents.
+ *
+ * `visible` follows the right edge of the chart, `data` follows the newest data point, and
+ * `both` renders both labels.
+ */
+export type LastValueMode = "visible" | "data" | "both";
+
+/**
+ * Information about a series price value.
+ */
+export interface SeriesValueInfo {
+  value: number;
+  time: Time;
+  index: number;
+  /** True when the value's time is inside the current visible time range. */
+  visible: boolean;
+}
+
+/**
  * Options shared by every series type.
  */
 export interface SeriesOptions {
@@ -433,7 +452,9 @@ export interface SeriesOptions {
   priceScaleId?: string;
   /** Draw a label for the most recent value. */
   lastValueVisible?: boolean;
-  /** Draw a horizontal line at the most recent value. */
+  /** Which last value the label represents. Defaults to `visible`. */
+  lastValueMode?: LastValueMode;
+  /** Draw a horizontal line at the visible last value. */
   priceLineVisible?: boolean;
 }
 
@@ -930,6 +951,10 @@ export interface SeriesApi<
   getOptions(): Readonly<TOptions>;
   /** Current datafeed identity, or null when the series uses manual data. */
   getDatafeedOptions(): Readonly<SeriesDatafeedOptions> | null;
+  /** Newest data point, even when it is outside the visible time range. */
+  lastValue(): SeriesValueInfo | null;
+  /** Last value at the visible right edge. */
+  visibleLastValue(): SeriesValueInfo | null;
   setData(data: readonly TData[]): void;
   update(data: TData): void;
   setOptions(options: Partial<TOptions>): void;

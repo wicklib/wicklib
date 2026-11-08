@@ -66,6 +66,29 @@ histogram.setData([
 Indicators currently require a candlestick source series. Custom series renderers are not
 part of the public API.
 
+## Last value labels
+
+The last-value axis label follows the right visible edge by default:
+
+```ts
+series.setOptions({ lastValueMode: "visible" });
+```
+
+The mode can follow the newest data point, or show both labels:
+
+```ts
+series.setOptions({ lastValueMode: "data" });
+series.setOptions({ lastValueMode: "both" });
+
+const current = series.lastValue();
+const visible = series.visibleLastValue();
+```
+
+`lastValue()` returns the newest data point even when it is outside the visible time range.
+`visibleLastValue()` returns the value at the right edge. With `"both"`, a current price outside
+the visible price range is clamped to the top or bottom of the axis and marked with an arrow.
+The price line remains attached to the visible edge; the legend also reflects the visible edge.
+
 ## Annotations
 
 Price lines can place their title in the plot while keeping the price on the axis:
