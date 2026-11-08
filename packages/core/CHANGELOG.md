@@ -1,5 +1,13 @@
 # @wicklib/core
 
+## 0.18.0
+
+### Minor Changes
+
+- 359bb65: Add automatic Elliott label placement: labels center above local highs and below local lows,
+  with forced `above`/`below` overrides. Labels flip inside the pane and respect custom sizes,
+  boxless rendering, and label sequences.
+
 ## 0.17.0
 
 ### Minor Changes
