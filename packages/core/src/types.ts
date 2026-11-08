@@ -653,21 +653,89 @@ export type DrawingSetting =
   | "labelPlacement"
   | "labelFontSize"
   | "labelBackgroundVisible"
+  | "showLine"
+  | "extendLeft"
+  | "extendRight"
+  | "showMidpoint"
+  | "priceLabels"
+  | "stats"
+  | "statsPosition"
   | "text"
+  | "textColor"
+  | "textStyle"
+  | "textAlign"
+  | "textVerticalAlign"
   | "fontSize"
   | "locked"
   | "visible";
 
 /**
+ * A drawing colour. `theme` resolves to the chart's layout text colour.
+ */
+export type DrawingColor = string | "theme";
+
+/**
+ * Font style for drawing text.
+ */
+export type DrawingTextStyle = "normal" | "bold" | "italic" | "bold-italic";
+
+/**
+ * Horizontal text alignment.
+ */
+export type DrawingTextAlign = "left" | "center" | "right";
+
+/**
+ * Vertical text alignment.
+ */
+export type DrawingTextVerticalAlign = "top" | "middle" | "bottom";
+
+/**
+ * Endpoint price labels on the price axis.
+ */
+export type DrawingPriceLabelsMode = "never" | "selected" | "always";
+
+/**
+ * Drawing stats box visibility.
+ */
+export type DrawingStatsMode = "off" | "selected" | "always";
+
+/**
+ * Horizontal placement of a drawing stats box.
+ */
+export type DrawingStatsPosition = "auto" | "left" | "center" | "right";
+
+/**
  * Drawing style and state options.
  */
 export interface DrawingOptions {
-  color?: string;
+  color?: DrawingColor | null;
   lineWidth?: number;
   lineStyle?: DrawingLineStyle;
-  fillColor?: string;
+  fillColor?: DrawingColor | null;
   fillOpacity?: number;
   showLabels?: boolean;
+  /** Draw the drawing's line geometry. Defaults to true. */
+  showLine?: boolean;
+  /** Extend a trend line beyond its first anchor. */
+  extendLeft?: boolean;
+  /** Extend a trend line beyond its second anchor. */
+  extendRight?: boolean;
+  /** Draw a small dot at the midpoint of a trend line. */
+  showMidpoint?: boolean;
+  /** Show trend-line endpoint prices on the price axis. Defaults to never. */
+  priceLabels?: DrawingPriceLabelsMode;
+  /** Show a stats box. Defaults to off. */
+  stats?: DrawingStatsMode;
+  /** Stats box horizontal placement. Defaults to auto. */
+  statsPosition?: DrawingStatsPosition;
+  /** Colour for the drawing text. Defaults to the drawing colour. */
+  textColor?: DrawingColor | null;
+  /** Font style for trend-line text. Defaults to normal. */
+  textStyle?: DrawingTextStyle;
+  /** Horizontal alignment for trend-line text. Defaults to center. */
+  textAlign?: DrawingTextAlign;
+  /** Vertical alignment for trend-line text. Defaults to middle. */
+  textVerticalAlign?: DrawingTextVerticalAlign;
   /** Text content for text drawings. */
   text?: string;
   /** Custom label sequence for drawing tools that render one label per anchor. */

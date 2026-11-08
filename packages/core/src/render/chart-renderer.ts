@@ -1219,18 +1219,23 @@ export class ChartRenderer {
       if (drawing.previewPoint && points.length < drawing.anchorCount) {
         points.push(drawing.previewPoint);
       }
+      const renderDrawing: DrawingRenderData = {
+        ...drawing,
+        options: resolveDrawingOptionsForModel(drawing.options, model),
+      };
 
       context.save();
       context.beginPath();
       context.rect(pane.plot.left, pane.plot.top, pane.plot.width, pane.plot.height);
       context.clip();
       context.globalAlpha = drawing.preview ? 0.65 : 1;
-      context.strokeStyle = drawing.options.color;
-      context.fillStyle = drawing.options.fillColor;
+      context.strokeStyle = renderDrawing.options.color;
+      context.fillStyle = renderDrawing.options.fillColor;
       context.lineWidth = drawing.options.lineWidth;
       context.setLineDash(drawing.preview ? [4, 4] : dash(drawing.options.lineStyle));
 
-      this.drawTool(context, model, pane, drawing, points);
+      this.drawTool(context, model, pane, renderDrawing, points);
+      this.drawDrawingStats(context, model, pane, renderDrawing, points);
 
       context.setLineDash([]);
       context.globalAlpha = 1;
@@ -1244,13 +1249,15 @@ export class ChartRenderer {
         for (const point of points) {
           context.fillStyle = model.layout.background;
           context.fillRect(point.x - 4, point.y - 4, 8, 8);
-          context.strokeStyle = drawing.options.color;
+          context.strokeStyle = renderDrawing.options.color;
           context.lineWidth = 1;
           context.strokeRect(point.x - 4, point.y - 4, 8, 8);
         }
         context.restore();
       }
     }
+
+    this.drawDrawingPriceLabels(context, model);
 
     if (model.selectionBox) {
       const left = Math.min(model.selectionBox.start.x, model.selectionBox.current.x);
@@ -1280,6 +1287,9 @@ export class ChartRenderer {
 
     switch (drawing.toolId) {
       case "horizontal-line": {
+        if (!drawing.options.showLine) {
+          return;
+        }
         const y = crisp(points[0]!.y);
         context.beginPath();
         context.moveTo(plot.left, y);
@@ -1288,6 +1298,9 @@ export class ChartRenderer {
         return;
       }
       case "horizontal-ray": {
+        if (!drawing.options.showLine) {
+          return;
+        }
         const y = crisp(points[0]!.y);
         context.beginPath();
         context.moveTo(points[0]!.x, y);
@@ -1296,6 +1309,9 @@ export class ChartRenderer {
         return;
       }
       case "vertical-line": {
+        if (!drawing.options.showLine) {
+          return;
+        }
         const x = crisp(points[0]!.x);
         context.beginPath();
         context.moveTo(x, plot.top);
@@ -1304,6 +1320,9 @@ export class ChartRenderer {
         return;
       }
       case "cross-line": {
+        if (!drawing.options.showLine) {
+          return;
+        }
         const x = crisp(points[0]!.x);
         const y = crisp(points[0]!.y);
         context.beginPath();
@@ -1318,18 +1337,37 @@ export class ChartRenderer {
         if (points.length < 2) {
           return;
         }
-        const clipped = clipLineToRect(points[0]!, points[1]!, plot);
+        const first = points[0]!;
+        const second = points[1]!;
+        const clipped = clipTrendLine(first, second, plot, drawing.options);
         if (!clipped) {
           return;
         }
-        context.beginPath();
-        context.moveTo(clipped[0].x, clipped[0].y);
-        context.lineTo(clipped[1].x, clipped[1].y);
-        context.stroke();
+        if (drawing.options.showLine) {
+          context.beginPath();
+          context.moveTo(clipped[0].x, clipped[0].y);
+          context.lineTo(clipped[1].x, clipped[1].y);
+          context.stroke();
+        }
+        const midpoint = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+        if (drawing.options.showMidpoint) {
+          context.save();
+          context.fillStyle = drawing.options.color;
+          context.beginPath();
+          context.arc(midpoint.x, midpoint.y, 3, 0, Math.PI * 2);
+          context.fill();
+          context.restore();
+        }
+        if (drawing.options.text) {
+          drawDrawingText(context, model, drawing.options.text, midpoint, drawing.options);
+        }
         return;
       }
       case "ray": {
         if (points.length < 2) {
+          return;
+        }
+        if (!drawing.options.showLine) {
           return;
         }
         const clipped = clipRayToPlot(points[0]!, points[1]!, plot);
@@ -1346,6 +1384,9 @@ export class ChartRenderer {
         if (points.length < 2) {
           return;
         }
+        if (!drawing.options.showLine) {
+          return;
+        }
         const clipped = clipExtendedLineToPlot(points[0]!, points[1]!, plot);
         if (!clipped) {
           return;
@@ -1358,6 +1399,9 @@ export class ChartRenderer {
       }
       case "arrow": {
         if (points.length < 2) {
+          return;
+        }
+        if (!drawing.options.showLine) {
           return;
         }
         const first = points[0]!;
@@ -1391,10 +1435,12 @@ export class ChartRenderer {
         if (!clipped) {
           return;
         }
-        context.beginPath();
-        context.moveTo(clipped[0].x, clipped[0].y);
-        context.lineTo(clipped[1].x, clipped[1].y);
-        context.stroke();
+        if (drawing.options.showLine) {
+          context.beginPath();
+          context.moveTo(clipped[0].x, clipped[0].y);
+          context.lineTo(clipped[1].x, clipped[1].y);
+          context.stroke();
+        }
         if (drawing.options.showLabels) {
           const angle = (Math.atan2(-(second.y - first.y), second.x - first.x) * 180) / Math.PI;
           this.drawLabel(
@@ -1770,12 +1816,14 @@ export class ChartRenderer {
         if (points.length < 2) {
           return;
         }
-        context.beginPath();
-        context.moveTo(points[0]!.x, points[0]!.y);
-        for (let index = 1; index < points.length; index += 1) {
-          context.lineTo(points[index]!.x, points[index]!.y);
+        if (drawing.options.showLine) {
+          context.beginPath();
+          context.moveTo(points[0]!.x, points[0]!.y);
+          for (let index = 1; index < points.length; index += 1) {
+            context.lineTo(points[index]!.x, points[index]!.y);
+          }
+          context.stroke();
         }
-        context.stroke();
 
         if (drawing.options.showLabels) {
           const labels = drawing.options.labels ?? ELLIOTT_LABELS[drawing.toolId] ?? [];
@@ -1890,6 +1938,117 @@ export class ChartRenderer {
       }
       default:
         return;
+    }
+  }
+
+  private drawDrawingStats(
+    context: CanvasRenderingContext2D,
+    model: ChartRenderModel,
+    pane: PaneRenderModel,
+    drawing: DrawingRenderData,
+    points: readonly Point[],
+  ): void {
+    const mode = drawing.options.stats;
+    if (mode === "off" || (mode === "selected" && !drawing.selected)) {
+      return;
+    }
+    const lines = drawingStatsLines(drawing, pane, model, points);
+    if (lines.length === 0) {
+      return;
+    }
+    const fontSize = drawing.options.labelFontSize ?? model.layout.fontSize;
+    const padding = 8;
+    const lineHeight = fontSize + 4;
+    context.font = this.font(model, fontSize);
+    const width = Math.max(...lines.map((line) => context.measureText(line).width)) + padding * 2;
+    const height = lines.length * lineHeight + padding * 2;
+    if (width > pane.plot.width || height > pane.plot.height) {
+      return;
+    }
+
+    let x = pane.plot.left + padding;
+    if (drawing.options.statsPosition === "right") {
+      x = pane.plot.right - width - padding;
+    } else if (drawing.options.statsPosition === "center") {
+      x = (pane.plot.left + pane.plot.right) / 2 - width / 2;
+    } else if (drawing.options.statsPosition === "auto") {
+      const averageX = points.length
+        ? points.reduce((sum, point) => sum + point.x, 0) / points.length
+        : pane.plot.left;
+      x =
+        averageX < (pane.plot.left + pane.plot.right) / 2
+          ? pane.plot.right - width - padding
+          : pane.plot.left + padding;
+    }
+    const y = pane.plot.top + padding;
+
+    context.save();
+    context.fillStyle = model.crosshair.labelBackground;
+    context.strokeStyle = drawing.options.color;
+    context.lineWidth = 1;
+    context.fillRect(x, y, width, height);
+    context.strokeRect(x + 0.5, y + 0.5, width, height);
+    context.fillStyle = "#ffffff";
+    context.textAlign = "left";
+    context.textBaseline = "top";
+    for (let index = 0; index < lines.length; index += 1) {
+      context.fillText(lines[index]!, x + padding, y + padding + index * lineHeight);
+    }
+    context.restore();
+  }
+
+  private drawDrawingPriceLabels(context: CanvasRenderingContext2D, model: ChartRenderModel): void {
+    const entries: Array<{
+      pane: PaneRenderModel;
+      y: number;
+      label: string;
+      color: string;
+    }> = [];
+    for (const drawing of model.drawings) {
+      if (drawing.preview || drawing.toolId !== "trend-line") {
+        continue;
+      }
+      const pane = model.panes.find((candidate) => candidate.paneId === drawing.paneId);
+      const options = resolveDrawingOptionsForModel(drawing.options, model);
+      if (!pane || options.priceLabels === "never") {
+        continue;
+      }
+      if (options.priceLabels === "selected" && !drawing.selected) {
+        continue;
+      }
+      for (const anchor of drawing.anchors.slice(0, 2)) {
+        const y = pane.priceScale.priceToY(anchor.price, pane.plot.top, pane.plot.height);
+        if (y < pane.plot.top || y > pane.plot.bottom) {
+          continue;
+        }
+        entries.push({
+          pane,
+          y,
+          label: pane.priceScale.formatValue(anchor.price, model.locale),
+          color: options.color,
+        });
+      }
+    }
+    entries.sort((first, second) => first.y - second.y);
+
+    const boxHeight = model.layout.fontSize + 6;
+    const lastBottom = new Map<string, number>();
+    for (const entry of entries) {
+      let top = entry.y - boxHeight / 2;
+      const previous = lastBottom.get(entry.pane.paneId);
+      if (previous !== undefined && top < previous + 2) {
+        top = previous + 2;
+      }
+      top = Math.max(entry.pane.plot.top, Math.min(entry.pane.plot.bottom - boxHeight, top));
+      lastBottom.set(entry.pane.paneId, top + boxHeight);
+
+      context.fillStyle = entry.color;
+      context.fillRect(entry.pane.plot.right, top, model.axisWidth, boxHeight);
+      context.fillStyle = "#ffffff";
+      context.font = this.font(model);
+      context.textAlign = "left";
+      context.textBaseline = "middle";
+      context.fillText(entry.label, entry.pane.plot.right + 8, top + boxHeight / 2);
     }
   }
 
@@ -2014,6 +2173,119 @@ export class ChartRenderer {
 
     context.restore();
   }
+}
+
+function resolveDrawingOptionsForModel(
+  options: ResolvedDrawingOptions,
+  model: ChartRenderModel,
+): ResolvedDrawingOptions {
+  const resolve = (color: string | "theme"): string =>
+    color === "theme" ? model.layout.textColor : color;
+  return {
+    ...options,
+    color: resolve(options.color),
+    fillColor: resolve(options.fillColor),
+    textColor: resolve(options.textColor),
+  };
+}
+
+function drawingStatsLines(
+  drawing: DrawingRenderData,
+  pane: PaneRenderModel,
+  model: ChartRenderModel,
+  points: readonly Point[],
+): string[] {
+  if (drawing.anchors.length === 0) {
+    return [];
+  }
+  const prices = drawing.anchors.map((anchor) => anchor.price);
+  const times = drawing.anchors.map((anchor) => anchor.time);
+  const first = prices[0]!;
+  const last = prices[prices.length - 1]!;
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const delta = last - first;
+  const percent = first === 0 ? 0 : (delta / Math.abs(first)) * 100;
+  const format = (value: number): string => pane.priceScale.formatValue(value, model.locale);
+  const lines = [
+    `Range  ${format(minPrice)} – ${format(maxPrice)}`,
+    `Change  ${delta >= 0 ? "+" : ""}${format(delta)} (${percent.toFixed(2)}%)`,
+  ];
+
+  const series =
+    pane.series.find((candidate) => candidate.visible && candidate.store.length > 0) ??
+    pane.series.find((candidate) => candidate.store.length > 0);
+  if (series) {
+    const start = series.store.nearestIndex(Math.min(...times));
+    const end = series.store.nearestIndex(Math.max(...times));
+    if (start >= 0 && end >= 0) {
+      lines.push(`Bars  ${Math.abs(end - start) + 1}`);
+    }
+  }
+
+  const from = formatDrawingDate(Math.min(...times), model);
+  const to = formatDrawingDate(Math.max(...times), model);
+  lines.push(`Date  ${from === to ? from : `${from} → ${to}`}`);
+
+  if (
+    points.length >= 2 &&
+    ["trend-line", "ray", "extended-line", "arrow", "trend-angle"].includes(drawing.toolId)
+  ) {
+    const angle =
+      (Math.atan2(-(points[1]!.y - points[0]!.y), points[1]!.x - points[0]!.x) * 180) / Math.PI;
+    lines.push(`Angle  ${angle.toFixed(1)}°`);
+  }
+  return lines;
+}
+
+function formatDrawingDate(time: number, model: ChartRenderModel): string {
+  const formatter = new Intl.DateTimeFormat(model.locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: model.timezone,
+  });
+  return formatter.format(time);
+}
+
+function clipTrendLine(
+  first: Point,
+  second: Point,
+  plot: { left: number; top: number; right: number; bottom: number; width: number; height: number },
+  options: { extendLeft: boolean; extendRight: boolean },
+): [Point, Point] | null {
+  if (options.extendLeft && options.extendRight) {
+    return clipExtendedLineToPlot(first, second, plot);
+  }
+  if (options.extendRight) {
+    return clipRayToPlot(first, second, plot);
+  }
+  if (options.extendLeft) {
+    return clipRayToPlot(second, first, plot);
+  }
+  return clipLineToRect(first, second, plot);
+}
+
+function drawDrawingText(
+  context: CanvasRenderingContext2D,
+  model: ChartRenderModel,
+  text: string,
+  point: Point,
+  options: ResolvedDrawingOptions,
+): void {
+  const style = [
+    options.textStyle.includes("bold") ? "bold" : "",
+    options.textStyle.includes("italic") ? "italic" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  context.save();
+  context.font = `${style ? `${style} ` : ""}${options.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+  context.fillStyle = options.textColor;
+  context.textAlign = options.textAlign;
+  context.textBaseline = options.textVerticalAlign;
+  context.fillText(text, point.x, point.y);
+  context.restore();
 }
 
 function drawChannelPolygon(

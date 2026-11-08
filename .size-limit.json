@@ -2,7 +2,7 @@
   {
     "name": "@wicklib/core",
     "path": "packages/core/dist/index.js",
-    "limit": "44 kB"
+    "limit": "48 kB"
   },
   {
     "name": "@wicklib/script",

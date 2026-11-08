@@ -378,6 +378,9 @@ export interface DrawingApi {
 }
 
 // @public
+export type DrawingColor = string | "theme";
+
+// @public
 export interface DrawingDocument {
     // (undocumented)
     drawings: SerializedDrawing[];
@@ -394,9 +397,11 @@ export type DrawingLineStyle = "solid" | "dotted" | "dashed";
 // @public
 export interface DrawingOptions {
     // (undocumented)
-    color?: string;
+    color?: DrawingColor | null;
+    extendLeft?: boolean;
+    extendRight?: boolean;
     // (undocumented)
-    fillColor?: string;
+    fillColor?: DrawingColor | null;
     // (undocumented)
     fillOpacity?: number;
     fontSize?: number;
@@ -410,18 +415,45 @@ export interface DrawingOptions {
     lineWidth?: number;
     // (undocumented)
     locked?: boolean;
+    priceLabels?: DrawingPriceLabelsMode;
     // (undocumented)
     showLabels?: boolean;
+    showLine?: boolean;
+    showMidpoint?: boolean;
+    stats?: DrawingStatsMode;
+    statsPosition?: DrawingStatsPosition;
     text?: string;
+    textAlign?: DrawingTextAlign;
+    textColor?: DrawingColor | null;
+    textStyle?: DrawingTextStyle;
+    textVerticalAlign?: DrawingTextVerticalAlign;
     // (undocumented)
     visible?: boolean;
 }
 
 // @public
+export type DrawingPriceLabelsMode = "never" | "selected" | "always";
+
+// @public
 export type DrawingSelectionMode = "replace" | "add" | "toggle";
 
 // @public
-export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "labelPlacement" | "labelFontSize" | "labelBackgroundVisible" | "text" | "fontSize" | "locked" | "visible";
+export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "labelPlacement" | "labelFontSize" | "labelBackgroundVisible" | "showLine" | "extendLeft" | "extendRight" | "showMidpoint" | "priceLabels" | "stats" | "statsPosition" | "text" | "textColor" | "textStyle" | "textAlign" | "textVerticalAlign" | "fontSize" | "locked" | "visible";
+
+// @public
+export type DrawingStatsMode = "off" | "selected" | "always";
+
+// @public
+export type DrawingStatsPosition = "auto" | "left" | "center" | "right";
+
+// @public
+export type DrawingTextAlign = "left" | "center" | "right";
+
+// @public
+export type DrawingTextStyle = "normal" | "bold" | "italic" | "bold-italic";
+
+// @public
+export type DrawingTextVerticalAlign = "top" | "middle" | "bottom";
 
 // @public
 export interface DrawingToolCatalogEntry {
@@ -1204,8 +1236,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:985:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:1000:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1035:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1050:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

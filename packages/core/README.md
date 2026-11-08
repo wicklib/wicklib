@@ -202,6 +202,33 @@ Logarithmic scales require positive prices. Explicit non-positive ranges throw
 valid range stays visible. Margins are applied in log space, and narrow ranges fall back to
 linear price ticks for familiar labels.
 
+## Drawing presentation
+
+Drawings support semantic theme colors and presentation options:
+
+```ts
+drawing.setOptions({
+  color: "theme",
+  fillColor: null,
+  showLine: true,
+  extendLeft: true,
+  extendRight: true,
+  showMidpoint: true,
+  priceLabels: "selected",
+  stats: "selected",
+  statsPosition: "auto",
+});
+```
+
+- `"theme"` resolves to the chart layout text color. `""` and `null` also clear a color override to theme.
+- `showLine` hides line geometry without hiding labels or stats.
+- Trend lines support `extendLeft`, `extendRight`, and `showMidpoint`.
+- Trend-line text uses `text`, `textColor`, `fontSize`, `textStyle`, `textAlign`, and `textVerticalAlign`.
+- `priceLabels` controls endpoint prices on the price axis: `never`, `selected`, or `always`.
+- `stats` controls the stats box: `off`, `selected`, or `always`.
+- `statsPosition` is `auto`, `left`, `center`, or `right`.
+- Stats include price range, percentage change, bar count, date range, and line angle where applicable.
+
 ## Drawing label style
 
 Labels use the chart layout font size and draw with a background by default. Both can be

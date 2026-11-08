@@ -5,6 +5,7 @@ import {
   drawingToolSettings,
   elliottLabelPlacement,
   hitTestDrawing,
+  mergeDrawingOptions,
   parallelLines,
   resolveDrawingOptions,
   type ResolvedDrawingOptions,
@@ -90,7 +91,12 @@ describe("drawing settings", () => {
     expect(drawingToolSettings("elliott-impulse")).toContain("labelPlacement");
     expect(drawingToolSettings("elliott-impulse")).toContain("labelFontSize");
     expect(drawingToolSettings("elliott-impulse")).toContain("labelBackgroundVisible");
+    expect(drawingToolSettings("elliott-impulse")).toContain("showLine");
+    expect(drawingToolSettings("elliott-impulse")).toContain("stats");
     expect(drawingToolSettings("fib-channel")).toContain("labelFontSize");
+    expect(drawingToolSettings("trend-line")).toContain("extendLeft");
+    expect(drawingToolSettings("trend-line")).toContain("priceLabels");
+    expect(drawingToolSettings("trend-line")).toContain("statsPosition");
     expect(() => drawingToolSettings("missing")).toThrow(/Unknown drawing tool/);
   });
 });
@@ -117,6 +123,39 @@ describe("drawing labels", () => {
     expect(() => resolveDrawingOptions(undefined, { labelPlacement: "right" as never })).toThrow(
       /labelPlacement/,
     );
+  });
+
+  it("normalizes theme colors and clears overrides", () => {
+    const resolved = resolveDrawingOptions(undefined, {
+      color: "",
+      fillColor: null,
+      textColor: "theme",
+      showLine: false,
+      extendLeft: true,
+      extendRight: true,
+      showMidpoint: true,
+      priceLabels: "always",
+      stats: "selected",
+      statsPosition: "right",
+      textStyle: "bold-italic",
+      textAlign: "right",
+      textVerticalAlign: "bottom",
+    });
+    expect(resolved.color).toBe("theme");
+    expect(resolved.fillColor).toBe("theme");
+    expect(resolved.textColor).toBe("theme");
+    expect(resolved.showLine).toBe(false);
+    expect(resolved.extendLeft).toBe(true);
+    expect(resolved.showMidpoint).toBe(true);
+    expect(resolved.priceLabels).toBe("always");
+    expect(resolved.stats).toBe("selected");
+    expect(resolved.statsPosition).toBe("right");
+    expect(resolved.textStyle).toBe("bold-italic");
+    expect(resolved.textAlign).toBe("right");
+    expect(resolved.textVerticalAlign).toBe("bottom");
+
+    const base = resolveDrawingOptions(undefined, { color: "#ffffff" });
+    expect(mergeDrawingOptions(base, { color: null }).color).toBe("theme");
   });
 });
 
@@ -189,20 +228,9 @@ describe("drawing geometry", () => {
 });
 
 describe("line drawing hit testing", () => {
-  const options: ResolvedDrawingOptions = {
+  const options: ResolvedDrawingOptions = resolveDrawingOptions(undefined, {
     color: "#ffffff",
-    lineWidth: 1,
-    lineStyle: "solid",
-    fillColor: "#ffffff",
-    fillOpacity: 0.12,
-    showLabels: true,
-    text: "",
-    labelPlacement: "auto",
-    labelBackgroundVisible: true,
-    fontSize: 13,
-    locked: false,
-    visible: true,
-  };
+  });
   const pane = {
     plot: { left: 0, top: 0, right: 400, bottom: 300, width: 400, height: 300 },
     priceScale: {

@@ -1,23 +1,41 @@
 import { fail } from "./errors";
 import type {
   DrawingAnchor,
+  DrawingColor,
   DrawingLabelPlacement,
   DrawingLineStyle,
   DrawingOptions,
+  DrawingPriceLabelsMode,
   DrawingSetting,
+  DrawingStatsMode,
+  DrawingStatsPosition,
+  DrawingTextAlign,
+  DrawingTextStyle,
+  DrawingTextVerticalAlign,
   DrawingToolDefinition,
   Point,
 } from "./types";
 import { VERSION } from "./version";
 
 export interface ResolvedDrawingOptions {
-  color: string;
+  color: DrawingColor;
   lineWidth: number;
   lineStyle: DrawingLineStyle;
-  fillColor: string;
+  fillColor: DrawingColor;
   fillOpacity: number;
   showLabels: boolean;
+  showLine: boolean;
+  extendLeft: boolean;
+  extendRight: boolean;
+  showMidpoint: boolean;
+  priceLabels: DrawingPriceLabelsMode;
+  stats: DrawingStatsMode;
+  statsPosition: DrawingStatsPosition;
   text: string;
+  textColor: DrawingColor;
+  textStyle: DrawingTextStyle;
+  textAlign: DrawingTextAlign;
+  textVerticalAlign: DrawingTextVerticalAlign;
   labels?: readonly string[];
   labelPlacement: DrawingLabelPlacement;
   labelFontSize?: number;
@@ -113,8 +131,31 @@ const TEXT_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "visible",
 ]);
 
+const TREND_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  ...STROKE_SETTINGS,
+  "showLine",
+  "extendLeft",
+  "extendRight",
+  "showMidpoint",
+  "priceLabels",
+  "text",
+  "textColor",
+  "textStyle",
+  "textAlign",
+  "textVerticalAlign",
+  "fontSize",
+  "stats",
+  "statsPosition",
+]);
+const ELLIOTT_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  ...LABEL_SETTINGS,
+  "showLine",
+  "stats",
+  "statsPosition",
+]);
+
 const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Object.freeze({
-  "trend-line": STROKE_SETTINGS,
+  "trend-line": TREND_SETTINGS,
   ray: STROKE_SETTINGS,
   "extended-line": STROKE_SETTINGS,
   "trend-angle": LABEL_SETTINGS,
@@ -140,11 +181,11 @@ const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Objec
   "long-short-position": LONG_SHORT_SETTINGS,
   "price-date-range": LABEL_FILL_SETTINGS,
   circle: FILL_SETTINGS,
-  "elliott-impulse": LABEL_SETTINGS,
-  "elliott-correction": LABEL_SETTINGS,
-  "elliott-triangle": LABEL_SETTINGS,
-  "elliott-double-combo": LABEL_SETTINGS,
-  "elliott-triple-combo": LABEL_SETTINGS,
+  "elliott-impulse": ELLIOTT_SETTINGS,
+  "elliott-correction": ELLIOTT_SETTINGS,
+  "elliott-triangle": ELLIOTT_SETTINGS,
+  "elliott-double-combo": ELLIOTT_SETTINGS,
+  "elliott-triple-combo": ELLIOTT_SETTINGS,
   brush: STROKE_SETTINGS,
   highlighter: STROKE_SETTINGS,
   path: STROKE_SETTINGS,
@@ -159,7 +200,17 @@ const DEFAULTS: DrawingOptions = {
   lineStyle: "solid",
   fillOpacity: 0.12,
   showLabels: true,
+  showLine: true,
+  extendLeft: false,
+  extendRight: false,
+  showMidpoint: false,
+  priceLabels: "never",
+  stats: "off",
+  statsPosition: "auto",
   text: "",
+  textStyle: "normal",
+  textAlign: "center",
+  textVerticalAlign: "middle",
   labelPlacement: "auto",
   labelBackgroundVisible: true,
   fontSize: 13,
@@ -741,15 +792,28 @@ export function resolveDrawingOptions(
   options: DrawingOptions | undefined,
 ): ResolvedDrawingOptions {
   const merged: DrawingOptions = { ...DEFAULTS, ...defaultOptions, ...options };
-  const fillColor = merged.fillColor ?? merged.color ?? "#2962ff";
+  const color = normalizeDrawingColor(merged.color, "#2962ff");
+  const fillColor = normalizeDrawingColor(merged.fillColor, color);
+  const textColor = normalizeDrawingColor(merged.textColor, color);
   const resolved: ResolvedDrawingOptions = {
-    color: merged.color ?? "#2962ff",
+    color,
     lineWidth: merged.lineWidth ?? 1,
     lineStyle: merged.lineStyle ?? "solid",
     fillColor,
     fillOpacity: merged.fillOpacity ?? 0.12,
     showLabels: merged.showLabels ?? true,
+    showLine: merged.showLine ?? true,
+    extendLeft: merged.extendLeft ?? false,
+    extendRight: merged.extendRight ?? false,
+    showMidpoint: merged.showMidpoint ?? false,
+    priceLabels: normalizedPriceLabels(merged.priceLabels),
+    stats: normalizedStats(merged.stats),
+    statsPosition: normalizedStatsPosition(merged.statsPosition),
     text: merged.text ?? "",
+    textColor,
+    textStyle: normalizedTextStyle(merged.textStyle),
+    textAlign: normalizedTextAlign(merged.textAlign),
+    textVerticalAlign: normalizedTextVerticalAlign(merged.textVerticalAlign),
     labelPlacement: normalizedLabelPlacement(merged.labelPlacement),
     labelBackgroundVisible: merged.labelBackgroundVisible ?? true,
     fontSize: merged.fontSize ?? 13,
@@ -770,13 +834,24 @@ export function mergeDrawingOptions(
   patch: DrawingOptions,
 ): ResolvedDrawingOptions {
   const merged: ResolvedDrawingOptions = {
-    color: patch.color ?? base.color,
+    color: mergeDrawingColor(patch.color, base.color),
     lineWidth: patch.lineWidth ?? base.lineWidth,
     lineStyle: patch.lineStyle ?? base.lineStyle,
-    fillColor: patch.fillColor ?? base.fillColor,
+    fillColor: mergeDrawingColor(patch.fillColor, base.fillColor),
     fillOpacity: patch.fillOpacity ?? base.fillOpacity,
     showLabels: patch.showLabels ?? base.showLabels,
+    showLine: patch.showLine ?? base.showLine,
+    extendLeft: patch.extendLeft ?? base.extendLeft,
+    extendRight: patch.extendRight ?? base.extendRight,
+    showMidpoint: patch.showMidpoint ?? base.showMidpoint,
+    priceLabels: patch.priceLabels ?? base.priceLabels,
+    stats: patch.stats ?? base.stats,
+    statsPosition: patch.statsPosition ?? base.statsPosition,
     text: patch.text ?? base.text,
+    textColor: mergeDrawingColor(patch.textColor, base.textColor),
+    textStyle: patch.textStyle ?? base.textStyle,
+    textAlign: patch.textAlign ?? base.textAlign,
+    textVerticalAlign: patch.textVerticalAlign ?? base.textVerticalAlign,
     labelPlacement: patch.labelPlacement ?? base.labelPlacement,
     labelBackgroundVisible: patch.labelBackgroundVisible ?? base.labelBackgroundVisible,
     fontSize: patch.fontSize ?? base.fontSize,
@@ -794,6 +869,82 @@ export function mergeDrawingOptions(
     merged.labelFontSize = base.labelFontSize;
   }
   return merged;
+}
+
+function normalizeDrawingColor(
+  value: DrawingColor | null | undefined,
+  fallback: DrawingColor,
+): DrawingColor {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (value === null || value === "" || value === "theme") {
+    return "theme";
+  }
+  return value;
+}
+
+function mergeDrawingColor(
+  value: DrawingColor | null | undefined,
+  fallback: DrawingColor,
+): DrawingColor {
+  return value === undefined ? fallback : normalizeDrawingColor(value, fallback);
+}
+
+function normalizedPriceLabels(value: DrawingPriceLabelsMode | undefined): DrawingPriceLabelsMode {
+  if (value === undefined || value === "never" || value === "selected" || value === "always") {
+    return value ?? "never";
+  }
+  fail("INVALID_ARGUMENT", "priceLabels must be never, selected, or always");
+}
+
+function normalizedStats(value: DrawingStatsMode | undefined): DrawingStatsMode {
+  if (value === undefined || value === "off" || value === "selected" || value === "always") {
+    return value ?? "off";
+  }
+  fail("INVALID_ARGUMENT", "stats must be off, selected, or always");
+}
+
+function normalizedStatsPosition(value: DrawingStatsPosition | undefined): DrawingStatsPosition {
+  if (
+    value === undefined ||
+    value === "auto" ||
+    value === "left" ||
+    value === "center" ||
+    value === "right"
+  ) {
+    return value ?? "auto";
+  }
+  fail("INVALID_ARGUMENT", "statsPosition must be auto, left, center, or right");
+}
+
+function normalizedTextStyle(value: DrawingTextStyle | undefined): DrawingTextStyle {
+  if (
+    value === undefined ||
+    value === "normal" ||
+    value === "bold" ||
+    value === "italic" ||
+    value === "bold-italic"
+  ) {
+    return value ?? "normal";
+  }
+  fail("INVALID_ARGUMENT", "textStyle must be normal, bold, italic, or bold-italic");
+}
+
+function normalizedTextAlign(value: DrawingTextAlign | undefined): DrawingTextAlign {
+  if (value === undefined || value === "left" || value === "center" || value === "right") {
+    return value ?? "center";
+  }
+  fail("INVALID_ARGUMENT", "textAlign must be left, center, or right");
+}
+
+function normalizedTextVerticalAlign(
+  value: DrawingTextVerticalAlign | undefined,
+): DrawingTextVerticalAlign {
+  if (value === undefined || value === "top" || value === "middle" || value === "bottom") {
+    return value ?? "middle";
+  }
+  fail("INVALID_ARGUMENT", "textVerticalAlign must be top, middle, or bottom");
 }
 
 function normalizedLabelPlacement(value: DrawingLabelPlacement | undefined): DrawingLabelPlacement {

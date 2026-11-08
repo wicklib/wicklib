@@ -2254,6 +2254,23 @@ class Chart implements ChartApi, SeriesHost {
           widest = Math.max(widest, measure(label));
         }
       }
+
+      for (const drawing of this.drawings) {
+        if (drawing.paneId !== pane.id || drawing.toolId !== "trend-line") {
+          continue;
+        }
+        const options = drawing.getOptions();
+        const mode = options.priceLabels ?? "never";
+        if (mode === "never" || (mode === "selected" && !this.selectedDrawingIds.has(drawing.id))) {
+          continue;
+        }
+        for (const anchor of drawing.getAnchorsInternal().slice(0, 2)) {
+          widest = Math.max(
+            widest,
+            measure(pane.priceScale.formatValue(anchor.price, this.options.locale)),
+          );
+        }
+      }
     }
 
     return Math.min(MAX_AXIS_WIDTH, Math.max(MIN_AXIS_WIDTH, Math.ceil(widest + 16)));

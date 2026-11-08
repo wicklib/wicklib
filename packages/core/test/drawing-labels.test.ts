@@ -7,6 +7,7 @@ import {
   ElliottImpulse,
   ElliottTriangle,
   ElliottTripleCombo,
+  TrendLine,
   createChart,
   type ChartApi,
   type OhlcData,
@@ -15,7 +16,13 @@ import {
 const MINUTE = 60_000;
 const charts: ChartApi[] = [];
 const containers: HTMLElement[] = [];
-const textCalls: Array<{ text: string; font: string; fillStyle: string }> = [];
+const textCalls: Array<{
+  text: string;
+  font: string;
+  fillStyle: string;
+  textAlign: string;
+  textBaseline: string;
+}> = [];
 const fillStyles: string[] = [];
 
 function mount(): HTMLElement {
@@ -47,8 +54,19 @@ beforeAll(() => {
     fillStyle: "#000000",
     measureText: (text: string) => ({ width: text.length * 7 }),
     createLinearGradient: () => ({ addColorStop: () => undefined }),
-    fillText(this: { font: string; fillStyle: string }, text: string) {
-      textCalls.push({ text: String(text), font: this.font, fillStyle: this.fillStyle });
+    textAlign: "left",
+    textBaseline: "alphabetic",
+    fillText(
+      this: { font: string; fillStyle: string; textAlign: string; textBaseline: string },
+      text: string,
+    ) {
+      textCalls.push({
+        text: String(text),
+        font: this.font,
+        fillStyle: this.fillStyle,
+        textAlign: this.textAlign,
+        textBaseline: this.textBaseline,
+      });
     },
     fillRect(this: { fillStyle: string }) {
       fillStyles.push(this.fillStyle);
@@ -136,6 +154,50 @@ describe("drawing label styling", () => {
     textCalls.length = 0;
     await settle();
     expect(textCalls.some((call) => call.text.startsWith("skip-"))).toBe(false);
+  });
+
+  it("renders theme colors, trend-line text, stats, and axis price labels", async () => {
+    const chart = createChart(mount(), {
+      layout: { textColor: "#abcdef", background: "#111111" },
+    });
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    series.priceScale().setOptions({ priceFormat: { precision: 2 } });
+    chart.timeScale().fitContent();
+
+    chart.addDrawing(TrendLine, {
+      anchors: [
+        { time: 0, price: 101.27 },
+        { time: 50 * MINUTE, price: 123.73 },
+      ],
+      options: {
+        color: "",
+        text: "Trend",
+        textColor: "",
+        textStyle: "bold-italic",
+        textAlign: "right",
+        textVerticalAlign: "top",
+        fontSize: 18,
+        showMidpoint: true,
+        priceLabels: "always",
+        stats: "always",
+        statsPosition: "left",
+      },
+    });
+
+    await settle();
+    const trendText = textCalls.find((call) => call.text === "Trend");
+    expect(trendText).toMatchObject({
+      fillStyle: "#abcdef",
+      textAlign: "right",
+      textBaseline: "top",
+    });
+    expect(trendText?.font.includes("bold italic 18px")).toBe(true);
+    expect(textCalls.some((call) => call.text.startsWith("Range  "))).toBe(true);
+    expect(textCalls.some((call) => call.text === "101.27")).toBe(true);
+    expect(textCalls.some((call) => call.text === "123.73")).toBe(true);
+    expect(fillStyles).toContain("#abcdef");
   });
 
   it("uses per-drawing font size and supports boxless labels", async () => {
