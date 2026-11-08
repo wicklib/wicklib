@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.23.0
+
+### Minor Changes
+
+- 5856e43: Add shared price/time axis line color, text color, and font size options.
+
 ## 0.22.0
 
 ### Minor Changes
