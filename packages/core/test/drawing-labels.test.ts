@@ -304,7 +304,9 @@ describe("drawing label styling", () => {
 
     const statsX = [
       ...new Set(
-        fillRects.filter((rect) => rect.fillStyle === "rgba(17,24,39,0.94)").map((rect) => rect.x),
+        fillRects
+          .filter((rect) => rect.fillStyle === "rgba(248,250,252,0.94)")
+          .map((rect) => rect.x),
       ),
     ].sort((first, second) => first - second);
     expect(statsX).toHaveLength(3);
@@ -312,7 +314,7 @@ describe("drawing label styling", () => {
     expect(statsX[1]).toBeLessThan(statsX[2]!);
   });
 
-  it("uses a light stats surface on light backgrounds", async () => {
+  it("uses a dark stats surface on light backgrounds", async () => {
     const chart = createChart(mount(), {
       layout: { background: "#ffffff", textColor: "#111827" },
     });
@@ -329,7 +331,7 @@ describe("drawing label styling", () => {
     });
 
     await settle();
-    expect(fillRects.some((rect) => rect.fillStyle === "rgba(248,250,252,0.94)")).toBe(true);
+    expect(fillRects.some((rect) => rect.fillStyle === "rgba(17,24,39,0.94)")).toBe(true);
   });
   it("shows all default stats fields when statsFields is omitted", async () => {
     const chart = createChart(mount());

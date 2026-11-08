@@ -252,11 +252,11 @@ describe("axis styling", () => {
     await settle();
 
     const crosshairHeights = fillRects
-      .filter((rect) => rect.fillStyle === "rgba(248,250,252,0.94)")
+      .filter((rect) => rect.fillStyle === "rgba(17,24,39,0.94)")
       .map((rect) => rect.height);
     expect(crosshairHeights).toContain(30);
     expect(crosshairHeights).toContain(40);
-    expect(textCalls.filter((call) => call.fillStyle === "#111827").length).toBeGreaterThanOrEqual(
+    expect(textCalls.filter((call) => call.fillStyle === "#f9fafb").length).toBeGreaterThanOrEqual(
       2,
     );
     expect(textCalls.some((call) => call.fillStyle === "#abcdef" && call.y > 350)).toBe(true);
@@ -265,6 +265,27 @@ describe("axis styling", () => {
       .filter((rect) => rect.fillStyle === "#123456")
       .map((rect) => rect.height);
     expect(lastValueHeights).toContain(30);
+  });
+
+  it("rejects crosshair label backgrounds that disappear into the canvas", async () => {
+    const { element } = addLineChart({
+      layout: { background: "#000000", textColor: "#ffffff" },
+      crosshair: { labelBackground: "#000000" },
+    });
+    await settle();
+
+    const root = element.firstElementChild as HTMLElement;
+    root.dispatchEvent(
+      new MouseEvent("pointermove", { clientX: 100, clientY: 100, bubbles: true }),
+    );
+    await settle();
+
+    const crosshairHeights = fillRects
+      .filter((rect) => rect.fillStyle === "rgba(248,250,252,0.94)")
+      .map((rect) => rect.height);
+    expect(crosshairHeights).toContain(18);
+    expect(crosshairHeights).toContain(28);
+    expect(textCalls.some((call) => call.fillStyle === "#111827")).toBe(true);
   });
 
   it("applies axisLineColor only to visible axis borders", async () => {

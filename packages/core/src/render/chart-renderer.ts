@@ -2233,12 +2233,7 @@ export class ChartRenderer {
 
     const price = hovered.priceScale.yToPrice(y, hovered.plot.top, hovered.plot.height);
     const priceLabel = hovered.priceScale.formatValue(price, model.locale);
-    const labelSurface = model.crosshair.labelBackground
-      ? {
-          background: model.crosshair.labelBackground,
-          text: contrastTextOnColor(model.crosshair.labelBackground),
-        }
-      : chartContrastSurface(model.layout);
+    const labelSurface = crosshairContrastSurface(model);
     const boxHeight = model.layout.axisFontSize + 6;
     const priceTop = Math.max(
       hovered.plot.top,
@@ -2481,26 +2476,99 @@ function drawDrawingText(
   context.restore();
 }
 
-function chartContrastSurface(layout: ResolvedLayout): {
+interface ContrastSurface {
   background: string;
   text: string;
-} {
-  const background = parseRgbColor(layout.background);
-  const text = parseRgbColor(layout.textColor);
-  const backgroundLuminance = background ? relativeLuminance(background) : null;
-  const textLuminance = text ? relativeLuminance(text) : null;
-  const light =
-    backgroundLuminance !== null
-      ? backgroundLuminance > 0.55
-      : textLuminance !== null && textLuminance < 0.5;
-  return light
-    ? { background: "rgba(248,250,252,0.94)", text: "#111827" }
-    : { background: "rgba(17,24,39,0.94)", text: "#f9fafb" };
 }
 
-function contrastTextOnColor(color: string): string {
-  const rgb = parseRgbColor(color);
-  return rgb && relativeLuminance(rgb) > 0.55 ? "#111827" : "#f9fafb";
+const LIGHT_CONTRAST_SURFACE: ContrastSurface = {
+  background: "rgba(248,250,252,0.94)",
+  text: "#111827",
+};
+const DARK_CONTRAST_SURFACE: ContrastSurface = {
+  background: "rgba(17,24,39,0.94)",
+  text: "#f9fafb",
+};
+const MIN_SURFACE_CONTRAST = 3;
+
+function chartContrastSurface(layout: ResolvedLayout): ContrastSurface {
+  const background = parseOpaqueRgbColor(layout.background);
+  if (!background) {
+    const text = parseRgbColor(layout.textColor);
+    return text && relativeLuminance(text) > 0.55 ? LIGHT_CONTRAST_SURFACE : DARK_CONTRAST_SURFACE;
+  }
+  const light = surfaceContrast(background, LIGHT_CONTRAST_SURFACE.background);
+  const dark = surfaceContrast(background, DARK_CONTRAST_SURFACE.background);
+  return light >= dark ? LIGHT_CONTRAST_SURFACE : DARK_CONTRAST_SURFACE;
+}
+
+function crosshairContrastSurface(model: ChartRenderModel): ContrastSurface {
+  const manual = model.crosshair.labelBackground;
+  if (manual !== undefined) {
+    const surface = customContrastSurface(manual, model.layout.background);
+    if (surface) {
+      return surface;
+    }
+  }
+  return chartContrastSurface(model.layout);
+}
+
+function customContrastSurface(background: string, canvas: string): ContrastSurface | null {
+  const box = parseRgbColor(background);
+  const canvasRgb = parseOpaqueRgbColor(canvas);
+  if (!box || !canvasRgb) {
+    return null;
+  }
+  const effective = compositeRgb(box, canvasRgb);
+  if (
+    contrastRatio(relativeLuminance(effective), relativeLuminance(canvasRgb)) < MIN_SURFACE_CONTRAST
+  ) {
+    return null;
+  }
+  return { background, text: bestContrastText(effective) };
+}
+
+function surfaceContrast(canvas: readonly [number, number, number], background: string): number {
+  const surface = parseRgbColor(background);
+  if (!surface) {
+    return 0;
+  }
+  const effective = compositeRgb(surface, canvas);
+  return contrastRatio(relativeLuminance(effective), relativeLuminance(canvas));
+}
+
+function bestContrastText(background: readonly [number, number, number]): string {
+  const backgroundLuminance = relativeLuminance(background);
+  const dark = contrastRatio(backgroundLuminance, relativeLuminance(parseRgbColor("#111827")!));
+  const light = contrastRatio(backgroundLuminance, relativeLuminance(parseRgbColor("#f9fafb")!));
+  return dark >= light ? "#111827" : "#f9fafb";
+}
+
+function contrastRatio(first: number, second: number): number {
+  const lighter = Math.max(first, second);
+  const darker = Math.min(first, second);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function parseOpaqueRgbColor(color: string): [number, number, number] | null {
+  const parsed = parseRgbColor(color);
+  if (!parsed) {
+    return null;
+  }
+  const opaque = compositeRgb(parsed, [255, 255, 255]);
+  return [opaque[0], opaque[1], opaque[2]];
+}
+
+function compositeRgb(
+  foreground: readonly [number, number, number, number],
+  background: readonly [number, number, number],
+): [number, number, number] {
+  const alpha = Math.max(0, Math.min(1, foreground[3]));
+  return [
+    foreground[0] * alpha + background[0] * (1 - alpha),
+    foreground[1] * alpha + background[1] * (1 - alpha),
+    foreground[2] * alpha + background[2] * (1 - alpha),
+  ];
 }
 
 function parseRgbColor(color: string): [number, number, number, number] | null {

@@ -33,10 +33,12 @@ The settings are shared by the price and time axes.
 
 Axis text styling applies to price/time tick labels, last-value axis labels, and price-line
 labels rendered on the price axis. Crosshair price/time label boxes use the chart-aware contrast
-surface shared with stats boxes instead of `axisTextColor`; an explicit
-`crosshair.labelBackground` remains an override with automatic text contrast. The styling does
-not affect the series legend, no-data text, drawing text or drawing labels, plot price-line
-titles, grids, crosshair lines, series, or drawings.
+surface shared with stats boxes instead of `axisTextColor`. The surface helper compares light and
+dark neutral boxes against the resolved canvas background and selects the stronger contrast; text
+contrast is derived from the selected surface. An explicit `crosshair.labelBackground` remains an
+override only when it reaches the minimum 3:1 box-to-canvas contrast; otherwise the automatic
+surface wins. The styling does not affect the series legend, no-data text, drawing text or drawing
+labels, plot price-line titles, grids, crosshair lines, series, or drawings.
 
 Crosshair, last-value, and price-line axis label boxes size from the axis font. The price-axis
 width is measured with the axis font. The time axis uses
