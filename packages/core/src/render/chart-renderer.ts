@@ -45,6 +45,9 @@ export interface ResolvedLayout {
   background: string;
   textColor: string;
   fontSize: number;
+  axisLineColor?: string;
+  axisTextColor: string;
+  axisFontSize: number;
 }
 
 export interface ResolvedGrid {
@@ -178,7 +181,9 @@ export interface ChartRenderModel {
   axisHeight: number;
 }
 
-const TIME_AXIS_HEIGHT = 28;
+export function timeAxisHeight(axisFontSize: number): number {
+  return Math.max(24, Math.ceil(axisFontSize + 16));
+}
 
 const ELLIOTT_LABELS: Readonly<Record<string, readonly string[]>> = {
   "elliott-impulse": ["0", "1", "2", "3", "4", "5"],
@@ -286,6 +291,10 @@ export class ChartRenderer {
     return `${size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
   }
 
+  private axisFont(model: ChartRenderModel): string {
+    return this.font(model, model.layout.axisFontSize);
+  }
+
   private drawGrid(model: ChartRenderModel): void {
     const context = this.stack.context("grid");
     this.stack.clear("grid");
@@ -303,7 +312,7 @@ export class ChartRenderer {
     const span = Math.max(0, visible.to - visible.from);
     const labelTimezone = this.timeScale.getCalendarTimezone() ?? model.timezone;
 
-    context.font = this.font(model);
+    context.font = this.axisFont(model);
 
     for (const pane of model.panes) {
       const { plot, priceScale } = pane;
@@ -350,7 +359,8 @@ export class ChartRenderer {
 
       context.restore();
 
-      context.fillStyle = model.layout.textColor;
+      context.fillStyle = model.layout.axisTextColor;
+      context.font = this.axisFont(model);
       context.textAlign = "left";
       context.textBaseline = "middle";
 
@@ -360,7 +370,7 @@ export class ChartRenderer {
         if (y < plot.top - 1 || y > plot.bottom + 1) {
           continue;
         }
-        if (Math.abs(y - lastPriceY) < model.layout.fontSize + 4) {
+        if (Math.abs(y - lastPriceY) < model.layout.axisFontSize + 4) {
           continue;
         }
         lastPriceY = y;
@@ -368,7 +378,7 @@ export class ChartRenderer {
       }
 
       if (priceScale.isBorderVisible()) {
-        context.strokeStyle = model.grid.horzColor;
+        context.strokeStyle = model.layout.axisLineColor ?? model.grid.horzColor;
         context.lineWidth = 1;
         context.beginPath();
         context.moveTo(crisp(plot.right), plot.top);
@@ -377,7 +387,7 @@ export class ChartRenderer {
       }
 
       if (this.timeScale.getOptions().borderVisible) {
-        context.strokeStyle = model.grid.vertColor;
+        context.strokeStyle = model.layout.axisLineColor ?? model.grid.vertColor;
         context.beginPath();
         context.moveTo(plot.left, crisp(plot.bottom));
         context.lineTo(plot.right, crisp(plot.bottom));
@@ -385,8 +395,9 @@ export class ChartRenderer {
       }
     }
 
-    context.fillStyle = model.layout.textColor;
-    context.strokeStyle = model.grid.vertColor;
+    context.fillStyle = model.layout.axisTextColor;
+    context.font = this.axisFont(model);
+    context.strokeStyle = model.layout.axisLineColor ?? model.grid.vertColor;
     if (this.timeScale.getOptions().borderVisible) {
       context.beginPath();
       context.moveTo(bottomPane.plot.left, crisp(bottomPane.plot.bottom));
@@ -395,13 +406,14 @@ export class ChartRenderer {
     }
 
     context.textAlign = "center";
+    const timeLabelGap = Math.max(70, Math.ceil(model.layout.axisFontSize * 5.5));
     let lastTimeX = Number.NEGATIVE_INFINITY;
     for (const time of timeTicks) {
       const x = this.timeScale.timeToX(time);
       if (x === null || x < bottomPane.plot.left + 20 || x > bottomPane.plot.right - 20) {
         continue;
       }
-      if (x - lastTimeX < 70) {
+      if (x - lastTimeX < timeLabelGap) {
         continue;
       }
       lastTimeX = x;
@@ -904,18 +916,17 @@ export class ChartRenderer {
         context.restore();
       }
 
-      const boxHeight = model.layout.fontSize + 6;
-      const top = Math.max(plot.top, Math.min(plot.bottom - boxHeight, y - boxHeight / 2));
       const value = pane.priceScale.formatValue(line.price, model.locale);
-      context.font = this.font(model);
-      context.textBaseline = "middle";
-
       if (line.axisLabelVisible) {
+        const boxHeight = model.layout.axisFontSize + 6;
+        const top = Math.max(plot.top, Math.min(plot.bottom - boxHeight, y - boxHeight / 2));
         const label =
           line.title && line.titlePosition === "axis" ? `${line.title} ${value}` : value;
+        context.font = this.axisFont(model);
+        context.textBaseline = "middle";
         context.fillStyle = line.color;
         context.fillRect(plot.right, top, model.axisWidth, boxHeight);
-        context.fillStyle = "#ffffff";
+        context.fillStyle = model.layout.axisTextColor;
         context.textAlign = "left";
         context.fillText(label, plot.right + 8, top + boxHeight / 2);
       }
@@ -924,7 +935,11 @@ export class ChartRenderer {
         continue;
       }
 
+      const boxHeight = model.layout.fontSize + 6;
+      const top = Math.max(plot.top, Math.min(plot.bottom - boxHeight, y - boxHeight / 2));
       const paddingX = 5;
+      context.font = this.font(model);
+      context.textBaseline = "middle";
       const boxWidth = context.measureText(line.title).width + paddingX * 2;
       const left = Math.max(plot.left + 2, plot.right - boxWidth - 2);
       context.fillStyle = line.color;
@@ -1072,7 +1087,7 @@ export class ChartRenderer {
     const { plot } = pane;
     const value = series.store.valueAt(index);
     const y = pane.priceScale.priceToY(value, plot.top, plot.height);
-    const boxHeight = model.layout.fontSize + 6;
+    const boxHeight = model.layout.axisFontSize + 6;
     let top = y - boxHeight / 2;
     let marker = "";
 
@@ -1102,8 +1117,8 @@ export class ChartRenderer {
     context.fillStyle = this.seriesColor(series, index);
     context.fillRect(plot.right, top, model.axisWidth, boxHeight);
 
-    context.fillStyle = "#ffffff";
-    context.font = this.font(model);
+    context.fillStyle = model.layout.axisTextColor;
+    context.font = this.axisFont(model);
     context.textAlign = "left";
     context.textBaseline = "middle";
     context.fillText(label, plot.right + 8, top + boxHeight / 2);
@@ -2218,7 +2233,7 @@ export class ChartRenderer {
 
     const price = hovered.priceScale.yToPrice(y, hovered.plot.top, hovered.plot.height);
     const priceLabel = hovered.priceScale.formatValue(price, model.locale);
-    const boxHeight = model.layout.fontSize + 6;
+    const boxHeight = model.layout.axisFontSize + 6;
     const priceTop = Math.max(
       hovered.plot.top,
       Math.min(hovered.plot.bottom - boxHeight, y - boxHeight / 2),
@@ -2226,14 +2241,15 @@ export class ChartRenderer {
 
     context.fillStyle = model.crosshair.labelBackground;
     context.fillRect(hovered.plot.right, priceTop, model.axisWidth, boxHeight);
-    context.fillStyle = "#ffffff";
-    context.font = this.font(model);
+    context.fillStyle = model.layout.axisTextColor;
+    context.font = this.axisFont(model);
     context.textAlign = "left";
     context.textBaseline = "middle";
     context.fillText(priceLabel, hovered.plot.right + 8, priceTop + boxHeight / 2);
 
     const time = this.timeScale.timeAtX(x);
     if (time !== null) {
+      context.font = this.axisFont(model);
       const label = formatCrosshairTime(
         time,
         model.locale,
@@ -2247,7 +2263,7 @@ export class ChartRenderer {
       );
       context.fillStyle = model.crosshair.labelBackground;
       context.fillRect(left, bottomPane.plot.bottom, width, model.axisHeight);
-      context.fillStyle = "#ffffff";
+      context.fillStyle = model.layout.axisTextColor;
       context.textAlign = "center";
       context.fillText(label, left + width / 2, bottomPane.plot.bottom + model.axisHeight / 2);
     }
@@ -2733,5 +2749,3 @@ function dash(style: "solid" | "dotted" | "dashed"): number[] {
   }
   return [];
 }
-
-export { TIME_AXIS_HEIGHT };

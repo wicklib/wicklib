@@ -189,10 +189,16 @@ export interface SeriesType<
 export interface LayoutOptions {
   /** Canvas background colour. */
   background?: string;
-  /** Axis and label text colour. */
+  /** Base text colour used by chart chrome outside the axes. */
   textColor?: string;
   /** Base font size in CSS pixels. */
   fontSize?: number;
+  /** Both-axis border colour; defaults to grid line colours. */
+  axisLineColor?: string;
+  /** Axis label text colour; defaults to `textColor`. */
+  axisTextColor?: string;
+  /** Axis label font size; defaults to `fontSize`. */
+  axisFontSize?: number;
 }
 
 /**

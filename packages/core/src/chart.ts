@@ -16,7 +16,7 @@ import type { RendererBackend } from "./render/backend";
 import { Canvas2DRenderer } from "./render/canvas2d-renderer";
 import { WebGL2Renderer } from "./render/webgl2-renderer";
 import {
-  TIME_AXIS_HEIGHT,
+  timeAxisHeight,
   type ChartRenderModel,
   type CrosshairRenderPoint,
   type OverlayRenderData,
@@ -1246,7 +1246,7 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     const plotWidth = Math.max(1, width - this.axisWidth);
-    const availableHeight = Math.max(1, height - TIME_AXIS_HEIGHT);
+    const availableHeight = Math.max(1, height - this.computeAxisHeight());
     const heights = computePaneHeights(this.panes, availableHeight);
 
     let top = 0;
@@ -2190,7 +2190,7 @@ class Chart implements ChartApi, SeriesHost {
       timeVisible: timeOptions.timeVisible,
       secondsVisible: timeOptions.secondsVisible,
       axisWidth: this.axisWidth,
-      axisHeight: TIME_AXIS_HEIGHT,
+      axisHeight: this.computeAxisHeight(),
     };
   }
 
@@ -2206,9 +2206,15 @@ class Chart implements ChartApi, SeriesHost {
     }
   }
 
+  private computeAxisHeight(): number {
+    return timeAxisHeight(this.options.layout.axisFontSize);
+  }
+
   private computeAxisWidth(): number {
-    const font = `${this.options.layout.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-    const measure = (text: string): number => this.backend.measureText(text, font);
+    const axisFont = `${this.options.layout.axisFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    const drawingFont = `${this.options.layout.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    const measure = (text: string): number => this.backend.measureText(text, axisFont);
+    const measureDrawing = (text: string): number => this.backend.measureText(text, drawingFont);
     const visible = this.timeScaleModel.visibleIndexRange();
     let widest = 0;
 
@@ -2267,7 +2273,7 @@ class Chart implements ChartApi, SeriesHost {
         for (const anchor of drawing.getAnchorsInternal().slice(0, 2)) {
           widest = Math.max(
             widest,
-            measure(pane.priceScale.formatValue(anchor.price, this.options.locale)),
+            measureDrawing(pane.priceScale.formatValue(anchor.price, this.options.locale)),
           );
         }
       }
@@ -2471,7 +2477,7 @@ class Chart implements ChartApi, SeriesHost {
     }
     if (
       point.y < pane.plot.bottom ||
-      point.y > pane.plot.bottom + TIME_AXIS_HEIGHT ||
+      point.y > pane.plot.bottom + this.computeAxisHeight() ||
       point.x < pane.plot.left ||
       point.x > pane.plot.right
     ) {
@@ -2661,6 +2667,11 @@ function resolveOptions(options: ChartOptions): ResolvedOptions {
   if (!Number.isFinite(fontSize) || fontSize <= 0) {
     fail("INVALID_ARGUMENT", "layout.fontSize must be a positive number");
   }
+  const axisFontSize = options.layout?.axisFontSize ?? fontSize;
+  if (!Number.isFinite(axisFontSize) || axisFontSize <= 0) {
+    fail("INVALID_ARGUMENT", "layout.axisFontSize must be a positive number");
+  }
+  const textColor = options.layout?.textColor ?? "#131722";
 
   return {
     autoSize,
@@ -2670,8 +2681,13 @@ function resolveOptions(options: ChartOptions): ResolvedOptions {
     timezone,
     layout: {
       background: options.layout?.background ?? "#ffffff",
-      textColor: options.layout?.textColor ?? "#131722",
+      textColor,
       fontSize,
+      axisTextColor: options.layout?.axisTextColor ?? textColor,
+      axisFontSize,
+      ...(options.layout?.axisLineColor !== undefined
+        ? { axisLineColor: options.layout.axisLineColor }
+        : {}),
     },
     grid: resolveGrid(options.grid),
     crosshair: resolveCrosshair(options.crosshair),
