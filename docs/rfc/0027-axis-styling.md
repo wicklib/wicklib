@@ -31,10 +31,12 @@ The settings are shared by the price and time axes.
 
 ## 4. Rendering scope
 
-Axis text styling applies to price/time tick labels, crosshair price/time labels, last-value
-axis labels, and price-line labels rendered on the price axis. It does not affect the series
-legend, no-data text, drawing text or drawing labels, plot price-line titles, grids, crosshair
-lines, series, or drawings.
+Axis text styling applies to price/time tick labels, last-value axis labels, and price-line
+labels rendered on the price axis. Crosshair price/time label boxes use the chart-aware contrast
+surface shared with stats boxes instead of `axisTextColor`; an explicit
+`crosshair.labelBackground` remains an override with automatic text contrast. The styling does
+not affect the series legend, no-data text, drawing text or drawing labels, plot price-line
+titles, grids, crosshair lines, series, or drawings.
 
 Crosshair, last-value, and price-line axis label boxes size from the axis font. The price-axis
 width is measured with the axis font. The time axis uses

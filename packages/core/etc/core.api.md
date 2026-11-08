@@ -286,7 +286,6 @@ export interface CrosshairOptions {
     color?: string;
     // (undocumented)
     horzLine?: CrosshairLineOptions;
-    // (undocumented)
     labelBackground?: string;
     mode?: "normal" | "magnet" | "hidden";
     // (undocumented)
@@ -1247,8 +1246,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:1059:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:1074:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1060:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1075:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

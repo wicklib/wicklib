@@ -252,6 +252,7 @@ export interface CrosshairOptions {
   /** `normal` follows the pointer, `magnet` snaps to the nearest bar price. */
   mode?: "normal" | "magnet" | "hidden";
   color?: string;
+  /** Crosshair label background. */
   labelBackground?: string;
   vertLine?: CrosshairLineOptions;
   horzLine?: CrosshairLineOptions;

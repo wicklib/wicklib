@@ -62,7 +62,7 @@ export interface ResolvedCrosshair {
   color: string;
   vertColor: string;
   horzColor: string;
-  labelBackground: string;
+  labelBackground?: string;
   vertVisible: boolean;
   horzVisible: boolean;
   vertWidth: number;
@@ -2022,7 +2022,7 @@ export class ChartRenderer {
     }
     y = Math.max(pane.plot.top + padding, Math.min(pane.plot.bottom - height - padding, y));
 
-    const surface = drawingStatsSurface(model.layout);
+    const surface = chartContrastSurface(model.layout);
     context.save();
     context.fillStyle = surface.background;
     context.fillRect(x, y, width, height);
@@ -2169,7 +2169,7 @@ export class ChartRenderer {
     const top = y - height / 2;
 
     if (options.labelBackgroundVisible) {
-      context.fillStyle = color ?? model.crosshair.labelBackground;
+      context.fillStyle = color ?? model.crosshair.labelBackground ?? "#131722";
       context.fillRect(left, top, width, height);
       context.fillStyle = "#ffffff";
       context.fillText(text, left + 5, y);
@@ -2233,15 +2233,21 @@ export class ChartRenderer {
 
     const price = hovered.priceScale.yToPrice(y, hovered.plot.top, hovered.plot.height);
     const priceLabel = hovered.priceScale.formatValue(price, model.locale);
+    const labelSurface = model.crosshair.labelBackground
+      ? {
+          background: model.crosshair.labelBackground,
+          text: contrastTextOnColor(model.crosshair.labelBackground),
+        }
+      : chartContrastSurface(model.layout);
     const boxHeight = model.layout.axisFontSize + 6;
     const priceTop = Math.max(
       hovered.plot.top,
       Math.min(hovered.plot.bottom - boxHeight, y - boxHeight / 2),
     );
 
-    context.fillStyle = model.crosshair.labelBackground;
+    context.fillStyle = labelSurface.background;
     context.fillRect(hovered.plot.right, priceTop, model.axisWidth, boxHeight);
-    context.fillStyle = model.layout.axisTextColor;
+    context.fillStyle = labelSurface.text;
     context.font = this.axisFont(model);
     context.textAlign = "left";
     context.textBaseline = "middle";
@@ -2261,9 +2267,9 @@ export class ChartRenderer {
         bottomPane.plot.left,
         Math.min(bottomPane.plot.right - width, x - width / 2),
       );
-      context.fillStyle = model.crosshair.labelBackground;
+      context.fillStyle = labelSurface.background;
       context.fillRect(left, bottomPane.plot.bottom, width, model.axisHeight);
-      context.fillStyle = model.layout.axisTextColor;
+      context.fillStyle = labelSurface.text;
       context.textAlign = "center";
       context.fillText(label, left + width / 2, bottomPane.plot.bottom + model.axisHeight / 2);
     }
@@ -2475,7 +2481,7 @@ function drawDrawingText(
   context.restore();
 }
 
-function drawingStatsSurface(layout: ResolvedLayout): {
+function chartContrastSurface(layout: ResolvedLayout): {
   background: string;
   text: string;
 } {
@@ -2490,6 +2496,11 @@ function drawingStatsSurface(layout: ResolvedLayout): {
   return light
     ? { background: "rgba(248,250,252,0.94)", text: "#111827" }
     : { background: "rgba(17,24,39,0.94)", text: "#f9fafb" };
+}
+
+function contrastTextOnColor(color: string): string {
+  const rgb = parseRgbColor(color);
+  return rgb && relativeLuminance(rgb) > 0.55 ? "#111827" : "#f9fafb";
 }
 
 function parseRgbColor(color: string): [number, number, number, number] | null {

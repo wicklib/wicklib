@@ -2753,7 +2753,7 @@ function resolveCrosshair(options: CrosshairOptions | undefined): ResolvedCrossh
     color,
     vertColor: options?.vertLine?.color ?? color,
     horzColor: options?.horzLine?.color ?? color,
-    labelBackground: options?.labelBackground ?? "#131722",
+    ...(options?.labelBackground !== undefined ? { labelBackground: options.labelBackground } : {}),
     vertVisible: options?.vertLine?.visible ?? true,
     horzVisible: options?.horzLine?.visible ?? true,
     vertWidth: options?.vertLine?.width ?? 1,

@@ -224,9 +224,7 @@ describe("axis styling", () => {
   });
 
   it("resizes axis width, time-axis height, and label boxes live", async () => {
-    const { chart, element } = addLineChart({
-      crosshair: { labelBackground: "#00ff00" },
-    });
+    const { chart, element } = addLineChart();
     await settle();
     const initialTicks = priceTickTexts();
     const initialTime = timeLabelTexts().find((call) => Math.abs(call.y - 386) < 1);
@@ -254,10 +252,14 @@ describe("axis styling", () => {
     await settle();
 
     const crosshairHeights = fillRects
-      .filter((rect) => rect.fillStyle === "#00ff00")
+      .filter((rect) => rect.fillStyle === "rgba(248,250,252,0.94)")
       .map((rect) => rect.height);
     expect(crosshairHeights).toContain(30);
     expect(crosshairHeights).toContain(40);
+    expect(textCalls.filter((call) => call.fillStyle === "#111827").length).toBeGreaterThanOrEqual(
+      2,
+    );
+    expect(textCalls.some((call) => call.fillStyle === "#abcdef" && call.y > 350)).toBe(true);
 
     const lastValueHeights = fillRects
       .filter((rect) => rect.fillStyle === "#123456")
