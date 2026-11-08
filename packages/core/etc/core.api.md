@@ -427,6 +427,7 @@ export interface DrawingOptions {
     textColor?: DrawingColor | null;
     textStyle?: DrawingTextStyle;
     textVerticalAlign?: DrawingTextVerticalAlign;
+    timeLabels?: DrawingTimeLabelsMode;
     // (undocumented)
     visible?: boolean;
 }
@@ -438,7 +439,7 @@ export type DrawingPriceLabelsMode = "never" | "selected" | "always";
 export type DrawingSelectionMode = "replace" | "add" | "toggle";
 
 // @public
-export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "labelPlacement" | "labelFontSize" | "labelBackgroundVisible" | "showLine" | "extendLeft" | "extendRight" | "showMidpoint" | "priceLabels" | "stats" | "statsPosition" | "text" | "textColor" | "textStyle" | "textAlign" | "textVerticalAlign" | "fontSize" | "locked" | "visible";
+export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "labelPlacement" | "labelFontSize" | "labelBackgroundVisible" | "showLine" | "extendLeft" | "extendRight" | "showMidpoint" | "priceLabels" | "timeLabels" | "stats" | "statsPosition" | "text" | "textColor" | "textStyle" | "textAlign" | "textVerticalAlign" | "fontSize" | "locked" | "visible";
 
 // @public
 export type DrawingStatsMode = "off" | "selected" | "always";
@@ -454,6 +455,9 @@ export type DrawingTextStyle = "normal" | "bold" | "italic" | "bold-italic";
 
 // @public
 export type DrawingTextVerticalAlign = "top" | "middle" | "bottom";
+
+// @public
+export type DrawingTimeLabelsMode = "never" | "selected" | "always";
 
 // @public
 export interface DrawingToolCatalogEntry {
@@ -1236,8 +1240,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:1035:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:1050:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1044:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1059:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

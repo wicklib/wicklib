@@ -658,6 +658,7 @@ export type DrawingSetting =
   | "extendRight"
   | "showMidpoint"
   | "priceLabels"
+  | "timeLabels"
   | "stats"
   | "statsPosition"
   | "text"
@@ -695,6 +696,11 @@ export type DrawingTextVerticalAlign = "top" | "middle" | "bottom";
 export type DrawingPriceLabelsMode = "never" | "selected" | "always";
 
 /**
+ * When to show drawing anchor times on the time axis.
+ */
+export type DrawingTimeLabelsMode = "never" | "selected" | "always";
+
+/**
  * Drawing stats box visibility.
  */
 export type DrawingStatsMode = "off" | "selected" | "always";
@@ -724,6 +730,8 @@ export interface DrawingOptions {
   showMidpoint?: boolean;
   /** Show trend-line endpoint prices on the price axis. Defaults to never. */
   priceLabels?: DrawingPriceLabelsMode;
+  /** Show trend-line endpoint times on the time axis. Defaults to never. */
+  timeLabels?: DrawingTimeLabelsMode;
   /** Show a stats box. Defaults to off. */
   stats?: DrawingStatsMode;
   /** Stats box horizontal placement. Defaults to auto. */
@@ -732,7 +740,10 @@ export interface DrawingOptions {
   textColor?: DrawingColor | null;
   /** Font style for trend-line text. Defaults to normal. */
   textStyle?: DrawingTextStyle;
-  /** Horizontal alignment for trend-line text. Defaults to center. */
+  /**
+   * Horizontal placement for trend-line text. Left/right place it outside the start/end
+   * anchor; center places it at the midpoint. Defaults to center.
+   */
   textAlign?: DrawingTextAlign;
   /** Vertical alignment for trend-line text. Defaults to middle. */
   textVerticalAlign?: DrawingTextVerticalAlign;

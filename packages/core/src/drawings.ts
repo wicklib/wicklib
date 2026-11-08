@@ -12,6 +12,7 @@ import type {
   DrawingTextAlign,
   DrawingTextStyle,
   DrawingTextVerticalAlign,
+  DrawingTimeLabelsMode,
   DrawingToolDefinition,
   Point,
 } from "./types";
@@ -29,6 +30,7 @@ export interface ResolvedDrawingOptions {
   extendRight: boolean;
   showMidpoint: boolean;
   priceLabels: DrawingPriceLabelsMode;
+  timeLabels: DrawingTimeLabelsMode;
   stats: DrawingStatsMode;
   statsPosition: DrawingStatsPosition;
   text: string;
@@ -138,6 +140,7 @@ const TREND_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "extendRight",
   "showMidpoint",
   "priceLabels",
+  "timeLabels",
   "text",
   "textColor",
   "textStyle",
@@ -205,6 +208,7 @@ const DEFAULTS: DrawingOptions = {
   extendRight: false,
   showMidpoint: false,
   priceLabels: "never",
+  timeLabels: "never",
   stats: "off",
   statsPosition: "auto",
   text: "",
@@ -807,6 +811,7 @@ export function resolveDrawingOptions(
     extendRight: merged.extendRight ?? false,
     showMidpoint: merged.showMidpoint ?? false,
     priceLabels: normalizedPriceLabels(merged.priceLabels),
+    timeLabels: normalizedPriceLabels(merged.timeLabels),
     stats: normalizedStats(merged.stats),
     statsPosition: normalizedStatsPosition(merged.statsPosition),
     text: merged.text ?? "",
@@ -845,6 +850,7 @@ export function mergeDrawingOptions(
     extendRight: patch.extendRight ?? base.extendRight,
     showMidpoint: patch.showMidpoint ?? base.showMidpoint,
     priceLabels: patch.priceLabels ?? base.priceLabels,
+    timeLabels: patch.timeLabels ?? base.timeLabels,
     stats: patch.stats ?? base.stats,
     statsPosition: patch.statsPosition ?? base.statsPosition,
     text: patch.text ?? base.text,

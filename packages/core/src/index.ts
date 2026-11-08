@@ -78,6 +78,7 @@ export type {
   DrawingStatsPosition,
   DrawingStatsMode,
   DrawingPriceLabelsMode,
+  DrawingTimeLabelsMode,
   DrawingColor,
   DrawingLineStyle,
   DrawingOptions,

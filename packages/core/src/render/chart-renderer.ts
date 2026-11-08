@@ -1258,6 +1258,7 @@ export class ChartRenderer {
     }
 
     this.drawDrawingPriceLabels(context, model);
+    this.drawDrawingTimeLabels(context, model);
 
     if (model.selectionBox) {
       const left = Math.min(model.selectionBox.start.x, model.selectionBox.current.x);
@@ -1359,7 +1360,7 @@ export class ChartRenderer {
           context.restore();
         }
         if (drawing.options.text) {
-          drawDrawingText(context, model, drawing.options.text, midpoint, drawing.options);
+          drawDrawingText(context, model, drawing.options.text, first, second, drawing.options);
         }
         return;
       }
@@ -1958,6 +1959,7 @@ export class ChartRenderer {
     }
     const fontSize = drawing.options.labelFontSize ?? model.layout.fontSize;
     const padding = 8;
+    const gap = 10;
     const lineHeight = fontSize + 4;
     context.font = this.font(model, fontSize);
     const width = Math.max(...lines.map((line) => context.measureText(line).width)) + padding * 2;
@@ -1966,29 +1968,50 @@ export class ChartRenderer {
       return;
     }
 
-    let x = pane.plot.left + padding;
-    if (drawing.options.statsPosition === "right") {
-      x = pane.plot.right - width - padding;
-    } else if (drawing.options.statsPosition === "center") {
-      x = (pane.plot.left + pane.plot.right) / 2 - width / 2;
-    } else if (drawing.options.statsPosition === "auto") {
-      const averageX = points.length
-        ? points.reduce((sum, point) => sum + point.x, 0) / points.length
-        : pane.plot.left;
-      x =
-        averageX < (pane.plot.left + pane.plot.right) / 2
-          ? pane.plot.right - width - padding
-          : pane.plot.left + padding;
+    const first = points[0]!;
+    const last = points[points.length - 1]!;
+    const midX = (first.x + last.x) / 2;
+    const midY = (first.y + last.y) / 2;
+    let referenceX = midX;
+    let referenceY = midY;
+    let x: number;
+    const position = drawing.options.statsPosition;
+    if (position === "left") {
+      referenceX = first.x;
+      referenceY = first.y;
+      x = referenceX + gap;
+    } else if (position === "right") {
+      referenceX = last.x;
+      referenceY = last.y;
+      x = referenceX - width - gap;
+    } else if (position === "center") {
+      x = midX - width / 2;
+    } else {
+      const leftSpace = first.x - pane.plot.left;
+      const rightSpace = pane.plot.right - last.x;
+      if (rightSpace >= leftSpace) {
+        referenceX = last.x;
+        referenceY = last.y;
+        x = referenceX - width - gap;
+      } else {
+        referenceX = first.x;
+        referenceY = first.y;
+        x = referenceX + gap;
+      }
     }
-    const y = pane.plot.top + padding;
 
+    x = Math.max(pane.plot.left + padding, Math.min(pane.plot.right - width - padding, x));
+    let y = referenceY - height - gap;
+    if (y < pane.plot.top + padding) {
+      y = referenceY + gap;
+    }
+    y = Math.max(pane.plot.top + padding, Math.min(pane.plot.bottom - height - padding, y));
+
+    const surface = drawingStatsSurface(model.layout);
     context.save();
-    context.fillStyle = model.crosshair.labelBackground;
-    context.strokeStyle = drawing.options.color;
-    context.lineWidth = 1;
+    context.fillStyle = surface.background;
     context.fillRect(x, y, width, height);
-    context.strokeRect(x + 0.5, y + 0.5, width, height);
-    context.fillStyle = "#ffffff";
+    context.fillStyle = surface.text;
     context.textAlign = "left";
     context.textBaseline = "top";
     for (let index = 0; index < lines.length; index += 1) {
@@ -2049,6 +2072,64 @@ export class ChartRenderer {
       context.textAlign = "left";
       context.textBaseline = "middle";
       context.fillText(entry.label, entry.pane.plot.right + 8, top + boxHeight / 2);
+    }
+  }
+
+  private drawDrawingTimeLabels(context: CanvasRenderingContext2D, model: ChartRenderModel): void {
+    const bottomPane = model.panes[model.panes.length - 1];
+    if (!bottomPane) {
+      return;
+    }
+    const fontSize = model.layout.fontSize;
+    const boxHeight = fontSize + 4;
+    const top = bottomPane.plot.bottom + Math.max(0, (model.axisHeight - boxHeight) / 2);
+    context.font = this.font(model);
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+
+    const entries: Array<{ left: number; width: number; label: string; color: string }> = [];
+    for (const drawing of model.drawings) {
+      if (drawing.preview || drawing.toolId !== "trend-line") {
+        continue;
+      }
+      const options = resolveDrawingOptionsForModel(drawing.options, model);
+      if (options.timeLabels === "never") {
+        continue;
+      }
+      if (options.timeLabels === "selected" && !drawing.selected) {
+        continue;
+      }
+      for (const anchor of drawing.anchors.slice(0, 2)) {
+        const x = this.timeScale.timeToX(anchor.time);
+        if (x === null || x < bottomPane.plot.left || x > bottomPane.plot.right) {
+          continue;
+        }
+        const label = formatCrosshairTime(
+          anchor.time,
+          model.locale,
+          this.timeScale.getCalendarTimezone() ?? model.timezone,
+          model.secondsVisible,
+        );
+        const width = context.measureText(label).width + 10;
+        const left = Math.max(
+          bottomPane.plot.left,
+          Math.min(bottomPane.plot.right - width, x - width / 2),
+        );
+        entries.push({ left, width, label, color: options.color });
+      }
+    }
+    entries.sort((first, second) => first.left - second.left);
+
+    let lastRight = Number.NEGATIVE_INFINITY;
+    for (const entry of entries) {
+      if (entry.left < lastRight + 2) {
+        continue;
+      }
+      context.fillStyle = entry.color;
+      context.fillRect(entry.left, top, entry.width, boxHeight);
+      context.fillStyle = "#ffffff";
+      context.fillText(entry.label, entry.left + entry.width / 2, top + boxHeight / 2);
+      lastRight = entry.left + entry.width;
     }
   }
 
@@ -2270,7 +2351,8 @@ function drawDrawingText(
   context: CanvasRenderingContext2D,
   model: ChartRenderModel,
   text: string,
-  point: Point,
+  first: Point,
+  second: Point,
   options: ResolvedDrawingOptions,
 ): void {
   const style = [
@@ -2279,13 +2361,87 @@ function drawDrawingText(
   ]
     .filter(Boolean)
     .join(" ");
+  let point: Point;
+  let align: CanvasTextAlign;
+  if (options.textAlign === "left") {
+    point = { x: first.x - 6, y: first.y };
+    align = "right";
+  } else if (options.textAlign === "right") {
+    point = { x: second.x + 6, y: second.y };
+    align = "left";
+  } else {
+    point = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+    align = "center";
+  }
   context.save();
   context.font = `${style ? `${style} ` : ""}${options.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
   context.fillStyle = options.textColor;
-  context.textAlign = options.textAlign;
+  context.textAlign = align;
   context.textBaseline = options.textVerticalAlign;
   context.fillText(text, point.x, point.y);
   context.restore();
+}
+
+function drawingStatsSurface(layout: ResolvedLayout): {
+  background: string;
+  text: string;
+} {
+  const background = parseRgbColor(layout.background);
+  const text = parseRgbColor(layout.textColor);
+  const backgroundLuminance = background ? relativeLuminance(background) : null;
+  const textLuminance = text ? relativeLuminance(text) : null;
+  const light =
+    backgroundLuminance !== null
+      ? backgroundLuminance > 0.55
+      : textLuminance !== null && textLuminance < 0.5;
+  return light
+    ? { background: "rgba(248,250,252,0.94)", text: "#111827" }
+    : { background: "rgba(17,24,39,0.94)", text: "#f9fafb" };
+}
+
+function parseRgbColor(color: string): [number, number, number, number] | null {
+  const value = color.trim().toLowerCase();
+  if (value === "transparent") {
+    return null;
+  }
+  if (value.startsWith("#")) {
+    const hex = value.slice(1);
+    if (hex.length === 3 || hex.length === 4) {
+      const red = Number.parseInt(hex[0]! + hex[0]!, 16);
+      const green = Number.parseInt(hex[1]! + hex[1]!, 16);
+      const blue = Number.parseInt(hex[2]! + hex[2]!, 16);
+      const alpha = hex.length === 4 ? Number.parseInt(hex[3]! + hex[3]!, 16) / 255 : 1;
+      return [red, green, blue, alpha];
+    }
+    if (hex.length === 6 || hex.length === 8) {
+      const red = Number.parseInt(hex.slice(0, 2), 16);
+      const green = Number.parseInt(hex.slice(2, 4), 16);
+      const blue = Number.parseInt(hex.slice(4, 6), 16);
+      const alpha = hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1;
+      if ([red, green, blue, alpha].some((channel) => Number.isNaN(channel))) {
+        return null;
+      }
+      return [red, green, blue, alpha];
+    }
+    return null;
+  }
+  const match = /^rgba?\(([^)]+)\)$/.exec(value);
+  if (!match) {
+    return null;
+  }
+  const channels = match[1]!.split(",").map((channel) => Number.parseFloat(channel.trim()));
+  if (channels.length < 3 || channels.some((channel) => Number.isNaN(channel))) {
+    return null;
+  }
+  return [channels[0]!, channels[1]!, channels[2]!, channels[3] ?? 1];
+}
+
+function relativeLuminance([red, green, blue]: readonly number[]): number {
+  const channel = (value: number): number => {
+    const normalized = Math.max(0, Math.min(255, value)) / 255;
+    return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(red!) + 0.7152 * channel(green!) + 0.0722 * channel(blue!);
 }
 
 function drawChannelPolygon(

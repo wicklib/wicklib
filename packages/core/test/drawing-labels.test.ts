@@ -18,12 +18,16 @@ const charts: ChartApi[] = [];
 const containers: HTMLElement[] = [];
 const textCalls: Array<{
   text: string;
+  x: number;
+  y: number;
   font: string;
   fillStyle: string;
   textAlign: string;
   textBaseline: string;
 }> = [];
 const fillStyles: string[] = [];
+const fillRects: Array<{ x: number; y: number; width: number; height: number; fillStyle: string }> =
+  [];
 
 function mount(): HTMLElement {
   const element = document.createElement("div");
@@ -59,17 +63,22 @@ beforeAll(() => {
     fillText(
       this: { font: string; fillStyle: string; textAlign: string; textBaseline: string },
       text: string,
+      x: number,
+      y: number,
     ) {
       textCalls.push({
         text: String(text),
+        x,
+        y,
         font: this.font,
         fillStyle: this.fillStyle,
         textAlign: this.textAlign,
         textBaseline: this.textBaseline,
       });
     },
-    fillRect(this: { fillStyle: string }) {
+    fillRect(this: { fillStyle: string }, x: number, y: number, width: number, height: number) {
       fillStyles.push(this.fillStyle);
+      fillRects.push({ x, y, width, height, fillStyle: this.fillStyle });
     },
   } as Record<string, unknown>;
   const context = new Proxy(target, {
@@ -116,6 +125,7 @@ afterEach(() => {
   }
   textCalls.length = 0;
   fillStyles.length = 0;
+  fillRects.length = 0;
 });
 
 afterAll(() => {
@@ -181,6 +191,7 @@ describe("drawing label styling", () => {
         fontSize: 18,
         showMidpoint: true,
         priceLabels: "always",
+        timeLabels: "always",
         stats: "always",
         statsPosition: "left",
       },
@@ -190,7 +201,7 @@ describe("drawing label styling", () => {
     const trendText = textCalls.find((call) => call.text === "Trend");
     expect(trendText).toMatchObject({
       fillStyle: "#abcdef",
-      textAlign: "right",
+      textAlign: "left",
       textBaseline: "top",
     });
     expect(trendText?.font.includes("bold italic 18px")).toBe(true);
@@ -198,6 +209,15 @@ describe("drawing label styling", () => {
     expect(textCalls.some((call) => call.text === "101.27")).toBe(true);
     expect(textCalls.some((call) => call.text === "123.73")).toBe(true);
     expect(fillStyles).toContain("#abcdef");
+    expect(
+      textCalls.filter(
+        (call) =>
+          call.fillStyle === "#abcdef" &&
+          call.textBaseline === "middle" &&
+          call.text !== "101.27" &&
+          call.text !== "123.73",
+      ).length,
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it("uses per-drawing font size and supports boxless labels", async () => {
@@ -238,5 +258,76 @@ describe("drawing label styling", () => {
     expect(boxless?.font.startsWith("24px")).toBe(true);
     expect(boxless?.fillStyle).toBe("#123456");
     expect(fillStyles).not.toContain("#123456");
+  });
+  it("places trend text and stats relative to drawing endpoints", async () => {
+    const chart = createChart(mount(), { layout: { background: "#111111" } });
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    chart.timeScale().fitContent();
+
+    const anchors = [
+      { time: 20 * MINUTE, price: 120 },
+      { time: 60 * MINUTE, price: 140 },
+    ];
+    for (const align of ["left", "center", "right"] as const) {
+      chart.addDrawing(TrendLine, {
+        anchors,
+        options: {
+          text: `Text-${align}`,
+          textAlign: align,
+          textVerticalAlign: "middle",
+          stats: "off",
+        },
+      });
+    }
+    for (const position of ["left", "center", "right"] as const) {
+      chart.addDrawing(TrendLine, {
+        anchors,
+        options: { stats: "always", statsPosition: position },
+      });
+    }
+
+    await settle();
+    const left = textCalls.find((call) => call.text === "Text-left");
+    const center = textCalls.find((call) => call.text === "Text-center");
+    const right = textCalls.find((call) => call.text === "Text-right");
+    expect(left).toBeDefined();
+    expect(center).toBeDefined();
+    expect(right).toBeDefined();
+    expect(left!.x).toBeLessThan(center!.x);
+    expect(right!.x).toBeGreaterThan(center!.x);
+    expect(left!.textAlign).toBe("right");
+    expect(center!.textAlign).toBe("center");
+    expect(right!.textAlign).toBe("left");
+
+    const statsX = [
+      ...new Set(
+        fillRects.filter((rect) => rect.fillStyle === "rgba(17,24,39,0.94)").map((rect) => rect.x),
+      ),
+    ].sort((first, second) => first - second);
+    expect(statsX).toHaveLength(3);
+    expect(statsX[0]).toBeLessThan(statsX[1]!);
+    expect(statsX[1]).toBeLessThan(statsX[2]!);
+  });
+
+  it("uses a light stats surface on light backgrounds", async () => {
+    const chart = createChart(mount(), {
+      layout: { background: "#ffffff", textColor: "#111827" },
+    });
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    chart.timeScale().fitContent();
+    chart.addDrawing(TrendLine, {
+      anchors: [
+        { time: 20 * MINUTE, price: 120 },
+        { time: 60 * MINUTE, price: 140 },
+      ],
+      options: { stats: "always", statsPosition: "center" },
+    });
+
+    await settle();
+    expect(fillRects.some((rect) => rect.fillStyle === "rgba(248,250,252,0.94)")).toBe(true);
   });
 });

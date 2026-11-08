@@ -18,6 +18,7 @@ Drawing options gain:
 - `showLine`
 - `extendLeft`, `extendRight`, `showMidpoint`
 - `priceLabels`: `never` | `selected` | `always`
+- `timeLabels`: `never` | `selected` | `always`
 - `text`, `textColor`, `fontSize`, `textStyle`, `textAlign`, `textVerticalAlign`
 - `stats`: `off` | `selected` | `always`
 - `statsPosition`: `auto` | `left` | `center` | `right`
@@ -27,13 +28,16 @@ Drawing options gain:
 - Theme colors resolve against the chart layout text color at render time.
 - Lines, fills, labels, text, stats, and price labels use resolved colors.
 - `showLine: false` keeps labels and stats while hiding line geometry.
-- Trend-line extensions affect rendering; price labels remain at the two anchor prices.
-- Text supports normal/bold/italic/bold-italic, horizontal left/center/right, and vertical
-  top/middle/bottom.
-- Stats boxes are drawn inside the plot and contain tool-appropriate values.
-- Axis price labels are drawn outside the plot on the price axis and participate in axis-width
-  measurement.
-- Defaults preserve existing drawings: theme is not forced, lines are shown, price labels are
+- Trend-line extensions affect rendering; price and time labels remain at the two anchor values.
+- Text supports normal/bold/italic/bold-italic; horizontal left/right places the text outside the
+  start/end anchor, while center places it at the midpoint. Vertical alignment is top/middle/bottom.
+- Stats boxes are drawn inside the plot, contain tool-appropriate values, and follow the drawing:
+  left is the start anchor, center is the midpoint, and right is the end anchor. `auto` chooses the
+  side with more space. Non-straight tools such as Elliott waves expose start/end positioning only.
+- Stats boxes use an automatic light/dark surface for contrast and have no border.
+- Axis price labels are drawn on the price axis and participate in axis-width measurement. Time
+  labels are drawn on the time axis and skip anchors outside the visible plot.
+- Defaults preserve existing drawings: theme is not forced, lines are shown, price/time labels are
   never, and stats are off.
 
 ## 4. Acceptance criteria
@@ -41,5 +45,7 @@ Drawing options gain:
 - Empty/null colors do not leave stale canvas styles.
 - Theme colors update when the chart theme changes.
 - Line labels, text, stats, and axis labels use the resolved color.
-- Trend-line extensions, midpoint, text, axis labels, and stats render correctly.
+- Trend-line extensions, midpoint, text, price/time axis labels, and stats render correctly.
+- Trend-line text left/right is placed outside the start/end anchors.
+- Stats boxes follow their drawing and remain legible on light and dark chart backgrounds.
 - Options persist through drawing serialization.
