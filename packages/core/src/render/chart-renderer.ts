@@ -1781,27 +1781,35 @@ export class ChartRenderer {
           const labels = drawing.options.labels ?? ELLIOTT_LABELS[drawing.toolId] ?? [];
           const fontSize = drawing.options.labelFontSize ?? model.layout.fontSize;
           const boxHeight = fontSize + 6;
+          const minLabelY = plot.top + boxHeight / 2;
+          const maxLabelY = plot.bottom - boxHeight / 2;
           for (let index = 0; index < points.length; index += 1) {
             const label = labels[index];
-            if (!label) {
+            const point = points[index];
+            if (
+              !label ||
+              !point ||
+              point.x < plot.left ||
+              point.x > plot.right ||
+              point.y < plot.top ||
+              point.y > plot.bottom
+            ) {
               continue;
             }
             let side = elliottLabelPlacement(points, index, drawing.options.labelPlacement);
-            if (side === "above" && points[index]!.y - boxHeight - 4 < plot.top) {
+            if (side === "above" && point.y - boxHeight - 4 < plot.top) {
               side = "below";
-            } else if (side === "below" && points[index]!.y + boxHeight + 4 > plot.bottom) {
+            } else if (side === "below" && point.y + boxHeight + 4 > plot.bottom) {
               side = "above";
             }
-            const labelY =
-              side === "above"
-                ? points[index]!.y - boxHeight / 2 - 4
-                : points[index]!.y + boxHeight / 2 + 4;
+            const rawY =
+              side === "above" ? point.y - boxHeight / 2 - 4 : point.y + boxHeight / 2 + 4;
             this.drawLabel(
               context,
               model,
               label,
-              points[index]!.x,
-              Math.max(plot.top, Math.min(plot.bottom, labelY)),
+              point.x,
+              Math.max(minLabelY, Math.min(maxLabelY, rawY)),
               drawing.options,
               drawing.options.color,
               "center",

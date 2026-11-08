@@ -217,7 +217,8 @@ drawing.setOptions({
 
 `labelPlacement` defaults to `auto`: Elliott labels center on their anchor, above local highs
 and below local lows. Use `"above"` or `"below"` to force a side. Labels flip to the opposite
-side when they would leave the pane.
+side when they would leave the pane. Labels are not drawn when their anchor is outside the
+visible plot.
 
 With `labelBackgroundVisible: false`, the background box is skipped and the label text uses the
 drawing-specific label color. This applies to Elliott labels and other label-bearing tools.

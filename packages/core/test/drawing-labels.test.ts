@@ -2,7 +2,11 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 
 import {
   CandlestickSeries,
+  ElliottCorrection,
+  ElliottDoubleCombo,
   ElliottImpulse,
+  ElliottTriangle,
+  ElliottTripleCombo,
   createChart,
   type ChartApi,
   type OhlcData,
@@ -102,6 +106,38 @@ afterAll(() => {
 });
 
 describe("drawing label styling", () => {
+  it("skips labels when Elliott anchors leave the visible price range", async () => {
+    const chart = createChart(mount());
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    chart.timeScale().fitContent();
+    series.priceScale().setVisibleRange({ min: 500, max: 600 });
+
+    const tools = [
+      [ElliottImpulse, 6],
+      [ElliottCorrection, 4],
+      [ElliottTriangle, 6],
+      [ElliottDoubleCombo, 4],
+      [ElliottTripleCombo, 6],
+    ] as const;
+    for (const [tool, count] of tools) {
+      chart.addDrawing(tool, {
+        anchors: Array.from({ length: count }, (_, index) => ({
+          time: index * 10 * MINUTE,
+          price: 100 + index * 2,
+        })),
+        options: {
+          labels: Array.from({ length: count }, (_, index) => `skip-${tool.id}-${index}`),
+        },
+      });
+    }
+
+    textCalls.length = 0;
+    await settle();
+    expect(textCalls.some((call) => call.text.startsWith("skip-"))).toBe(false);
+  });
+
   it("uses per-drawing font size and supports boxless labels", async () => {
     const chart = createChart(mount());
     charts.push(chart);
