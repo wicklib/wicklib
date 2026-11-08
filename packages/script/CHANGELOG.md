@@ -1,5 +1,12 @@
 # @wicklib/script
 
+## 0.23.1
+
+### Patch Changes
+
+- Updated dependencies [eb20232]
+  - @wicklib/core@0.23.1
+
 ## 0.23.0
 
 ### Patch Changes

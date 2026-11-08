@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.23.1
+
+### Patch Changes
+
+- eb20232: Use chart-aware contrast surfaces for crosshair price and time labels while preserving axis font sizing.
+
 ## 0.23.0
 
 ### Minor Changes
