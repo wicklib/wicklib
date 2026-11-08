@@ -1,5 +1,12 @@
 # @wicklib/core
 
+## 0.16.0
+
+### Minor Changes
+
+- 7555bd5: Add custom per-anchor label overrides for Elliott drawing tools. Label sequences persist with
+  the drawing, while Elliott degree catalogs and UI remain host-owned.
+
 ## 0.15.0
 
 ### Minor Changes
