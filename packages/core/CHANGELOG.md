@@ -1,5 +1,12 @@
 # @wicklib/core
 
+## 0.19.0
+
+### Minor Changes
+
+- 979e609: Add theme-aware drawing colors, line-only visibility, trend-line extensions/midpoint/text,
+  axis price labels, and per-drawing stats boxes with position controls.
+
 ## 0.18.1
 
 ### Patch Changes

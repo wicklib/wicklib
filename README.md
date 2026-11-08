@@ -27,13 +27,13 @@ selected drawing. Pinch zoom works on touch. Core edits hot-reload.
 
 | Package                  | Status | Description                                                                                                             |
 | ------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `@wicklib/core`          | 0.18.1 | Canvas2D/WebGL scales, candlestick/line/area/histogram series, panes, indicators, drawings, annotations, export, themes |
-| `@wicklib/indicators`    | 0.18.1 | Built-in indicator catalog                                                                                              |
-| `@wicklib/react`         | 0.18.1 | Thin React mount wrapper and `useChart`                                                                                 |
-| `@wicklib/script`        | 0.18.1 | WickScript API v1, compiler, worker runtime                                                                             |
-| `@wicklib/script-editor` | 0.18.1 | Monaco editor with generated WickScript types                                                                           |
-| `@wicklib/layouts`       | 0.18.1 | Free multi-chart grid, time-range sync, and crosshair sync                                                              |
-| `wicklib`                | 0.18.1 | Umbrella package: core + indicators + layouts                                                                           |
+| `@wicklib/core`          | 0.19.0 | Canvas2D/WebGL scales, candlestick/line/area/histogram series, panes, indicators, drawings, annotations, export, themes |
+| `@wicklib/indicators`    | 0.19.0 | Built-in indicator catalog                                                                                              |
+| `@wicklib/react`         | 0.19.0 | Thin React mount wrapper and `useChart`                                                                                 |
+| `@wicklib/script`        | 0.19.0 | WickScript API v1, compiler, worker runtime                                                                             |
+| `@wicklib/script-editor` | 0.19.0 | Monaco editor with generated WickScript types                                                                           |
+| `@wicklib/layouts`       | 0.19.0 | Free multi-chart grid, time-range sync, and crosshair sync                                                              |
+| `wicklib`                | 0.19.0 | Umbrella package: core + indicators + layouts                                                                           |
 
 The commercial add-on (`@wicklib/pro`) lives in a separate private repository and consumes
 `@wicklib/core` through its published entrypoint only.
