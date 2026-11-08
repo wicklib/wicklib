@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.21.0
+
+### Minor Changes
+
+- e3ade86: Add configurable drawing stats fields, including intraday time ranges with optional seconds.
+
 ## 0.20.0
 
 ### Minor Changes
