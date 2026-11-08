@@ -1,27 +1,42 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
+  Arrow,
   CandlestickSeries,
   Brush,
   Circle,
   createChart,
   CrossLine,
+  DisjointChannel,
   ElliottCorrection,
   ElliottDoubleCombo,
   ElliottImpulse,
   ElliottTriangle,
   ElliottTripleCombo,
+  ExtendedLine,
   FibExtension,
+  FibChannel,
+  FibTimeZone,
+  FlatTopBottom,
+  GannFan,
   Highlighter,
   HorizontalLine,
   HorizontalRay,
   LongShortPosition,
   Measure,
+  ModifiedSchiffPitchfork,
   ParallelChannel,
   Path,
+  Pitchfork,
   PriceDateRange,
+  Ray,
   Rectangle,
+  RegressionTrend,
+  SchiffPitchfork,
+  SpeedLines,
+  StatsLine,
   Text,
+  TrendAngle,
   TrendLine,
   VerticalLine,
   type ChartApi,
@@ -786,6 +801,32 @@ describe("createChart", () => {
     expect(events).toEqual(["horizontal-line", "text"]);
   });
 
+  it("persists custom label sequences for Elliott drawings", () => {
+    const chart = track(createChart(mount()));
+    chart.addSeries(CandlestickSeries).setData(bars(100));
+    const labels = ["start", "i", "ii", "iii", "iv", "v"];
+    const drawing = chart.addDrawing(ElliottImpulse, {
+      anchors: [
+        { time: 0, price: 98 },
+        { time: 10 * MINUTE, price: 108 },
+        { time: 20 * MINUTE, price: 103 },
+        { time: 30 * MINUTE, price: 112 },
+        { time: 40 * MINUTE, price: 109 },
+        { time: 50 * MINUTE, price: 116 },
+      ],
+      options: { labels },
+    });
+
+    expect(drawing.getOptions().labels).toEqual(labels);
+    const document = chart.serializeDrawings();
+    expect(document.drawings[0]?.options.labels).toEqual(labels);
+
+    const restored = track(createChart(mount()));
+    restored.addSeries(CandlestickSeries).setData(bars(100));
+    restored.loadDrawings(document);
+    expect(restored.serializeDrawings().drawings[0]?.options.labels).toEqual(labels);
+  });
+
   it("creates, renders, serializes, and restores every drawing tool", () => {
     const chart = track(createChart(mount()));
     chart.addSeries(CandlestickSeries).setData(bars(50));
@@ -828,6 +869,21 @@ describe("createChart", () => {
       [ElliottTriangle, six],
       [ElliottDoubleCombo, four],
       [ElliottTripleCombo, six],
+      [Ray, two],
+      [ExtendedLine, two],
+      [TrendAngle, two],
+      [Arrow, two],
+      [StatsLine, two],
+      [RegressionTrend, two],
+      [FlatTopBottom, three],
+      [DisjointChannel, four],
+      [FibChannel, three],
+      [FibTimeZone, two],
+      [Pitchfork, three],
+      [SchiffPitchfork, three],
+      [ModifiedSchiffPitchfork, three],
+      [GannFan, two],
+      [SpeedLines, three],
       [Brush, two],
       [Highlighter, two],
       [Path, three],

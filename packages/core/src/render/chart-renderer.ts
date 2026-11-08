@@ -1770,7 +1770,7 @@ export class ChartRenderer {
         context.stroke();
 
         if (drawing.options.showLabels) {
-          const labels = ELLIOTT_LABELS[drawing.toolId] ?? [];
+          const labels = drawing.options.labels ?? ELLIOTT_LABELS[drawing.toolId] ?? [];
           for (let index = 0; index < points.length; index += 1) {
             const label = labels[index];
             if (!label) {

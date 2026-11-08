@@ -5,6 +5,7 @@ import {
   drawingToolSettings,
   hitTestDrawing,
   parallelLines,
+  resolveDrawingOptions,
   type ResolvedDrawingOptions,
 } from "../src/drawings";
 
@@ -86,6 +87,16 @@ describe("drawing settings", () => {
     expect(drawingToolSettings("gann-fan")).toContain("showLabels");
     expect(drawingToolSettings("speed-lines")).not.toContain("showLabels");
     expect(() => drawingToolSettings("missing")).toThrow(/Unknown drawing tool/);
+  });
+});
+
+describe("drawing labels", () => {
+  it("accepts string label overrides and rejects invalid values", () => {
+    const resolved = resolveDrawingOptions(undefined, {
+      labels: ["0", "i", "ii", "iii", "iv", "v"],
+    });
+    expect(resolved.labels).toEqual(["0", "i", "ii", "iii", "iv", "v"]);
+    expect(() => resolveDrawingOptions(undefined, { labels: ["0", 1 as never] })).toThrow(/labels/);
   });
 });
 

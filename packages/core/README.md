@@ -202,6 +202,25 @@ Logarithmic scales require positive prices. Explicit non-positive ranges throw
 valid range stays visible. Margins are applied in log space, and narrow ranges fall back to
 linear price ticks for familiar labels.
 
+## Elliott labels
+
+Elliott tools use the built-in label sequence by default. A degree or custom convention can
+override one label per anchor:
+
+```ts
+const wave = chart.addDrawing(ElliottImpulse, {
+  anchors,
+  options: {
+    labels: ["0", "i", "ii", "iii", "iv", "v"],
+  },
+});
+
+wave.setOptions({ labels: ["0", "(i)", "(ii)", "(iii)", "(iv)", "(v)"] });
+```
+
+Label overrides are stored with the drawing and survive save/load. Degree catalogs, menu
+labels, and per-user defaults remain host-owned.
+
 ## Workspace state
 
 Wicklib does not persist application state. The host can read the state it needs to save:

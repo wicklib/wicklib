@@ -662,6 +662,8 @@ export interface DrawingOptions {
   showLabels?: boolean;
   /** Text content for text drawings. */
   text?: string;
+  /** Custom label sequence for drawing tools that render one label per anchor. */
+  labels?: readonly string[];
   /** Text size in CSS pixels. */
   fontSize?: number;
   locked?: boolean;

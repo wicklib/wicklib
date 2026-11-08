@@ -1,3 +1,4 @@
+import { fail } from "./errors";
 import type {
   DrawingAnchor,
   DrawingLineStyle,
@@ -16,6 +17,7 @@ export interface ResolvedDrawingOptions {
   fillOpacity: number;
   showLabels: boolean;
   text: string;
+  labels?: readonly string[];
   fontSize: number;
   locked: boolean;
   visible: boolean;
@@ -725,8 +727,7 @@ export function resolveDrawingOptions(
 ): ResolvedDrawingOptions {
   const merged: DrawingOptions = { ...DEFAULTS, ...defaultOptions, ...options };
   const fillColor = merged.fillColor ?? merged.color ?? "#2962ff";
-
-  return {
+  const resolved: ResolvedDrawingOptions = {
     color: merged.color ?? "#2962ff",
     lineWidth: merged.lineWidth ?? 1,
     lineStyle: merged.lineStyle ?? "solid",
@@ -738,13 +739,17 @@ export function resolveDrawingOptions(
     locked: merged.locked ?? false,
     visible: merged.visible ?? true,
   };
+  if (merged.labels !== undefined) {
+    resolved.labels = validateLabels(merged.labels);
+  }
+  return resolved;
 }
 
 export function mergeDrawingOptions(
   base: ResolvedDrawingOptions,
   patch: DrawingOptions,
 ): ResolvedDrawingOptions {
-  return {
+  const merged: ResolvedDrawingOptions = {
     color: patch.color ?? base.color,
     lineWidth: patch.lineWidth ?? base.lineWidth,
     lineStyle: patch.lineStyle ?? base.lineStyle,
@@ -756,6 +761,19 @@ export function mergeDrawingOptions(
     locked: patch.locked ?? base.locked,
     visible: patch.visible ?? base.visible,
   };
+  if (patch.labels !== undefined) {
+    merged.labels = validateLabels(patch.labels);
+  } else if (base.labels !== undefined) {
+    merged.labels = base.labels;
+  }
+  return merged;
+}
+
+function validateLabels(labels: readonly string[]): readonly string[] {
+  if (!Array.isArray(labels) || labels.some((label) => typeof label !== "string")) {
+    fail("INVALID_ARGUMENT", "drawing labels must be an array of strings");
+  }
+  return [...labels];
 }
 
 export function anchorPoint(
