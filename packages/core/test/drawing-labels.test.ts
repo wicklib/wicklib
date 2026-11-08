@@ -330,4 +330,74 @@ describe("drawing label styling", () => {
     await settle();
     expect(fillRects.some((rect) => rect.fillStyle === "rgba(248,250,252,0.94)")).toBe(true);
   });
+  it("shows all default stats fields when statsFields is omitted", async () => {
+    const chart = createChart(mount());
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    chart.timeScale().fitContent();
+    chart.addDrawing(TrendLine, {
+      anchors: [
+        { time: 20 * MINUTE, price: 120 },
+        { time: 60 * MINUTE, price: 140 },
+      ],
+      options: { stats: "always" },
+    });
+
+    await settle();
+    expect(textCalls.some((call) => call.text.startsWith("Range  "))).toBe(true);
+    expect(textCalls.some((call) => call.text.startsWith("Change  "))).toBe(true);
+    expect(textCalls.some((call) => call.text.startsWith("Bars  "))).toBe(true);
+    expect(textCalls.some((call) => call.text.startsWith("Date  "))).toBe(true);
+    expect(textCalls.some((call) => call.text.startsWith("Angle  "))).toBe(true);
+  });
+
+  it("renders only the configured stats fields", async () => {
+    const chart = createChart(mount());
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    chart.timeScale().fitContent();
+    chart.addDrawing(TrendLine, {
+      anchors: [
+        { time: 20 * MINUTE, price: 120 },
+        { time: 60 * MINUTE, price: 140 },
+      ],
+      options: { stats: "always", statsFields: ["range"] },
+    });
+
+    await settle();
+    expect(textCalls.some((call) => call.text.startsWith("Range  "))).toBe(true);
+    expect(textCalls.some((call) => call.text.startsWith("Change  "))).toBe(false);
+    expect(textCalls.some((call) => call.text.startsWith("Bars  "))).toBe(false);
+    expect(textCalls.some((call) => call.text.startsWith("Date  "))).toBe(false);
+    expect(textCalls.some((call) => call.text.startsWith("Time  "))).toBe(false);
+    expect(textCalls.some((call) => call.text.startsWith("Angle  "))).toBe(false);
+  });
+
+  it("renders an intraday time range with seconds when visible", async () => {
+    const chart = createChart(mount(), {
+      locale: "en-US",
+      timezone: "UTC",
+      timeScale: { secondsVisible: true },
+    });
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    chart.timeScale().fitContent();
+    chart.addDrawing(TrendLine, {
+      anchors: [
+        { time: 0, price: 120 },
+        { time: 90_000, price: 140 },
+      ],
+      options: { stats: "always", statsFields: ["timeRange"] },
+    });
+
+    await settle();
+    const time = textCalls.find((call) => call.text.startsWith("Time  "));
+    expect(time).toBeDefined();
+    expect(time!.text).toContain("12:00:00");
+    expect(time!.text).toContain("12:01:30");
+    expect(time!.text).toContain("→");
+  });
 });

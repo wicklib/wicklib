@@ -97,6 +97,8 @@ describe("drawing settings", () => {
     expect(drawingToolSettings("trend-line")).toContain("extendLeft");
     expect(drawingToolSettings("trend-line")).toContain("priceLabels");
     expect(drawingToolSettings("trend-line")).toContain("statsPosition");
+    expect(drawingToolSettings("trend-line")).toContain("statsFields");
+    expect(drawingToolSettings("elliott-impulse")).toContain("statsFields");
     expect(() => drawingToolSettings("missing")).toThrow(/Unknown drawing tool/);
   });
 });
@@ -136,6 +138,7 @@ describe("drawing labels", () => {
       showMidpoint: true,
       priceLabels: "always",
       stats: "selected",
+      statsFields: ["timeRange", "range", "timeRange"],
       statsPosition: "right",
       textStyle: "bold-italic",
       textAlign: "right",
@@ -149,6 +152,7 @@ describe("drawing labels", () => {
     expect(resolved.showMidpoint).toBe(true);
     expect(resolved.priceLabels).toBe("always");
     expect(resolved.stats).toBe("selected");
+    expect(resolved.statsFields).toEqual(["timeRange", "range"]);
     expect(resolved.statsPosition).toBe("right");
     expect(resolved.textStyle).toBe("bold-italic");
     expect(resolved.textAlign).toBe("right");
@@ -156,6 +160,16 @@ describe("drawing labels", () => {
 
     const base = resolveDrawingOptions(undefined, { color: "#ffffff" });
     expect(mergeDrawingOptions(base, { color: null }).color).toBe("theme");
+    expect(resolveDrawingOptions(undefined, {}).statsFields).toEqual([
+      "range",
+      "change",
+      "bars",
+      "date",
+      "angle",
+    ]);
+    expect(() => resolveDrawingOptions(undefined, { statsFields: ["volume" as never] })).toThrow(
+      /statsFields/,
+    );
   });
 });
 

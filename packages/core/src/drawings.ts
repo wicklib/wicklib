@@ -7,6 +7,7 @@ import type {
   DrawingOptions,
   DrawingPriceLabelsMode,
   DrawingSetting,
+  DrawingStatsField,
   DrawingStatsMode,
   DrawingStatsPosition,
   DrawingTextAlign,
@@ -32,6 +33,7 @@ export interface ResolvedDrawingOptions {
   priceLabels: DrawingPriceLabelsMode;
   timeLabels: DrawingTimeLabelsMode;
   stats: DrawingStatsMode;
+  statsFields: readonly DrawingStatsField[];
   statsPosition: DrawingStatsPosition;
   text: string;
   textColor: DrawingColor;
@@ -148,12 +150,14 @@ const TREND_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "textVerticalAlign",
   "fontSize",
   "stats",
+  "statsFields",
   "statsPosition",
 ]);
 const ELLIOTT_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   ...LABEL_SETTINGS,
   "showLine",
   "stats",
+  "statsFields",
   "statsPosition",
 ]);
 
@@ -197,6 +201,14 @@ const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Objec
   "stats-line": LABEL_SETTINGS,
 });
 
+const DEFAULT_STATS_FIELDS: readonly DrawingStatsField[] = Object.freeze([
+  "range",
+  "change",
+  "bars",
+  "date",
+  "angle",
+]);
+
 const DEFAULTS: DrawingOptions = {
   color: "#2962ff",
   lineWidth: 1,
@@ -210,6 +222,7 @@ const DEFAULTS: DrawingOptions = {
   priceLabels: "never",
   timeLabels: "never",
   stats: "off",
+  statsFields: DEFAULT_STATS_FIELDS,
   statsPosition: "auto",
   text: "",
   textStyle: "normal",
@@ -813,6 +826,7 @@ export function resolveDrawingOptions(
     priceLabels: normalizedPriceLabels(merged.priceLabels),
     timeLabels: normalizedPriceLabels(merged.timeLabels),
     stats: normalizedStats(merged.stats),
+    statsFields: normalizedStatsFields(merged.statsFields),
     statsPosition: normalizedStatsPosition(merged.statsPosition),
     text: merged.text ?? "",
     textColor,
@@ -852,6 +866,8 @@ export function mergeDrawingOptions(
     priceLabels: patch.priceLabels ?? base.priceLabels,
     timeLabels: patch.timeLabels ?? base.timeLabels,
     stats: patch.stats ?? base.stats,
+    statsFields:
+      patch.statsFields !== undefined ? normalizedStatsFields(patch.statsFields) : base.statsFields,
     statsPosition: patch.statsPosition ?? base.statsPosition,
     text: patch.text ?? base.text,
     textColor: mergeDrawingColor(patch.textColor, base.textColor),
@@ -909,6 +925,37 @@ function normalizedStats(value: DrawingStatsMode | undefined): DrawingStatsMode 
     return value ?? "off";
   }
   fail("INVALID_ARGUMENT", "stats must be off, selected, or always");
+}
+
+function normalizedStatsFields(
+  value: readonly DrawingStatsField[] | undefined,
+): readonly DrawingStatsField[] {
+  if (value === undefined) {
+    return DEFAULT_STATS_FIELDS;
+  }
+  if (!Array.isArray(value)) {
+    fail("INVALID_ARGUMENT", "statsFields must be an array of stats fields");
+  }
+  const fields: DrawingStatsField[] = [];
+  for (const field of value) {
+    if (
+      field !== "range" &&
+      field !== "change" &&
+      field !== "bars" &&
+      field !== "date" &&
+      field !== "timeRange" &&
+      field !== "angle"
+    ) {
+      fail(
+        "INVALID_ARGUMENT",
+        "statsFields must contain range, change, bars, date, timeRange, or angle",
+      );
+    }
+    if (!fields.includes(field)) {
+      fields.push(field);
+    }
+  }
+  return fields;
 }
 
 function normalizedStatsPosition(value: DrawingStatsPosition | undefined): DrawingStatsPosition {

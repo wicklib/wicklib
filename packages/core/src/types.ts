@@ -660,6 +660,7 @@ export type DrawingSetting =
   | "priceLabels"
   | "timeLabels"
   | "stats"
+  | "statsFields"
   | "statsPosition"
   | "text"
   | "textColor"
@@ -706,6 +707,11 @@ export type DrawingTimeLabelsMode = "never" | "selected" | "always";
 export type DrawingStatsMode = "off" | "selected" | "always";
 
 /**
+ * One value shown in a drawing stats box.
+ */
+export type DrawingStatsField = "range" | "change" | "bars" | "date" | "timeRange" | "angle";
+
+/**
  * Horizontal placement of a drawing stats box.
  */
 export type DrawingStatsPosition = "auto" | "left" | "center" | "right";
@@ -734,6 +740,11 @@ export interface DrawingOptions {
   timeLabels?: DrawingTimeLabelsMode;
   /** Show a stats box. Defaults to off. */
   stats?: DrawingStatsMode;
+  /**
+   * Fields shown in the stats box, in display order. Omit to keep the built-in set:
+   * range, change, bars, date, and angle where available.
+   */
+  statsFields?: readonly DrawingStatsField[];
   /** Stats box horizontal placement. Defaults to auto. */
   statsPosition?: DrawingStatsPosition;
   /** Colour for the drawing text. Defaults to the drawing colour. */

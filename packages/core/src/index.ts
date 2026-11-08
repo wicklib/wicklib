@@ -76,6 +76,7 @@ export type {
   DrawingTextStyle,
   DrawingTextAlign,
   DrawingStatsPosition,
+  DrawingStatsField,
   DrawingStatsMode,
   DrawingPriceLabelsMode,
   DrawingTimeLabelsMode,

@@ -2288,35 +2288,52 @@ function drawingStatsLines(
   const delta = last - first;
   const percent = first === 0 ? 0 : (delta / Math.abs(first)) * 100;
   const format = (value: number): string => pane.priceScale.formatValue(value, model.locale);
-  const lines = [
-    `Range  ${format(minPrice)} – ${format(maxPrice)}`,
-    `Change  ${delta >= 0 ? "+" : ""}${format(delta)} (${percent.toFixed(2)}%)`,
-  ];
+  const lines: string[] = [];
+  let seriesChecked = false;
+  let series: PaneRenderModel["series"][number] | undefined;
 
-  const series =
-    pane.series.find((candidate) => candidate.visible && candidate.store.length > 0) ??
-    pane.series.find((candidate) => candidate.store.length > 0);
-  if (series) {
-    const start = series.store.nearestIndex(Math.min(...times));
-    const end = series.store.nearestIndex(Math.max(...times));
-    if (start >= 0 && end >= 0) {
-      lines.push(`Bars  ${Math.abs(end - start) + 1}`);
+  for (const field of drawing.options.statsFields) {
+    if (field === "range") {
+      lines.push(`Range  ${format(minPrice)} – ${format(maxPrice)}`);
+    } else if (field === "change") {
+      lines.push(`Change  ${delta >= 0 ? "+" : ""}${format(delta)} (${percent.toFixed(2)}%)`);
+    } else if (field === "bars") {
+      if (!seriesChecked) {
+        series =
+          pane.series.find((candidate) => candidate.visible && candidate.store.length > 0) ??
+          pane.series.find((candidate) => candidate.store.length > 0);
+        seriesChecked = true;
+      }
+      if (series) {
+        const start = series.store.nearestIndex(Math.min(...times));
+        const end = series.store.nearestIndex(Math.max(...times));
+        if (start >= 0 && end >= 0) {
+          lines.push(`Bars  ${Math.abs(end - start) + 1}`);
+        }
+      }
+    } else if (field === "date") {
+      const from = formatDrawingDate(Math.min(...times), model);
+      const to = formatDrawingDate(Math.max(...times), model);
+      lines.push(`Date  ${from === to ? from : `${from} → ${to}`}`);
+    } else if (field === "timeRange") {
+      const from = formatDrawingTime(Math.min(...times), model);
+      const to = formatDrawingTime(Math.max(...times), model);
+      lines.push(`Time  ${from === to ? from : `${from} → ${to}`}`);
+    } else if (
+      field === "angle" &&
+      points.length >= 2 &&
+      ["trend-line", "ray", "extended-line", "arrow", "trend-angle"].includes(drawing.toolId)
+    ) {
+      const angle =
+        (Math.atan2(-(points[1]!.y - points[0]!.y), points[1]!.x - points[0]!.x) * 180) / Math.PI;
+      lines.push(`Angle  ${angle.toFixed(1)}°`);
     }
   }
-
-  const from = formatDrawingDate(Math.min(...times), model);
-  const to = formatDrawingDate(Math.max(...times), model);
-  lines.push(`Date  ${from === to ? from : `${from} → ${to}`}`);
-
-  if (
-    points.length >= 2 &&
-    ["trend-line", "ray", "extended-line", "arrow", "trend-angle"].includes(drawing.toolId)
-  ) {
-    const angle =
-      (Math.atan2(-(points[1]!.y - points[0]!.y), points[1]!.x - points[0]!.x) * 180) / Math.PI;
-    lines.push(`Angle  ${angle.toFixed(1)}°`);
-  }
   return lines;
+}
+
+function formatDrawingTime(time: number, model: ChartRenderModel): string {
+  return formatCrosshairTime(time, model.locale, model.timezone, model.secondsVisible);
 }
 
 function formatDrawingDate(time: number, model: ChartRenderModel): string {

@@ -421,6 +421,7 @@ export interface DrawingOptions {
     showLine?: boolean;
     showMidpoint?: boolean;
     stats?: DrawingStatsMode;
+    statsFields?: readonly DrawingStatsField[];
     statsPosition?: DrawingStatsPosition;
     text?: string;
     textAlign?: DrawingTextAlign;
@@ -439,7 +440,10 @@ export type DrawingPriceLabelsMode = "never" | "selected" | "always";
 export type DrawingSelectionMode = "replace" | "add" | "toggle";
 
 // @public
-export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "labelPlacement" | "labelFontSize" | "labelBackgroundVisible" | "showLine" | "extendLeft" | "extendRight" | "showMidpoint" | "priceLabels" | "timeLabels" | "stats" | "statsPosition" | "text" | "textColor" | "textStyle" | "textAlign" | "textVerticalAlign" | "fontSize" | "locked" | "visible";
+export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "labelPlacement" | "labelFontSize" | "labelBackgroundVisible" | "showLine" | "extendLeft" | "extendRight" | "showMidpoint" | "priceLabels" | "timeLabels" | "stats" | "statsFields" | "statsPosition" | "text" | "textColor" | "textStyle" | "textAlign" | "textVerticalAlign" | "fontSize" | "locked" | "visible";
+
+// @public
+export type DrawingStatsField = "range" | "change" | "bars" | "date" | "timeRange" | "angle";
 
 // @public
 export type DrawingStatsMode = "off" | "selected" | "always";
@@ -1240,8 +1244,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:1044:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:1059:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1053:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1068:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
