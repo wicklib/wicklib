@@ -2281,6 +2281,8 @@ function drawingStatsLines(
   }
   const prices = drawing.anchors.map((anchor) => anchor.price);
   const times = drawing.anchors.map((anchor) => anchor.time);
+  const firstTime = times[0]!;
+  const lastTime = times[times.length - 1]!;
   const first = prices[0]!;
   const last = prices[prices.length - 1]!;
   const minPrice = Math.min(...prices);
@@ -2320,6 +2322,15 @@ function drawingStatsLines(
       const to = formatDrawingTime(Math.max(...times), model);
       lines.push(`Time  ${from === to ? from : `${from} → ${to}`}`);
     } else if (
+      field === "duration" &&
+      drawing.anchors.length >= 2 &&
+      Number.isFinite(firstTime) &&
+      Number.isFinite(lastTime)
+    ) {
+      lines.push(
+        `Duration  ${formatDrawingDuration(Math.abs(lastTime - firstTime) / 1000, model.locale)}`,
+      );
+    } else if (
       field === "angle" &&
       points.length >= 2 &&
       ["trend-line", "ray", "extended-line", "arrow", "trend-angle"].includes(drawing.toolId)
@@ -2330,6 +2341,55 @@ function drawingStatsLines(
     }
   }
   return lines;
+}
+
+const durationUnitFormatters = new Map<string, Intl.NumberFormat>();
+
+function formatDurationUnit(
+  value: number,
+  unit: Intl.NumberFormatOptions["unit"],
+  locale: string,
+): string {
+  const key = `${locale}|${unit}`;
+  let formatter = durationUnitFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, {
+      style: "unit",
+      unit,
+      unitDisplay: "narrow",
+    });
+    durationUnitFormatters.set(key, formatter);
+  }
+  return formatter.format(value);
+}
+
+function formatDrawingDuration(seconds: number, locale: string): string {
+  const total = Math.max(0, Math.floor(seconds));
+  const days = Math.floor(total / 86_400);
+  const hours = Math.floor((total % 86_400) / 3_600);
+  const minutes = Math.floor((total % 3_600) / 60);
+  const remainder = total % 60;
+  if (days > 0) {
+    return formatDurationPair(days, hours, "day", "hour", locale);
+  }
+  if (hours > 0) {
+    return formatDurationPair(hours, minutes, "hour", "minute", locale);
+  }
+  if (minutes > 0) {
+    return formatDurationPair(minutes, remainder, "minute", "second", locale);
+  }
+  return formatDurationUnit(remainder, "second", locale);
+}
+
+function formatDurationPair(
+  major: number,
+  minor: number,
+  majorUnit: Intl.NumberFormatOptions["unit"],
+  minorUnit: Intl.NumberFormatOptions["unit"],
+  locale: string,
+): string {
+  const primary = formatDurationUnit(major, majorUnit, locale);
+  return minor > 0 ? `${primary} ${formatDurationUnit(minor, minorUnit, locale)}` : primary;
 }
 
 function formatDrawingTime(time: number, model: ChartRenderModel): string {

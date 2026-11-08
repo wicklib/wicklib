@@ -7,6 +7,7 @@ import {
   ElliottImpulse,
   ElliottTriangle,
   ElliottTripleCombo,
+  Text,
   TrendLine,
   createChart,
   type ChartApi,
@@ -399,5 +400,65 @@ describe("drawing label styling", () => {
     expect(time!.text).toContain("12:00:00");
     expect(time!.text).toContain("12:01:30");
     expect(time!.text).toContain("→");
+  });
+  it("renders a compact intraday duration", async () => {
+    const chart = createChart(mount(), { locale: "en-US", timezone: "UTC" });
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    chart.timeScale().fitContent();
+    chart.addDrawing(TrendLine, {
+      anchors: [
+        { time: 0, price: 120 },
+        { time: 2 * 3_600_000 + 15 * MINUTE, price: 140 },
+      ],
+      options: { stats: "always", statsFields: ["duration"] },
+    });
+
+    await settle();
+    const duration = textCalls.find((call) => call.text.startsWith("Duration  "));
+    expect(duration).toBeDefined();
+    expect(duration!.text).toContain("2h");
+    expect(duration!.text).toContain("15m");
+    expect(duration!.text).not.toContain("0h");
+  });
+
+  it("renders a compact multi-day duration", async () => {
+    const chart = createChart(mount(), { locale: "en-US", timezone: "UTC" });
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    chart.timeScale().fitContent();
+    const day = 86_400_000;
+    chart.addDrawing(TrendLine, {
+      anchors: [
+        { time: 0, price: 120 },
+        { time: 3 * day + 4 * 3_600_000, price: 140 },
+      ],
+      options: { stats: "always", statsFields: ["duration"] },
+    });
+
+    await settle();
+    const duration = textCalls.find((call) => call.text.startsWith("Duration  "));
+    expect(duration).toBeDefined();
+    expect(duration!.text).toContain("3d");
+    expect(duration!.text).toContain("4h");
+    expect(duration!.text).not.toContain("m");
+  });
+
+  it("skips duration when the drawing has no time range", async () => {
+    const chart = createChart(mount());
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    chart.timeScale().fitContent();
+    chart.addDrawing(Text, {
+      anchors: [{ time: 20 * MINUTE, price: 120 }],
+      options: { text: "Note", stats: "always", statsFields: ["duration"] },
+    });
+
+    await settle();
+    expect(textCalls.some((call) => call.text === "Note")).toBe(true);
+    expect(textCalls.some((call) => call.text.startsWith("Duration  "))).toBe(false);
   });
 });

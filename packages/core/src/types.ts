@@ -709,7 +709,8 @@ export type DrawingStatsMode = "off" | "selected" | "always";
 /**
  * One value shown in a drawing stats box.
  */
-export type DrawingStatsField = "range" | "change" | "bars" | "date" | "timeRange" | "angle";
+export type DrawingStatsField =
+  "range" | "change" | "bars" | "date" | "timeRange" | "duration" | "angle";
 
 /**
  * Horizontal placement of a drawing stats box.

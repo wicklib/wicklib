@@ -944,11 +944,12 @@ function normalizedStatsFields(
       field !== "bars" &&
       field !== "date" &&
       field !== "timeRange" &&
+      field !== "duration" &&
       field !== "angle"
     ) {
       fail(
         "INVALID_ARGUMENT",
-        "statsFields must contain range, change, bars, date, timeRange, or angle",
+        "statsFields must contain range, change, bars, date, timeRange, duration, or angle",
       );
     }
     if (!fields.includes(field)) {

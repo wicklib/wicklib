@@ -443,7 +443,7 @@ export type DrawingSelectionMode = "replace" | "add" | "toggle";
 export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "labelPlacement" | "labelFontSize" | "labelBackgroundVisible" | "showLine" | "extendLeft" | "extendRight" | "showMidpoint" | "priceLabels" | "timeLabels" | "stats" | "statsFields" | "statsPosition" | "text" | "textColor" | "textStyle" | "textAlign" | "textVerticalAlign" | "fontSize" | "locked" | "visible";
 
 // @public
-export type DrawingStatsField = "range" | "change" | "bars" | "date" | "timeRange" | "angle";
+export type DrawingStatsField = "range" | "change" | "bars" | "date" | "timeRange" | "duration" | "angle";
 
 // @public
 export type DrawingStatsMode = "off" | "selected" | "always";

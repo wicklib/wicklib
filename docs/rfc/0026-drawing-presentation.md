@@ -21,7 +21,7 @@ Drawing options gain:
 - `timeLabels`: `never` | `selected` | `always`
 - `text`, `textColor`, `fontSize`, `textStyle`, `textAlign`, `textVerticalAlign`
 - `stats`: `off` | `selected` | `always`
-- `statsFields`: `range` | `change` | `bars` | `date` | `timeRange` | `angle`
+- `statsFields`: `range` | `change` | `bars` | `date` | `timeRange` | `duration` | `angle`
 - `statsPosition`: `auto` | `left` | `center` | `right`
 
 ## 3. Behavior
@@ -38,6 +38,7 @@ Drawing options gain:
 - `statsFields` selects and orders the visible stats. Omitted keeps the built-in set: range,
   change, bars, date, and angle where available. `date` is date-only; `timeRange` includes the
   anchor time range with locale/timezone formatting and seconds when the time scale shows them.
+  `duration` shows only the elapsed first-to-last anchor span with compact locale-aware units.
 - Stats boxes use an automatic light/dark surface for contrast and have no border.
 - Axis price labels are drawn on the price axis and participate in axis-width measurement. Time
   labels are drawn on the time axis and skip anchors outside the visible plot.
@@ -54,4 +55,5 @@ Drawing options gain:
 - Stats boxes follow their drawing and remain legible on light and dark chart backgrounds.
 - Stats fields render in the requested order, and unavailable fields are skipped.
 - Intraday time ranges include hours/minutes and seconds when the time scale exposes seconds.
+- Durations render compactly as seconds, minutes, hours, or days plus the next smaller unit.
 - Options persist through drawing serialization.
