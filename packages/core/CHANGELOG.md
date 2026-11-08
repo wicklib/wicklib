@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.24.0
+
+### Minor Changes
+
+- 44c8671: Add dedicated long/short position tools, one-click position placement, draggable position geometry, and price/time/date-price range drawings with volume stats.
+
 ## 0.23.2
 
 ### Patch Changes
