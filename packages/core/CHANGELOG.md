@@ -1,5 +1,12 @@
 # @wicklib/core
 
+## 0.17.0
+
+### Minor Changes
+
+- 8964dbc: Add `labelFontSize` and `labelBackgroundVisible` drawing options. Labels can use a custom size,
+  and boxless labels skip the background and use their drawing-specific colour.
+
 ## 0.16.0
 
 ### Minor Changes
