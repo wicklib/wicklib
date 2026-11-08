@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.20.0
+
+### Minor Changes
+
+- 3de65f0: Add trend-line time-axis labels, endpoint-relative text placement, drawing-relative stats boxes, and adaptive stats surfaces.
+
 ## 0.19.0
 
 ### Minor Changes
