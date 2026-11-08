@@ -397,6 +397,8 @@ export interface DrawingOptions {
     // (undocumented)
     fillOpacity?: number;
     fontSize?: number;
+    labelBackgroundVisible?: boolean;
+    labelFontSize?: number;
     labels?: readonly string[];
     // (undocumented)
     lineStyle?: DrawingLineStyle;
@@ -415,7 +417,7 @@ export interface DrawingOptions {
 export type DrawingSelectionMode = "replace" | "add" | "toggle";
 
 // @public
-export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "text" | "fontSize" | "locked" | "visible";
+export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "labelFontSize" | "labelBackgroundVisible" | "text" | "fontSize" | "locked" | "visible";
 
 // @public
 export interface DrawingToolCatalogEntry {
@@ -1198,8 +1200,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:975:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:990:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:979:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:994:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

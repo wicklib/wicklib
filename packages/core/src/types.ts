@@ -645,6 +645,8 @@ export type DrawingSetting =
   | "fillColor"
   | "fillOpacity"
   | "showLabels"
+  | "labelFontSize"
+  | "labelBackgroundVisible"
   | "text"
   | "fontSize"
   | "locked"
@@ -664,7 +666,11 @@ export interface DrawingOptions {
   text?: string;
   /** Custom label sequence for drawing tools that render one label per anchor. */
   labels?: readonly string[];
-  /** Text size in CSS pixels. */
+  /** Label font size in CSS pixels. Defaults to the chart layout font size. */
+  labelFontSize?: number;
+  /** Draw a background behind labels. Defaults to true. */
+  labelBackgroundVisible?: boolean;
+  /** Text size in CSS pixels for text drawings. */
   fontSize?: number;
   locked?: boolean;
   visible?: boolean;

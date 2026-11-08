@@ -86,6 +86,9 @@ describe("drawing settings", () => {
     expect(drawingToolSettings("pitchfork")).not.toContain("showLabels");
     expect(drawingToolSettings("gann-fan")).toContain("showLabels");
     expect(drawingToolSettings("speed-lines")).not.toContain("showLabels");
+    expect(drawingToolSettings("elliott-impulse")).toContain("labelFontSize");
+    expect(drawingToolSettings("elliott-impulse")).toContain("labelBackgroundVisible");
+    expect(drawingToolSettings("fib-channel")).toContain("labelFontSize");
     expect(() => drawingToolSettings("missing")).toThrow(/Unknown drawing tool/);
   });
 });
@@ -125,6 +128,7 @@ describe("line drawing hit testing", () => {
     fillOpacity: 0.12,
     showLabels: true,
     text: "",
+    labelBackgroundVisible: true,
     fontSize: 13,
     locked: false,
     visible: true,

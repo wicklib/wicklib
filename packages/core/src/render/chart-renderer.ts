@@ -281,8 +281,8 @@ export class ChartRenderer {
     }
   }
 
-  private font(model: ChartRenderModel): string {
-    return `${model.layout.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+  private font(model: ChartRenderModel, size = model.layout.fontSize): string {
+    return `${size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
   }
 
   private drawGrid(model: ChartRenderModel): void {
@@ -1402,6 +1402,7 @@ export class ChartRenderer {
             `${angle.toFixed(1)}°`,
             (first.x + second.x) / 2 + 8,
             (first.y + second.y) / 2 - 8,
+            drawing.options,
           );
         }
         return;
@@ -1437,6 +1438,7 @@ export class ChartRenderer {
             `${priceDelta >= 0 ? "+" : ""}${pane.priceScale.formatValue(priceDelta, model.locale)} (${percent.toFixed(2)}%)  ${formatDuration(seconds)}`,
             x + 8,
             y + model.layout.fontSize + 4,
+            drawing.options,
           );
         }
         return;
@@ -1560,7 +1562,7 @@ export class ChartRenderer {
           context.stroke();
 
           if (drawing.options.showLabels) {
-            this.drawLabel(context, model, level.toFixed(3), start.x + 8, start.y);
+            this.drawLabel(context, model, level.toFixed(3), start.x + 8, start.y, drawing.options);
           }
         }
         return;
@@ -1585,6 +1587,7 @@ export class ChartRenderer {
               String(entry.ratio),
               x + 5,
               plot.top + model.layout.fontSize,
+              drawing.options,
             );
           }
         }
@@ -1634,6 +1637,7 @@ export class ChartRenderer {
               entry.label,
               Math.min(plot.right - 8, clipped[1].x + 8),
               clipped[1].y,
+              drawing.options,
             );
           }
         }
@@ -1699,6 +1703,7 @@ export class ChartRenderer {
             `Entry ${pane.priceScale.formatValue(pane.priceScale.yToPrice(entry.y, plot.top, plot.height), model.locale)}  R/R ${ratio}`,
             left + 8,
             entry.y - 10,
+            drawing.options,
           );
         }
         return;
@@ -1724,6 +1729,7 @@ export class ChartRenderer {
               `${level.toFixed(3)}  ${pane.priceScale.formatValue(value, model.locale)}`,
               plot.left + 8,
               y,
+              drawing.options,
             );
           }
         }
@@ -1749,6 +1755,7 @@ export class ChartRenderer {
               `${level.toFixed(3)}  ${pane.priceScale.formatValue(value, model.locale)}`,
               plot.left + 8,
               y,
+              drawing.options,
             );
           }
         }
@@ -1782,6 +1789,7 @@ export class ChartRenderer {
               label,
               points[index]!.x + 7,
               points[index]!.y - 10,
+              drawing.options,
               drawing.options.color,
             );
           }
@@ -1852,6 +1860,7 @@ export class ChartRenderer {
             label,
             (first.x + second.x) / 2 + 8,
             (first.y + second.y) / 2 - 8,
+            drawing.options,
             drawing.toolId === "measure" ? lineColor : undefined,
           );
         }
@@ -1868,20 +1877,28 @@ export class ChartRenderer {
     text: string,
     x: number,
     y: number,
+    options: ResolvedDrawingOptions,
     color?: string,
   ): void {
-    context.font = this.font(model);
+    const fontSize = options.labelFontSize ?? model.layout.fontSize;
+    context.font = this.font(model, fontSize);
     context.textAlign = "left";
     context.textBaseline = "middle";
     const width = context.measureText(text).width + 10;
-    const height = model.layout.fontSize + 6;
+    const height = fontSize + 6;
     const left = Math.max(0, x - 5);
     const top = y - height / 2;
 
-    context.fillStyle = color ?? model.crosshair.labelBackground;
-    context.fillRect(left, top, width, height);
-    context.fillStyle = "#ffffff";
-    context.fillText(text, left + 5, y);
+    if (options.labelBackgroundVisible) {
+      context.fillStyle = color ?? model.crosshair.labelBackground;
+      context.fillRect(left, top, width, height);
+      context.fillStyle = "#ffffff";
+      context.fillText(text, left + 5, y);
+      return;
+    }
+
+    context.fillStyle = color ?? options.color;
+    context.fillText(text, Math.max(0, x), y);
   }
 
   private drawOverlay(model: ChartRenderModel): void {

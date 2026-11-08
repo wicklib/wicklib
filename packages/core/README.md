@@ -202,6 +202,22 @@ Logarithmic scales require positive prices. Explicit non-positive ranges throw
 valid range stays visible. Margins are applied in log space, and narrow ranges fall back to
 linear price ticks for familiar labels.
 
+## Drawing label style
+
+Labels use the chart layout font size and draw with a background by default. Both can be
+overridden per drawing:
+
+```ts
+drawing.setOptions({
+  labelFontSize: 24,
+  labelBackgroundVisible: false,
+});
+```
+
+With `labelBackgroundVisible: false`, the background box is skipped and the label text uses the
+drawing-specific label color. This applies to Elliott labels and other label-bearing tools.
+Text drawings continue to use `fontSize` for their own text size.
+
 ## Elliott labels
 
 Elliott tools use the built-in label sequence by default. A degree or custom convention can

@@ -18,6 +18,8 @@ export interface ResolvedDrawingOptions {
   showLabels: boolean;
   text: string;
   labels?: readonly string[];
+  labelFontSize?: number;
+  labelBackgroundVisible: boolean;
   fontSize: number;
   locked: boolean;
   visible: boolean;
@@ -61,6 +63,8 @@ const LABEL_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "lineWidth",
   "lineStyle",
   "showLabels",
+  "labelFontSize",
+  "labelBackgroundVisible",
   "locked",
   "visible",
 ]);
@@ -80,6 +84,8 @@ const LABEL_FILL_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "fillColor",
   "fillOpacity",
   "showLabels",
+  "labelFontSize",
+  "labelBackgroundVisible",
   "locked",
   "visible",
 ]);
@@ -89,6 +95,8 @@ const LONG_SHORT_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "lineStyle",
   "fillOpacity",
   "showLabels",
+  "labelFontSize",
+  "labelBackgroundVisible",
   "locked",
   "visible",
 ]);
@@ -147,6 +155,7 @@ const DEFAULTS: DrawingOptions = {
   fillOpacity: 0.12,
   showLabels: true,
   text: "",
+  labelBackgroundVisible: true,
   fontSize: 13,
   locked: false,
   visible: true,
@@ -735,12 +744,16 @@ export function resolveDrawingOptions(
     fillOpacity: merged.fillOpacity ?? 0.12,
     showLabels: merged.showLabels ?? true,
     text: merged.text ?? "",
+    labelBackgroundVisible: merged.labelBackgroundVisible ?? true,
     fontSize: merged.fontSize ?? 13,
     locked: merged.locked ?? false,
     visible: merged.visible ?? true,
   };
   if (merged.labels !== undefined) {
     resolved.labels = validateLabels(merged.labels);
+  }
+  if (merged.labelFontSize !== undefined) {
+    resolved.labelFontSize = validateLabelFontSize(merged.labelFontSize);
   }
   return resolved;
 }
@@ -757,6 +770,7 @@ export function mergeDrawingOptions(
     fillOpacity: patch.fillOpacity ?? base.fillOpacity,
     showLabels: patch.showLabels ?? base.showLabels,
     text: patch.text ?? base.text,
+    labelBackgroundVisible: patch.labelBackgroundVisible ?? base.labelBackgroundVisible,
     fontSize: patch.fontSize ?? base.fontSize,
     locked: patch.locked ?? base.locked,
     visible: patch.visible ?? base.visible,
@@ -766,7 +780,19 @@ export function mergeDrawingOptions(
   } else if (base.labels !== undefined) {
     merged.labels = base.labels;
   }
+  if (patch.labelFontSize !== undefined) {
+    merged.labelFontSize = validateLabelFontSize(patch.labelFontSize);
+  } else if (base.labelFontSize !== undefined) {
+    merged.labelFontSize = base.labelFontSize;
+  }
   return merged;
+}
+
+function validateLabelFontSize(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    fail("INVALID_ARGUMENT", "labelFontSize must be a positive finite number");
+  }
+  return value;
 }
 
 function validateLabels(labels: readonly string[]): readonly string[] {
