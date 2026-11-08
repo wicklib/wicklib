@@ -1,6 +1,6 @@
 {
   "name": "@wicklib/core",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "Wicklib core charting engine",
   "license": "Apache-2.0",
   "type": "module",

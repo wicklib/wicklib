@@ -1,5 +1,13 @@
 # @wicklib/core
 
+## 0.15.0
+
+### Minor Changes
+
+- 01d9fe0: Add `lastValueMode` for visible, newest-data, or dual last-value labels, expose
+  `SeriesApi.lastValue()` and `SeriesApi.visibleLastValue()`, and clamp off-screen current
+  prices to the axis with direction markers.
+
 ## 0.14.0
 
 ### Minor Changes
