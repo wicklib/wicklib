@@ -1470,8 +1470,37 @@ export class ChartRenderer {
         }
         return;
       }
-      case "rectangle":
+      case "price-range":
+      case "time-range":
       case "price-date-range": {
+        if (points.length < 2) {
+          return;
+        }
+        let left = Math.min(points[0]!.x, points[1]!.x);
+        let right = Math.max(points[0]!.x, points[1]!.x);
+        let top = Math.min(points[0]!.y, points[1]!.y);
+        let bottom = Math.max(points[0]!.y, points[1]!.y);
+        if (drawing.options.extend || drawing.options.extendLeft) {
+          left = plot.left;
+        }
+        if (drawing.options.extend || drawing.options.extendRight) {
+          right = plot.right;
+        }
+        if (drawing.options.extend || drawing.options.extendTop) {
+          top = plot.top;
+        }
+        if (drawing.options.extend || drawing.options.extendBottom) {
+          bottom = plot.bottom;
+        }
+        context.globalAlpha = drawing.preview ? 0.3 : drawing.options.fillOpacity;
+        context.fillRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top));
+        context.globalAlpha = drawing.preview ? 0.65 : 1;
+        if (drawing.options.showLine) {
+          context.strokeRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top));
+        }
+        return;
+      }
+      case "rectangle": {
         if (points.length < 2) {
           return;
         }
@@ -1484,26 +1513,6 @@ export class ChartRenderer {
         context.fillRect(x, y, width, height);
         context.globalAlpha = drawing.preview ? 0.65 : 1;
         context.strokeRect(x, y, width, height);
-
-        if (
-          drawing.toolId === "price-date-range" &&
-          drawing.options.showLabels &&
-          drawing.anchors[1]
-        ) {
-          const firstPrice = pane.priceScale.yToPrice(points[0]!.y, plot.top, plot.height);
-          const priceDelta =
-            pane.priceScale.yToPrice(points[1]!.y, plot.top, plot.height) - firstPrice;
-          const percent = firstPrice === 0 ? 0 : (priceDelta / Math.abs(firstPrice)) * 100;
-          const seconds = Math.abs(drawing.anchors[1]!.time - drawing.anchors[0]!.time) / 1000;
-          this.drawLabel(
-            context,
-            model,
-            `${priceDelta >= 0 ? "+" : ""}${pane.priceScale.formatValue(priceDelta, model.locale)} (${percent.toFixed(2)}%)  ${formatDuration(seconds)}`,
-            x + 8,
-            y + model.layout.fontSize + 4,
-            drawing.options,
-          );
-        }
         return;
       }
       case "circle": {
@@ -1719,6 +1728,66 @@ export class ChartRenderer {
           context.moveTo(clipped[0].x, clipped[0].y);
           context.lineTo(clipped[1].x, clipped[1].y);
           context.stroke();
+        }
+        return;
+      }
+      case "long-position":
+      case "short-position": {
+        if (points.length < 4) {
+          return;
+        }
+        const entry = points[0]!;
+        const stop = points[1]!;
+        const target = points[2]!;
+        const widthPoint = points[3]!;
+        const left = Math.min(entry.x, widthPoint.x);
+        const right = Math.max(entry.x, widthPoint.x);
+        const width = Math.max(1, right - left);
+        const stopTop = Math.min(entry.y, stop.y);
+        const stopHeight = Math.max(1, Math.abs(stop.y - entry.y));
+        const targetTop = Math.min(entry.y, target.y);
+        const targetHeight = Math.max(1, Math.abs(target.y - entry.y));
+
+        context.globalAlpha = drawing.options.fillOpacity;
+        context.fillStyle = drawing.options.stopColor;
+        context.fillRect(left, stopTop, width, stopHeight);
+        context.fillStyle = drawing.options.targetColor;
+        context.fillRect(left, targetTop, width, targetHeight);
+        context.globalAlpha = drawing.preview ? 0.65 : 1;
+        context.strokeStyle = drawing.options.targetColor;
+        context.beginPath();
+        context.moveTo(left, entry.y);
+        context.lineTo(right, entry.y);
+        context.stroke();
+
+        if (drawing.options.showLabels) {
+          const fontSize = drawing.options.labelFontSize ?? model.layout.fontSize;
+          const labels = [
+            { text: "Profit", y: target.y, color: drawing.options.targetColor },
+            { text: "Entry", y: entry.y, color: drawing.options.targetColor },
+            { text: "Stop", y: stop.y, color: drawing.options.stopColor },
+          ].sort((first, second) => first.y - second.y);
+          context.font = this.font(model, fontSize);
+          const padding = 6;
+          const boxWidth =
+            Math.max(...labels.map((label) => context.measureText(label.text).width)) + padding * 2;
+          const boxHeight = fontSize + 6;
+          let lastBottom = Number.NEGATIVE_INFINITY;
+          for (const label of labels) {
+            let top = label.y - boxHeight / 2;
+            if (top < lastBottom + 2) {
+              top = lastBottom + 2;
+            }
+            top = Math.max(plot.top, Math.min(plot.bottom - boxHeight, top));
+            const x = Math.max(plot.left, right - boxWidth - 8);
+            context.fillStyle = label.color;
+            context.fillRect(x, top, boxWidth, boxHeight);
+            context.fillStyle = drawing.options.labelTextColor ?? contrastTextForColor(label.color);
+            context.textAlign = "left";
+            context.textBaseline = "middle";
+            context.fillText(label.text, x + padding, top + boxHeight / 2);
+            lastBottom = top + boxHeight;
+          }
         }
         return;
       }
@@ -2026,7 +2095,7 @@ export class ChartRenderer {
     context.save();
     context.fillStyle = surface.background;
     context.fillRect(x, y, width, height);
-    context.fillStyle = surface.text;
+    context.fillStyle = drawing.options.labelTextColor ?? surface.text;
     context.textAlign = "left";
     context.textBaseline = "top";
     for (let index = 0; index < lines.length; index += 1) {
@@ -2041,9 +2110,12 @@ export class ChartRenderer {
       y: number;
       label: string;
       color: string;
+      textColor: string;
+      height: number;
+      font: string;
     }> = [];
     for (const drawing of model.drawings) {
-      if (drawing.preview || drawing.toolId !== "trend-line") {
+      if (drawing.preview) {
         continue;
       }
       const pane = model.panes.find((candidate) => candidate.paneId === drawing.paneId);
@@ -2054,39 +2126,54 @@ export class ChartRenderer {
       if (options.priceLabels === "selected" && !drawing.selected) {
         continue;
       }
-      for (const anchor of drawing.anchors.slice(0, 2)) {
-        const y = pane.priceScale.priceToY(anchor.price, pane.plot.top, pane.plot.height);
+      const levels: Array<{ price: number; color: string; axis: boolean }> = [];
+      if (drawing.toolId === "trend-line") {
+        for (const anchor of drawing.anchors.slice(0, 2)) {
+          levels.push({ price: anchor.price, color: options.color, axis: false });
+        }
+      } else if (
+        (drawing.toolId === "long-position" || drawing.toolId === "short-position") &&
+        drawing.anchors.length >= 3
+      ) {
+        levels.push({ price: drawing.anchors[1]!.price, color: options.stopColor, axis: true });
+        levels.push({ price: drawing.anchors[0]!.price, color: options.targetColor, axis: true });
+        levels.push({ price: drawing.anchors[2]!.price, color: options.targetColor, axis: true });
+      }
+      for (const level of levels) {
+        const y = pane.priceScale.priceToY(level.price, pane.plot.top, pane.plot.height);
         if (y < pane.plot.top || y > pane.plot.bottom) {
           continue;
         }
         entries.push({
           pane,
           y,
-          label: pane.priceScale.formatValue(anchor.price, model.locale),
-          color: options.color,
+          label: pane.priceScale.formatValue(level.price, model.locale),
+          color: level.color,
+          textColor: level.axis ? contrastTextForColor(level.color) : "#ffffff",
+          height: level.axis ? model.layout.axisFontSize + 6 : model.layout.fontSize + 6,
+          font: level.axis ? this.axisFont(model) : this.font(model),
         });
       }
     }
     entries.sort((first, second) => first.y - second.y);
 
-    const boxHeight = model.layout.fontSize + 6;
     const lastBottom = new Map<string, number>();
     for (const entry of entries) {
-      let top = entry.y - boxHeight / 2;
+      let top = entry.y - entry.height / 2;
       const previous = lastBottom.get(entry.pane.paneId);
       if (previous !== undefined && top < previous + 2) {
         top = previous + 2;
       }
-      top = Math.max(entry.pane.plot.top, Math.min(entry.pane.plot.bottom - boxHeight, top));
-      lastBottom.set(entry.pane.paneId, top + boxHeight);
+      top = Math.max(entry.pane.plot.top, Math.min(entry.pane.plot.bottom - entry.height, top));
+      lastBottom.set(entry.pane.paneId, top + entry.height);
 
       context.fillStyle = entry.color;
-      context.fillRect(entry.pane.plot.right, top, model.axisWidth, boxHeight);
-      context.fillStyle = "#ffffff";
-      context.font = this.font(model);
+      context.fillRect(entry.pane.plot.right, top, model.axisWidth, entry.height);
+      context.fillStyle = entry.textColor;
+      context.font = entry.font;
       context.textAlign = "left";
       context.textBaseline = "middle";
-      context.fillText(entry.label, entry.pane.plot.right + 8, top + boxHeight / 2);
+      context.fillText(entry.label, entry.pane.plot.right + 8, top + entry.height / 2);
     }
   }
 
@@ -2284,6 +2371,11 @@ function resolveDrawingOptionsForModel(
     color: resolve(options.color),
     fillColor: resolve(options.fillColor),
     textColor: resolve(options.textColor),
+    stopColor: resolve(options.stopColor),
+    targetColor: resolve(options.targetColor),
+    ...(options.labelTextColor !== undefined
+      ? { labelTextColor: resolve(options.labelTextColor) }
+      : {}),
   };
 }
 
@@ -2310,6 +2402,15 @@ function drawingStatsLines(
   const lines: string[] = [];
   let seriesChecked = false;
   let series: PaneRenderModel["series"][number] | undefined;
+  const ensureSeries = (): PaneRenderModel["series"][number] | undefined => {
+    if (!seriesChecked) {
+      series =
+        pane.series.find((candidate) => candidate.visible && candidate.store.length > 0) ??
+        pane.series.find((candidate) => candidate.store.length > 0);
+      seriesChecked = true;
+    }
+    return series;
+  };
 
   for (const field of drawing.options.statsFields) {
     if (field === "range") {
@@ -2317,15 +2418,10 @@ function drawingStatsLines(
     } else if (field === "change") {
       lines.push(`Change  ${delta >= 0 ? "+" : ""}${format(delta)} (${percent.toFixed(2)}%)`);
     } else if (field === "bars") {
-      if (!seriesChecked) {
-        series =
-          pane.series.find((candidate) => candidate.visible && candidate.store.length > 0) ??
-          pane.series.find((candidate) => candidate.store.length > 0);
-        seriesChecked = true;
-      }
-      if (series) {
-        const start = series.store.nearestIndex(Math.min(...times));
-        const end = series.store.nearestIndex(Math.max(...times));
+      const barsSeries = ensureSeries();
+      if (barsSeries) {
+        const start = barsSeries.store.nearestIndex(Math.min(...times));
+        const end = barsSeries.store.nearestIndex(Math.max(...times));
         if (start >= 0 && end >= 0) {
           lines.push(`Bars  ${Math.abs(end - start) + 1}`);
         }
@@ -2347,6 +2443,33 @@ function drawingStatsLines(
       lines.push(
         `Duration  ${formatDrawingDuration(Math.abs(lastTime - firstTime) / 1000, model.locale)}`,
       );
+    } else if (field === "volume") {
+      const volumeSeries =
+        pane.series.find(
+          (candidate) =>
+            candidate.visible && candidate.kind === "candlestick" && candidate.store.length > 0,
+        ) ??
+        pane.series.find(
+          (candidate) => candidate.kind === "candlestick" && candidate.store.length > 0,
+        );
+      if (volumeSeries?.kind === "candlestick") {
+        const start = volumeSeries.store.nearestIndex(Math.min(...times));
+        const end = volumeSeries.store.nearestIndex(Math.max(...times));
+        if (start >= 0 && end >= 0) {
+          let total = 0;
+          let hasVolume = false;
+          for (let index = Math.min(start, end); index <= Math.max(start, end); index += 1) {
+            const volume = volumeSeries.store.volumeAt(index);
+            if (volume !== undefined && Number.isFinite(volume)) {
+              total += volume;
+              hasVolume = true;
+            }
+          }
+          if (hasVolume) {
+            lines.push(`Volume  ${formatCompactNumber(total, model.locale)}`);
+          }
+        }
+      }
     } else if (
       field === "angle" &&
       points.length >= 2 &&
@@ -2355,9 +2478,49 @@ function drawingStatsLines(
       const angle =
         (Math.atan2(-(points[1]!.y - points[0]!.y), points[1]!.x - points[0]!.x) * 180) / Math.PI;
       lines.push(`Angle  ${angle.toFixed(1)}°`);
+    } else if (
+      (field === "risk" ||
+        field === "reward" ||
+        field === "riskReward" ||
+        field === "riskPercent" ||
+        field === "rewardPercent") &&
+      prices.length >= 3
+    ) {
+      const entry = prices[0]!;
+      const risk = Math.abs(prices[1]! - entry);
+      const reward = Math.abs(prices[2]! - entry);
+      if (field === "risk") {
+        lines.push(`Risk  ${format(risk)}`);
+      } else if (field === "reward") {
+        lines.push(`Reward  ${format(reward)}`);
+      } else if (field === "riskReward") {
+        lines.push(`R/R  ${risk === 0 ? "∞" : (reward / risk).toFixed(2)}`);
+      } else if (field === "riskPercent") {
+        lines.push(
+          `Risk %  ${entry === 0 ? "0.00" : ((risk / Math.abs(entry)) * 100).toFixed(2)}%`,
+        );
+      } else if (field === "rewardPercent") {
+        lines.push(
+          `Reward %  ${entry === 0 ? "0.00" : ((reward / Math.abs(entry)) * 100).toFixed(2)}%`,
+        );
+      }
     }
   }
   return lines;
+}
+
+const compactNumberFormatters = new Map<string, Intl.NumberFormat>();
+
+function formatCompactNumber(value: number, locale: string): string {
+  let formatter = compactNumberFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, {
+      notation: "compact",
+      maximumFractionDigits: 1,
+    });
+    compactNumberFormatters.set(locale, formatter);
+  }
+  return formatter.format(value);
 }
 
 const durationUnitFormatters = new Map<string, Intl.NumberFormat>();
@@ -2535,6 +2698,11 @@ function surfaceContrast(canvas: readonly [number, number, number], background: 
   }
   const effective = compositeRgb(surface, canvas);
   return contrastRatio(relativeLuminance(effective), relativeLuminance(canvas));
+}
+
+function contrastTextForColor(color: string): string {
+  const rgb = parseRgbColor(color);
+  return rgb ? bestContrastText(compositeRgb(rgb, [255, 255, 255])) : "#ffffff";
 }
 
 function bestContrastText(background: readonly [number, number, number]): string {

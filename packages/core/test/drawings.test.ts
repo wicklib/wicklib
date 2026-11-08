@@ -99,6 +99,12 @@ describe("drawing settings", () => {
     expect(drawingToolSettings("trend-line")).toContain("statsPosition");
     expect(drawingToolSettings("trend-line")).toContain("statsFields");
     expect(drawingToolSettings("elliott-impulse")).toContain("statsFields");
+    expect(drawingToolSettings("long-position")).toContain("stopColor");
+    expect(drawingToolSettings("short-position")).toContain("targetColor");
+    expect(drawingToolSettings("long-position")).toContain("labelTextColor");
+    expect(drawingToolSettings("price-range")).toContain("extendTop");
+    expect(drawingToolSettings("time-range")).toContain("extendBottom");
+    expect(drawingToolSettings("price-date-range")).toContain("fillOpacity");
     expect(() => drawingToolSettings("missing")).toThrow(/Unknown drawing tool/);
   });
 });
@@ -167,7 +173,7 @@ describe("drawing labels", () => {
       "date",
       "angle",
     ]);
-    expect(() => resolveDrawingOptions(undefined, { statsFields: ["volume" as never] })).toThrow(
+    expect(() => resolveDrawingOptions(undefined, { statsFields: ["unknown" as never] })).toThrow(
       /statsFields/,
     );
   });

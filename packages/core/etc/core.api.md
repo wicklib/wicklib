@@ -397,8 +397,11 @@ export type DrawingLineStyle = "solid" | "dotted" | "dashed";
 export interface DrawingOptions {
     // (undocumented)
     color?: DrawingColor | null;
+    extend?: boolean;
+    extendBottom?: boolean;
     extendLeft?: boolean;
     extendRight?: boolean;
+    extendTop?: boolean;
     // (undocumented)
     fillColor?: DrawingColor | null;
     // (undocumented)
@@ -408,6 +411,7 @@ export interface DrawingOptions {
     labelFontSize?: number;
     labelPlacement?: DrawingLabelPlacement;
     labels?: readonly string[];
+    labelTextColor?: DrawingColor | null;
     // (undocumented)
     lineStyle?: DrawingLineStyle;
     // (undocumented)
@@ -422,6 +426,8 @@ export interface DrawingOptions {
     stats?: DrawingStatsMode;
     statsFields?: readonly DrawingStatsField[];
     statsPosition?: DrawingStatsPosition;
+    stopColor?: DrawingColor | null;
+    targetColor?: DrawingColor | null;
     text?: string;
     textAlign?: DrawingTextAlign;
     textColor?: DrawingColor | null;
@@ -439,10 +445,10 @@ export type DrawingPriceLabelsMode = "never" | "selected" | "always";
 export type DrawingSelectionMode = "replace" | "add" | "toggle";
 
 // @public
-export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "labelPlacement" | "labelFontSize" | "labelBackgroundVisible" | "showLine" | "extendLeft" | "extendRight" | "showMidpoint" | "priceLabels" | "timeLabels" | "stats" | "statsFields" | "statsPosition" | "text" | "textColor" | "textStyle" | "textAlign" | "textVerticalAlign" | "fontSize" | "locked" | "visible";
+export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "labelPlacement" | "labelFontSize" | "labelBackgroundVisible" | "showLine" | "extendLeft" | "extendRight" | "showMidpoint" | "priceLabels" | "timeLabels" | "stopColor" | "targetColor" | "extend" | "extendTop" | "extendBottom" | "labelTextColor" | "stats" | "statsFields" | "statsPosition" | "text" | "textColor" | "textStyle" | "textAlign" | "textVerticalAlign" | "fontSize" | "locked" | "visible";
 
 // @public
-export type DrawingStatsField = "range" | "change" | "bars" | "date" | "timeRange" | "duration" | "angle";
+export type DrawingStatsField = "range" | "change" | "bars" | "date" | "timeRange" | "duration" | "volume" | "angle" | "risk" | "reward" | "riskReward" | "riskPercent" | "rewardPercent";
 
 // @public
 export type DrawingStatsMode = "off" | "selected" | "always";
@@ -478,7 +484,7 @@ export type DrawingToolCategory = "lines" | "channels" | "fibonacci" | "shapes" 
 // @public
 export interface DrawingToolDefinition {
     readonly anchors: 1 | 2 | 3 | 4 | 5 | 6;
-    readonly capture?: "anchors" | "freehand" | "path";
+    readonly capture?: "anchors" | "freehand" | "path" | "position";
     // (undocumented)
     readonly defaultOptions?: DrawingOptions;
     // (undocumented)
@@ -821,6 +827,9 @@ export interface LineSeriesOptions extends SeriesOptions {
 }
 
 // @public (undocumented)
+export const LongPosition: DrawingToolDefinition;
+
+// @public (undocumented)
 export const LongShortPosition: DrawingToolDefinition;
 
 // @public
@@ -960,6 +969,9 @@ export interface PriceRange {
     // (undocumented)
     min: number;
 }
+
+// @public (undocumented)
+export const PriceRangeDrawing: DrawingToolDefinition;
 
 // @public
 export interface PriceScaleApi {
@@ -1130,6 +1142,9 @@ export interface SessionWindow {
     openTime: string;
 }
 
+// @public (undocumented)
+export const ShortPosition: DrawingToolDefinition;
+
 // @public
 export type SourceValue = "open" | "high" | "low" | "close" | "hl2" | "hlc3" | "ohlc4";
 
@@ -1153,6 +1168,9 @@ export { Text_2 as Text }
 
 // @public
 export type Time = number;
+
+// @public (undocumented)
+export const TimeRangeDrawing: DrawingToolDefinition;
 
 // @public
 export interface TimeScaleApi {
@@ -1246,8 +1264,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:1060:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:1075:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1072:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1087:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -666,6 +666,12 @@ export type DrawingSetting =
   | "showMidpoint"
   | "priceLabels"
   | "timeLabels"
+  | "stopColor"
+  | "targetColor"
+  | "extend"
+  | "extendTop"
+  | "extendBottom"
+  | "labelTextColor"
   | "stats"
   | "statsFields"
   | "statsPosition"
@@ -717,7 +723,19 @@ export type DrawingStatsMode = "off" | "selected" | "always";
  * One value shown in a drawing stats box.
  */
 export type DrawingStatsField =
-  "range" | "change" | "bars" | "date" | "timeRange" | "duration" | "angle";
+  | "range"
+  | "change"
+  | "bars"
+  | "date"
+  | "timeRange"
+  | "duration"
+  | "volume"
+  | "angle"
+  | "risk"
+  | "reward"
+  | "riskReward"
+  | "riskPercent"
+  | "rewardPercent";
 
 /**
  * Horizontal placement of a drawing stats box.
@@ -736,16 +754,26 @@ export interface DrawingOptions {
   showLabels?: boolean;
   /** Draw the drawing's line geometry. Defaults to true. */
   showLine?: boolean;
-  /** Extend a trend line beyond its first anchor. */
+  /** Extend a drawing beyond all four anchor edges. */
+  extend?: boolean;
+  /** Extend beyond the first/left edge. */
   extendLeft?: boolean;
-  /** Extend a trend line beyond its second anchor. */
+  /** Extend beyond the second/right edge. */
   extendRight?: boolean;
+  /** Extend beyond the top price edge. */
+  extendTop?: boolean;
+  /** Extend beyond the bottom price edge. */
+  extendBottom?: boolean;
   /** Draw a small dot at the midpoint of a trend line. */
   showMidpoint?: boolean;
   /** Show trend-line endpoint prices on the price axis. Defaults to never. */
   priceLabels?: DrawingPriceLabelsMode;
   /** Show trend-line endpoint times on the time axis. Defaults to never. */
   timeLabels?: DrawingTimeLabelsMode;
+  /** Stop/loss colour for position drawings. */
+  stopColor?: DrawingColor | null;
+  /** Win/target colour for position drawings. */
+  targetColor?: DrawingColor | null;
   /** Show a stats box. Defaults to off. */
   stats?: DrawingStatsMode;
   /**
@@ -757,6 +785,8 @@ export interface DrawingOptions {
   statsPosition?: DrawingStatsPosition;
   /** Colour for the drawing text. Defaults to the drawing colour. */
   textColor?: DrawingColor | null;
+  /** Optional label text colour. Defaults to automatic contrast. */
+  labelTextColor?: DrawingColor | null;
   /** Font style for trend-line text. Defaults to normal. */
   textStyle?: DrawingTextStyle;
   /**
@@ -791,7 +821,7 @@ export interface DrawingToolDefinition {
   /** Number of anchors required to create the drawing. */
   readonly anchors: 1 | 2 | 3 | 4 | 5 | 6;
   /** How anchors are collected. Defaults to discrete clicks. */
-  readonly capture?: "anchors" | "freehand" | "path";
+  readonly capture?: "anchors" | "freehand" | "path" | "position";
   readonly defaultOptions?: DrawingOptions;
   /** False for transient tools such as measure. Defaults to true. */
   readonly persist?: boolean;

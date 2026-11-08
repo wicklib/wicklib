@@ -69,6 +69,10 @@ import type {
 import { cancelFrame, mergeDefined, scheduleFrame } from "./util";
 
 const DEFAULT_AXIS_WIDTH = 64;
+const POSITION_ATR_PERIOD = 14;
+const POSITION_RISK_REWARD = 2;
+const POSITION_DEFAULT_WIDTH_BARS = 20;
+const POSITION_FALLBACK_RISK = 0.01;
 const MIN_AXIS_WIDTH = 40;
 const MAX_AXIS_WIDTH = 160;
 
@@ -635,16 +639,93 @@ class Chart implements ChartApi, SeriesHost {
     anchors: readonly DrawingAnchor[],
     options: DrawingOptions | undefined,
   ): Drawing {
+    const normalizedAnchors =
+      tool.capture === "position" && anchors.length === 1
+        ? this.positionAnchors(tool, pane, anchors[0]!)
+        : anchors;
     const drawing = new Drawing(
       this.nextDrawingId(),
       pane.id,
       tool,
-      anchors,
+      normalizedAnchors,
       mergeDefined<DrawingOptions>(this.drawingDefaultOptions.get(tool.id) ?? {}, options),
       this.drawingHost,
     );
     this.drawings.push(drawing);
     return drawing;
+  }
+
+  private positionAnchors(
+    tool: DrawingToolDefinition,
+    pane: Pane,
+    entry: DrawingAnchor,
+  ): DrawingAnchor[] {
+    const series =
+      pane.series.find(
+        (candidate) => candidate.kind === "candlestick" && candidate.getStore().length > 0,
+      ) ?? pane.series.find((candidate) => candidate.getStore().length > 0);
+    const store = series?.getOhlcStore() ?? null;
+    const risk = this.initialPositionRisk(store, entry);
+    const direction = tool.id === "short-position" ? -1 : 1;
+    const stop = entry.price - direction * risk;
+    const target = entry.price + direction * risk * POSITION_RISK_REWARD;
+    const width = this.defaultPositionWidth(store, entry.time);
+    return [
+      entry,
+      { time: entry.time, price: stop },
+      { time: entry.time, price: target },
+      { time: entry.time + width, price: entry.price },
+    ];
+  }
+
+  private initialPositionRisk(
+    store: ReturnType<Series["getOhlcStore"]>,
+    entry: DrawingAnchor,
+  ): number {
+    if (store && store.length >= 2) {
+      const end = store.nearestIndex(entry.time);
+      if (end >= 0) {
+        const start = Math.max(0, end - POSITION_ATR_PERIOD + 1);
+        let total = 0;
+        let count = 0;
+        for (let index = start; index <= end; index += 1) {
+          const bar = store.barAt(index);
+          const previousClose = index > 0 ? store.closeAt(index - 1) : bar.open;
+          const trueRange = Math.max(
+            bar.high - bar.low,
+            Math.abs(bar.high - previousClose),
+            Math.abs(bar.low - previousClose),
+          );
+          if (Number.isFinite(trueRange)) {
+            total += trueRange;
+            count += 1;
+          }
+        }
+        if (count > 0) {
+          const atr = total / count;
+          if (atr > 0) {
+            return atr;
+          }
+        }
+      }
+    }
+    return Math.max(Math.abs(entry.price) * POSITION_FALLBACK_RISK, 1e-6);
+  }
+
+  private defaultPositionWidth(store: ReturnType<Series["getOhlcStore"]>, time: number): number {
+    let interval = 0;
+    if (store && store.length > 1) {
+      const index = store.nearestIndex(time);
+      if (index >= 0) {
+        const leftIndex = Math.max(0, Math.min(index, store.length - 2));
+        interval = Math.abs(store.timeAt(leftIndex + 1) - store.timeAt(leftIndex));
+      }
+    }
+    if (!Number.isFinite(interval) || interval <= 0) {
+      const visible = this.timeScaleModel.getVisibleRange();
+      interval = Math.max(1, (visible.to - visible.from) / POSITION_DEFAULT_WIDTH_BARS);
+    }
+    return interval * POSITION_DEFAULT_WIDTH_BARS;
   }
 
   private nextDrawingId(): string {
@@ -921,6 +1002,17 @@ class Chart implements ChartApi, SeriesHost {
 
     if (this.pendingAnchors.length === 0) {
       this.activeDrawingPaneId = pane.id;
+    }
+
+    if (this.activeTool.capture === "position") {
+      const tool = this.activeTool;
+      const options = this.activeDrawingOptions;
+      const drawing = this.createDrawing(tool, pane, [anchor], options);
+      this.resetDrawingTool();
+      this.selectOnly(drawing);
+      this.bus.emit("drawing-created", { drawing });
+      this.requestRender();
+      return;
     }
 
     this.pendingAnchors.push(anchor);
@@ -2262,7 +2354,7 @@ class Chart implements ChartApi, SeriesHost {
       }
 
       for (const drawing of this.drawings) {
-        if (drawing.paneId !== pane.id || drawing.toolId !== "trend-line") {
+        if (drawing.paneId !== pane.id) {
           continue;
         }
         const options = drawing.getOptions();
@@ -2270,11 +2362,20 @@ class Chart implements ChartApi, SeriesHost {
         if (mode === "never" || (mode === "selected" && !this.selectedDrawingIds.has(drawing.id))) {
           continue;
         }
-        for (const anchor of drawing.getAnchorsInternal().slice(0, 2)) {
-          widest = Math.max(
-            widest,
-            measureDrawing(pane.priceScale.formatValue(anchor.price, this.options.locale)),
-          );
+        if (drawing.toolId === "trend-line") {
+          for (const anchor of drawing.getAnchorsInternal().slice(0, 2)) {
+            widest = Math.max(
+              widest,
+              measureDrawing(pane.priceScale.formatValue(anchor.price, this.options.locale)),
+            );
+          }
+        } else if (drawing.toolId === "long-position" || drawing.toolId === "short-position") {
+          for (const anchor of drawing.getAnchorsInternal().slice(0, 3)) {
+            widest = Math.max(
+              widest,
+              measure(pane.priceScale.formatValue(anchor.price, this.options.locale)),
+            );
+          }
         }
       }
     }

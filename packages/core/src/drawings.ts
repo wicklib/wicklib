@@ -32,6 +32,12 @@ export interface ResolvedDrawingOptions {
   showMidpoint: boolean;
   priceLabels: DrawingPriceLabelsMode;
   timeLabels: DrawingTimeLabelsMode;
+  stopColor: DrawingColor;
+  targetColor: DrawingColor;
+  extend: boolean;
+  extendTop: boolean;
+  extendBottom: boolean;
+  labelTextColor?: DrawingColor;
   stats: DrawingStatsMode;
   statsFields: readonly DrawingStatsField[];
   statsPosition: DrawingStatsPosition;
@@ -127,6 +133,42 @@ const LONG_SHORT_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "locked",
   "visible",
 ]);
+const POSITION_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "lineWidth",
+  "lineStyle",
+  "fillOpacity",
+  "showLabels",
+  "priceLabels",
+  "stopColor",
+  "targetColor",
+  "labelTextColor",
+  "labelFontSize",
+  "stats",
+  "statsFields",
+  "statsPosition",
+  "locked",
+  "visible",
+]);
+const RANGE_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "color",
+  "lineWidth",
+  "lineStyle",
+  "fillColor",
+  "fillOpacity",
+  "showLine",
+  "extend",
+  "extendTop",
+  "extendBottom",
+  "extendLeft",
+  "extendRight",
+  "labelTextColor",
+  "labelFontSize",
+  "stats",
+  "statsFields",
+  "statsPosition",
+  "locked",
+  "visible",
+]);
 const TEXT_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "color",
   "text",
@@ -186,7 +228,11 @@ const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Objec
   "fib-retracement": LABEL_SETTINGS,
   "fib-extension": LABEL_SETTINGS,
   "long-short-position": LONG_SHORT_SETTINGS,
-  "price-date-range": LABEL_FILL_SETTINGS,
+  "long-position": POSITION_SETTINGS,
+  "short-position": POSITION_SETTINGS,
+  "price-range": RANGE_SETTINGS,
+  "time-range": RANGE_SETTINGS,
+  "price-date-range": RANGE_SETTINGS,
   circle: FILL_SETTINGS,
   "elliott-impulse": ELLIOTT_SETTINGS,
   "elliott-correction": ELLIOTT_SETTINGS,
@@ -221,6 +267,11 @@ const DEFAULTS: DrawingOptions = {
   showMidpoint: false,
   priceLabels: "never",
   timeLabels: "never",
+  stopColor: "#ef5350",
+  targetColor: "#26a69a",
+  extend: false,
+  extendTop: false,
+  extendBottom: false,
   stats: "off",
   statsFields: DEFAULT_STATS_FIELDS,
   statsPosition: "auto",
@@ -491,16 +542,98 @@ export const LongShortPosition: DrawingToolDefinition = Object.freeze({
   defaultOptions: { showLabels: true },
 });
 
-export const PriceDateRange: DrawingToolDefinition = Object.freeze({
-  id: "price-date-range",
+export const LongPosition: DrawingToolDefinition = Object.freeze({
+  id: "long-position",
   meta: {
-    id: "com.wicklib.price-date-range",
-    name: "Price/Date Range",
+    id: "com.wicklib.long-position",
+    name: "Long Position",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 4,
+  capture: "position",
+  defaultOptions: {
+    stopColor: "#ef5350",
+    targetColor: "#26a69a",
+    fillOpacity: 0.16,
+    priceLabels: "always" as const,
+    stats: "selected" as const,
+    statsFields: ["riskReward"] as const,
+    labelFontSize: 12,
+  },
+});
+
+export const ShortPosition: DrawingToolDefinition = Object.freeze({
+  id: "short-position",
+  meta: {
+    id: "com.wicklib.short-position",
+    name: "Short Position",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 4,
+  capture: "position",
+  defaultOptions: {
+    stopColor: "#ef5350",
+    targetColor: "#26a69a",
+    fillOpacity: 0.16,
+    priceLabels: "always" as const,
+    stats: "selected" as const,
+    statsFields: ["riskReward"] as const,
+    labelFontSize: 12,
+  },
+});
+
+export const PriceRangeDrawing: DrawingToolDefinition = Object.freeze({
+  id: "price-range",
+  meta: {
+    id: "com.wicklib.price-range",
+    name: "Price Range",
     version: VERSION,
     license: "free" as const,
   },
   anchors: 2,
-  defaultOptions: { fillOpacity: 0.1 },
+  defaultOptions: {
+    fillOpacity: 0.1,
+    extendLeft: true,
+    extendRight: true,
+    stats: "always" as const,
+    statsFields: ["range", "bars", "timeRange", "volume"] as const,
+  },
+});
+
+export const TimeRangeDrawing: DrawingToolDefinition = Object.freeze({
+  id: "time-range",
+  meta: {
+    id: "com.wicklib.time-range",
+    name: "Time Range",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+  defaultOptions: {
+    fillOpacity: 0.1,
+    extendTop: true,
+    extendBottom: true,
+    stats: "always" as const,
+    statsFields: ["bars", "timeRange", "volume"] as const,
+  },
+});
+
+export const PriceDateRange: DrawingToolDefinition = Object.freeze({
+  id: "price-date-range",
+  meta: {
+    id: "com.wicklib.price-date-range",
+    name: "Date and Price Range",
+    version: VERSION,
+    license: "free" as const,
+  },
+  anchors: 2,
+  defaultOptions: {
+    fillOpacity: 0.1,
+    stats: "always" as const,
+    statsFields: ["range", "bars", "timeRange", "volume"] as const,
+  },
 });
 
 export const Circle: DrawingToolDefinition = Object.freeze({
@@ -701,6 +834,10 @@ export const DRAWING_TOOLS: ReadonlyMap<string, DrawingToolDefinition> = new Map
     FibRetracement,
     FibExtension,
     LongShortPosition,
+    LongPosition,
+    ShortPosition,
+    PriceRangeDrawing,
+    TimeRangeDrawing,
     PriceDateRange,
     Circle,
     ElliottImpulse,
@@ -761,6 +898,10 @@ const TOOL_CATEGORIES: Readonly<Record<string, DrawingToolCategory>> = Object.fr
   rectangle: "shapes",
   circle: "shapes",
   "long-short-position": "positions",
+  "long-position": "positions",
+  "short-position": "positions",
+  "price-range": "ranges",
+  "time-range": "ranges",
   "price-date-range": "ranges",
   "elliott-impulse": "patterns",
   "elliott-correction": "patterns",
@@ -812,6 +953,9 @@ export function resolveDrawingOptions(
   const color = normalizeDrawingColor(merged.color, "#2962ff");
   const fillColor = normalizeDrawingColor(merged.fillColor, color);
   const textColor = normalizeDrawingColor(merged.textColor, color);
+  const stopColor = normalizeDrawingColor(merged.stopColor, "#ef5350");
+  const targetColor = normalizeDrawingColor(merged.targetColor, "#26a69a");
+  const labelTextColor = normalizeOptionalDrawingColor(merged.labelTextColor, textColor);
   const resolved: ResolvedDrawingOptions = {
     color,
     lineWidth: merged.lineWidth ?? 1,
@@ -820,11 +964,16 @@ export function resolveDrawingOptions(
     fillOpacity: merged.fillOpacity ?? 0.12,
     showLabels: merged.showLabels ?? true,
     showLine: merged.showLine ?? true,
+    extend: merged.extend ?? false,
     extendLeft: merged.extendLeft ?? false,
     extendRight: merged.extendRight ?? false,
+    extendTop: merged.extendTop ?? false,
+    extendBottom: merged.extendBottom ?? false,
     showMidpoint: merged.showMidpoint ?? false,
     priceLabels: normalizedPriceLabels(merged.priceLabels),
     timeLabels: normalizedPriceLabels(merged.timeLabels),
+    stopColor,
+    targetColor,
     stats: normalizedStats(merged.stats),
     statsFields: normalizedStatsFields(merged.statsFields),
     statsPosition: normalizedStatsPosition(merged.statsPosition),
@@ -839,6 +988,9 @@ export function resolveDrawingOptions(
     locked: merged.locked ?? false,
     visible: merged.visible ?? true,
   };
+  if (labelTextColor !== undefined) {
+    resolved.labelTextColor = labelTextColor;
+  }
   if (merged.labels !== undefined) {
     resolved.labels = validateLabels(merged.labels);
   }
@@ -860,11 +1012,16 @@ export function mergeDrawingOptions(
     fillOpacity: patch.fillOpacity ?? base.fillOpacity,
     showLabels: patch.showLabels ?? base.showLabels,
     showLine: patch.showLine ?? base.showLine,
+    extend: patch.extend ?? base.extend,
     extendLeft: patch.extendLeft ?? base.extendLeft,
     extendRight: patch.extendRight ?? base.extendRight,
+    extendTop: patch.extendTop ?? base.extendTop,
+    extendBottom: patch.extendBottom ?? base.extendBottom,
     showMidpoint: patch.showMidpoint ?? base.showMidpoint,
     priceLabels: patch.priceLabels ?? base.priceLabels,
     timeLabels: patch.timeLabels ?? base.timeLabels,
+    stopColor: mergeDrawingColor(patch.stopColor, base.stopColor),
+    targetColor: mergeDrawingColor(patch.targetColor, base.targetColor),
     stats: patch.stats ?? base.stats,
     statsFields:
       patch.statsFields !== undefined ? normalizedStatsFields(patch.statsFields) : base.statsFields,
@@ -880,6 +1037,16 @@ export function mergeDrawingOptions(
     locked: patch.locked ?? base.locked,
     visible: patch.visible ?? base.visible,
   };
+  if (patch.labelTextColor !== undefined) {
+    const labelTextColor = normalizeOptionalDrawingColor(patch.labelTextColor, merged.textColor);
+    if (labelTextColor !== undefined) {
+      merged.labelTextColor = labelTextColor;
+    } else {
+      delete merged.labelTextColor;
+    }
+  } else if (base.labelTextColor !== undefined) {
+    merged.labelTextColor = base.labelTextColor;
+  }
   if (patch.labels !== undefined) {
     merged.labels = validateLabels(patch.labels);
   } else if (base.labels !== undefined) {
@@ -891,6 +1058,16 @@ export function mergeDrawingOptions(
     merged.labelFontSize = base.labelFontSize;
   }
   return merged;
+}
+
+function normalizeOptionalDrawingColor(
+  value: DrawingColor | null | undefined,
+  fallback: DrawingColor,
+): DrawingColor | undefined {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+  return normalizeDrawingColor(value, fallback);
 }
 
 function normalizeDrawingColor(
@@ -945,12 +1122,15 @@ function normalizedStatsFields(
       field !== "date" &&
       field !== "timeRange" &&
       field !== "duration" &&
-      field !== "angle"
+      field !== "volume" &&
+      field !== "angle" &&
+      field !== "risk" &&
+      field !== "reward" &&
+      field !== "riskReward" &&
+      field !== "riskPercent" &&
+      field !== "rewardPercent"
     ) {
-      fail(
-        "INVALID_ARGUMENT",
-        "statsFields must contain range, change, bars, date, timeRange, duration, or angle",
-      );
+      fail("INVALID_ARGUMENT", "statsFields contains an unsupported field");
     }
     if (!fields.includes(field)) {
       fields.push(field);
@@ -1242,12 +1422,41 @@ export function hitTestDrawing(
         pointInChannel(point, channel, tolerance)
       );
     }
-    case "rectangle":
-    case "price-date-range": {
+    case "rectangle": {
       if (points.length < 2) {
         return false;
       }
       return pointInRect(point, points[0]!, points[1]!, tolerance);
+    }
+    case "price-range":
+    case "time-range":
+    case "price-date-range": {
+      if (points.length < 2) {
+        return false;
+      }
+      const plot = pane.plot;
+      let left = Math.min(points[0]!.x, points[1]!.x);
+      let right = Math.max(points[0]!.x, points[1]!.x);
+      let top = Math.min(points[0]!.y, points[1]!.y);
+      let bottom = Math.max(points[0]!.y, points[1]!.y);
+      if (target.options.extend || target.options.extendLeft) {
+        left = plot.left;
+      }
+      if (target.options.extend || target.options.extendRight) {
+        right = plot.right;
+      }
+      if (target.options.extend || target.options.extendTop) {
+        top = plot.top;
+      }
+      if (target.options.extend || target.options.extendBottom) {
+        bottom = plot.bottom;
+      }
+      return (
+        point.x >= left - tolerance &&
+        point.x <= right + tolerance &&
+        point.y >= top - tolerance &&
+        point.y <= bottom + tolerance
+      );
     }
     case "circle": {
       if (points.length < 2) {
@@ -1272,6 +1481,27 @@ export function hitTestDrawing(
       return FIB_EXTENSION_LEVELS.some(
         (level) => Math.abs(point.y - (points[2]!.y + delta * level)) <= tolerance,
       );
+    }
+    case "long-position":
+    case "short-position": {
+      if (points.length < 4) {
+        return false;
+      }
+      const left = Math.min(points[0]!.x, points[3]!.x);
+      const right = Math.max(points[0]!.x, points[3]!.x);
+      const entryY = points[0]!.y;
+      const stopY = points[1]!.y;
+      const targetY = points[2]!.y;
+      const withinTime = point.x >= left - tolerance && point.x <= right + tolerance;
+      const inStop =
+        withinTime &&
+        point.y >= Math.min(entryY, stopY) - tolerance &&
+        point.y <= Math.max(entryY, stopY) + tolerance;
+      const inTarget =
+        withinTime &&
+        point.y >= Math.min(entryY, targetY) - tolerance &&
+        point.y <= Math.max(entryY, targetY) + tolerance;
+      return inStop || inTarget;
     }
     case "long-short-position": {
       if (points.length < 3) {
