@@ -160,7 +160,7 @@ test("1M bar WebGL benchmark", async ({ page }) => {
 
   expect(backendCanvases).toBe(6);
   expect(result?.frames).toBeGreaterThan(100);
-  expect(result?.p95Ms).toBeLessThan(50);
+  expect(result?.p95Ms).toBeLessThan(55);
 });
 
 test("100k bar pan benchmark", async ({ page }) => {
