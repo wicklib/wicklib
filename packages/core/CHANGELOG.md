@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.23.2
+
+### Patch Changes
+
+- 441dacd: Select drawing stats and crosshair label surfaces by contrast against the actual canvas colour.
+
 ## 0.23.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@wicklib/indicators",
-  "version": "0.23.1",
+  "version": "0.23.2",
   "description": "Wicklib built-in indicator catalog",
   "license": "Apache-2.0",
   "type": "module",
@@ -37,7 +37,7 @@
     "directory": "packages/indicators"
   },
   "peerDependencies": {
-    "@wicklib/core": "^0.23.1"
+    "@wicklib/core": "^0.23.2"
   },
   "devDependencies": {
     "@wicklib/core": "workspace:*",
