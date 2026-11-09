@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.27.0
+
+### Minor Changes
+
+- 396b7db: Add weak and strong magnet snapping for crosshair, drawing placement, and anchor dragging, with Ctrl/Command temporary activation.
+
 ## 0.26.0
 
 ### Minor Changes
