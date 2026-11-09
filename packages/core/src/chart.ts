@@ -163,6 +163,7 @@ class Chart implements ChartApi, SeriesHost {
   private crosshairPoint: CrosshairRenderPoint | null = null;
   private lastPointerPoint: Point | null = null;
   private magnetModifierPressed = false;
+  private shiftAnglePressed = false;
   private readonly activePointers = new Map<number, Point>();
   private pinchDistance: number | null = null;
   private dragging = false;
@@ -976,19 +977,65 @@ class Chart implements ChartApi, SeriesHost {
     return result;
   }
 
-  private drawingAnchor(pane: Pane, point: Point): DrawingAnchor | null {
+  private drawingAnchor(
+    pane: Pane,
+    point: Point,
+    angleReference: DrawingAnchor | null = null,
+  ): DrawingAnchor | null {
     if (!pane.plot) {
       return null;
     }
 
     const snapped = this.snapPointForMagnet(pane, point);
-    const time = snapped.time ?? this.timeScaleModel.timeAtX(snapped.point.x);
+    let snappedPoint = snapped.point;
+    let snappedTime = snapped.time;
+    if (this.shiftAnglePressed && angleReference) {
+      const reference = this.anchorScreenPoint(pane, angleReference);
+      if (reference) {
+        snappedPoint = constrainPointAngle(reference, snappedPoint);
+        snappedTime = null;
+      }
+    }
+    const time = snappedTime ?? this.timeScaleModel.timeAtX(snappedPoint.x);
     if (time === null) {
       return null;
     }
 
-    const price = pane.priceScale.yToPrice(snapped.point.y, pane.plot.top, pane.plot.height);
+    const price = pane.priceScale.yToPrice(snappedPoint.y, pane.plot.top, pane.plot.height);
     return { time, price };
+  }
+
+  private anchorScreenPoint(pane: Pane, anchor: DrawingAnchor): Point | null {
+    if (!pane.plot) {
+      return null;
+    }
+    const x = this.timeScaleModel.timeToX(anchor.time);
+    if (x === null) {
+      return null;
+    }
+    return {
+      x,
+      y: pane.priceScale.priceToY(anchor.price, pane.plot.top, pane.plot.height),
+    };
+  }
+
+  private previewPointForTool(pane: Pane, point: Point): Point {
+    const tool = this.activeTool;
+    if (!tool) {
+      return point;
+    }
+    const snapped = this.snapPointForMagnet(pane, point).point;
+    if (!this.shiftAnglePressed) {
+      return snapped;
+    }
+    const referenceIndex = placementAngleReference(tool.id, this.pendingAnchors.length);
+    const referenceAnchor =
+      referenceIndex === null ? null : (this.pendingAnchors[referenceIndex] ?? null);
+    if (!referenceAnchor) {
+      return snapped;
+    }
+    const reference = this.anchorScreenPoint(pane, referenceAnchor);
+    return reference ? constrainPointAngle(reference, snapped) : snapped;
   }
 
   private placeAnchor(pane: Pane, point: Point): void {
@@ -1000,7 +1047,10 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
-    const anchor = this.drawingAnchor(pane, point);
+    const referenceIndex = placementAngleReference(this.activeTool.id, this.pendingAnchors.length);
+    const reference =
+      referenceIndex === null ? null : (this.pendingAnchors[referenceIndex] ?? null);
+    const anchor = this.drawingAnchor(pane, point, reference);
     if (!anchor) {
       return;
     }
@@ -1158,7 +1208,9 @@ class Chart implements ChartApi, SeriesHost {
       const next = anchors.map((anchor) => ({ ...anchor }));
 
       if (this.draggingAnchorIndex >= 0) {
-        const anchor = this.drawingAnchor(pane, point);
+        const referenceIndex = dragAngleReference(drawing.toolId, this.draggingAnchorIndex);
+        const referenceAnchor = referenceIndex === null ? null : (anchors[referenceIndex] ?? null);
+        const anchor = this.drawingAnchor(pane, point, referenceAnchor);
         if (!anchor) {
           continue;
         }
@@ -1668,6 +1720,8 @@ class Chart implements ChartApi, SeriesHost {
     const point = this.localPoint(event);
     this.lastPointerPoint = point;
     this.magnetModifierPressed = event.metaKey || event.ctrlKey;
+    this.shiftAnglePressed = event.shiftKey;
+    this.shiftAnglePressed = event.shiftKey;
     const axisPane = this.priceAxisPaneAtPoint(point);
     if (axisPane) {
       if (!this.options.interaction.axisDrag) {
@@ -1807,6 +1861,7 @@ class Chart implements ChartApi, SeriesHost {
     const point = this.localPoint(event);
     this.lastPointerPoint = point;
     this.magnetModifierPressed = event.metaKey || event.ctrlKey;
+    this.shiftAnglePressed = event.shiftKey;
 
     if (this.timeAxisDrag && event.pointerId === this.timeAxisDrag.pointerId) {
       this.updateTimeAxisDrag(point);
@@ -1822,7 +1877,8 @@ class Chart implements ChartApi, SeriesHost {
       if (this.activeTool.capture === "freehand") {
         this.updateFreehand(point, event.pointerId);
       } else {
-        this.previewPoint = point;
+        const previewPane = this.paneAtPoint(point) ?? this.findPane(this.activeDrawingPaneId);
+        this.previewPoint = previewPane ? this.previewPointForTool(previewPane, point) : point;
         this.updateCrosshair(point.x, point.y);
         this.requestRender();
       }
@@ -2017,6 +2073,7 @@ class Chart implements ChartApi, SeriesHost {
   private readonly onPointerLeave = (): void => {
     this.lastPointerPoint = null;
     this.magnetModifierPressed = false;
+    this.shiftAnglePressed = false;
     if (this.activeTool) {
       this.previewPoint = null;
       this.requestRender();
@@ -2089,6 +2146,7 @@ class Chart implements ChartApi, SeriesHost {
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     this.updateMagnetModifier(event.metaKey || event.ctrlKey);
+    this.updateShiftAngleModifier(event.shiftKey);
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {
       this.selectAllDrawings();
       event.preventDefault();
@@ -2178,6 +2236,7 @@ class Chart implements ChartApi, SeriesHost {
 
   private readonly onKeyUp = (event: KeyboardEvent): void => {
     this.updateMagnetModifier(event.metaKey || event.ctrlKey);
+    this.updateShiftAngleModifier(event.shiftKey);
   };
 
   private updateMagnetModifier(pressed: boolean): void {
@@ -2188,6 +2247,27 @@ class Chart implements ChartApi, SeriesHost {
     const point = this.lastPointerPoint;
     if (point) {
       this.updateCrosshair(point.x, point.y);
+    }
+  }
+
+  private updateShiftAngleModifier(pressed: boolean): void {
+    if (this.shiftAnglePressed === pressed) {
+      return;
+    }
+    this.shiftAnglePressed = pressed;
+    const point = this.lastPointerPoint;
+    if (!point) {
+      return;
+    }
+    if (this.activeTool && this.pendingAnchors.length > 0) {
+      const pane = this.paneAtPoint(point);
+      if (pane) {
+        this.previewPoint = this.previewPointForTool(pane, point);
+        this.requestRender();
+      }
+    }
+    if (this.draggingDrawings.length > 0 && this.drawingDragPointerId !== null) {
+      this.updateDrawingDrag(point);
     }
   }
 
@@ -2861,6 +2941,96 @@ class Chart implements ChartApi, SeriesHost {
     root.removeEventListener("keyup", this.onKeyUp);
     root.removeEventListener("wheel", this.onWheel);
   }
+}
+
+const LINE_ANGLE_TOOLS = new Set([
+  "trend-line",
+  "ray",
+  "extended-line",
+  "arrow",
+  "trend-angle",
+  "gann-fan",
+  "measure",
+  "stats-line",
+]);
+
+const CHANNEL_ANGLE_TOOLS = new Set([
+  "parallel-channel",
+  "fib-channel",
+  "flat-top-bottom",
+  "speed-lines",
+  "pitchfork",
+  "schiff-pitchfork",
+  "modified-schiff-pitchfork",
+]);
+
+export function placementAngleReference(toolId: string, anchorIndex: number): number | null {
+  if (LINE_ANGLE_TOOLS.has(toolId)) {
+    return anchorIndex === 1 ? 0 : null;
+  }
+  if (CHANNEL_ANGLE_TOOLS.has(toolId)) {
+    return anchorIndex === 1 ? 0 : null;
+  }
+  if (toolId === "disjoint-channel") {
+    if (anchorIndex === 1) {
+      return 0;
+    }
+    if (anchorIndex === 3) {
+      return 2;
+    }
+  }
+  return null;
+}
+
+export function dragAngleReference(toolId: string, anchorIndex: number): number | null {
+  if (LINE_ANGLE_TOOLS.has(toolId)) {
+    if (anchorIndex === 0) {
+      return 1;
+    }
+    if (anchorIndex === 1) {
+      return 0;
+    }
+    return null;
+  }
+  if (CHANNEL_ANGLE_TOOLS.has(toolId)) {
+    if (anchorIndex === 0) {
+      return 1;
+    }
+    if (anchorIndex === 1) {
+      return 0;
+    }
+    return null;
+  }
+  if (toolId === "disjoint-channel") {
+    if (anchorIndex === 0) {
+      return 1;
+    }
+    if (anchorIndex === 1) {
+      return 0;
+    }
+    if (anchorIndex === 2) {
+      return 3;
+    }
+    if (anchorIndex === 3) {
+      return 2;
+    }
+  }
+  return null;
+}
+
+export function constrainPointAngle(reference: Point, point: Point): Point {
+  const dx = point.x - reference.x;
+  const dy = point.y - reference.y;
+  const length = Math.hypot(dx, dy);
+  if (length < 0.001) {
+    return point;
+  }
+  const step = Math.PI / 4;
+  const angle = Math.round(Math.atan2(dy, dx) / step) * step;
+  return {
+    x: reference.x + Math.cos(angle) * length,
+    y: reference.y + Math.sin(angle) * length,
+  };
 }
 
 function computePaneHeights(panes: readonly Pane[], available: number): number[] {

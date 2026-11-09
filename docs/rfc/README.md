@@ -30,6 +30,7 @@ changing its decisions requires a new RFC or an ADR.
 | 0028 | Position and range drawing suite       | Accepted |
 | 0029 | Modern drawing styling                 | Accepted |
 | 0030 | Weak, strong, and modifier magnet      | Accepted |
+| 0031 | Shift angle snapping while drawing     | Accepted |
 
 Rules:
 
