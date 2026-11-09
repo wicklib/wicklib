@@ -102,6 +102,8 @@ describe("drawing settings", () => {
     expect(drawingToolSettings("long-position")).toContain("stopColor");
     expect(drawingToolSettings("short-position")).toContain("targetColor");
     expect(drawingToolSettings("long-position")).toContain("labelTextColor");
+    expect(drawingToolSettings("long-position")).toContain("statsPosition");
+    expect(drawingToolSettings("long-position")).not.toContain("statsFields");
     expect(drawingToolSettings("price-range")).toContain("extendTop");
     expect(drawingToolSettings("time-range")).toContain("extendBottom");
     expect(drawingToolSettings("price-date-range")).toContain("fillOpacity");

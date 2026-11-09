@@ -37,11 +37,12 @@ Position visuals:
 - Entry line, entry label, and target label use `targetColor`.
 - Stop label uses `stopColor`.
 - The three old label boxes are replaced by three zone-coloured stats boxes at stop, entry, and
-  profit. Boxes are right-anchored to the position edge and are not clamped to the chart's left
-  edge.
+  profit. Their alignment follows `statsPosition`: left, center, right, or auto. Boxes are not
+  clamped to the chart's left edge and use a 5px corner radius.
 - Stats-box text uses `labelTextColor` without automatic contrast and `labelFontSize` for size.
-- `priceLabels` defaults to `always`; stop/entry/target axis labels use their zone colours with
-  automatic contrast text.
+- `priceLabels` defaults to `always` and controls both axis labels and position stats boxes:
+  never hides both, selected shows both only while selected.
+- Stop/entry/target axis labels use their zone colours with automatic contrast text.
 
 Position sizing inputs:
 

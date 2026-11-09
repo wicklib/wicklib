@@ -161,6 +161,59 @@ describe("position drawings", () => {
     ]);
   });
 
+  it("aligns position stats boxes left, center, and right", async () => {
+    const chart = addChart();
+    const drawing = chart.addDrawing(LongPosition, {
+      anchors: [
+        { time: 20 * MINUTE, price: 100 },
+        { time: 20 * MINUTE, price: 98 },
+        { time: 20 * MINUTE, price: 104 },
+        { time: 60 * MINUTE, price: 100 },
+      ],
+      options: { positionStatsFields: ["entry"], statsPosition: "left" },
+    });
+    await settle();
+    const left = textCalls.find((call) => call.text.startsWith("Entry  "))?.x;
+    expect(left).toBeDefined();
+
+    textCalls.length = 0;
+    drawing.setOptions({ statsPosition: "center" });
+    await settle();
+    const center = textCalls.find((call) => call.text.startsWith("Entry  "))?.x;
+    expect(center).toBeDefined();
+
+    textCalls.length = 0;
+    drawing.setOptions({ statsPosition: "right" });
+    await settle();
+    const right = textCalls.find((call) => call.text.startsWith("Entry  "))?.x;
+    expect(right).toBeDefined();
+    expect(left!).toBeLessThan(center!);
+    expect(center!).toBeLessThan(right!);
+  });
+
+  it("hides position stats boxes with the price label setting", async () => {
+    const chart = addChart();
+    const drawing = chart.addDrawing(LongPosition, {
+      anchors: [
+        { time: 20 * MINUTE, price: 100 },
+        { time: 20 * MINUTE, price: 98 },
+        { time: 20 * MINUTE, price: 104 },
+        { time: 60 * MINUTE, price: 100 },
+      ],
+      options: { positionStatsFields: ["loss", "entry", "profit"] },
+    });
+    await settle();
+    expect(textCalls.some((call) => call.text.startsWith("Loss  "))).toBe(true);
+
+    textCalls.length = 0;
+    drawing.setOptions({ priceLabels: "never" });
+    await settle();
+    expect(textCalls.some((call) => call.text.startsWith("Loss  "))).toBe(false);
+    expect(textCalls.some((call) => call.text.startsWith("Entry  "))).toBe(false);
+    expect(textCalls.some((call) => call.text.startsWith("Profit  "))).toBe(false);
+    expect(textCalls.some((call) => call.text === "98.00")).toBe(false);
+  });
+
   it("renders position labels, fills, stats, and axis labels", async () => {
     const chart = addChart();
     chart.addDrawing(LongPosition, {

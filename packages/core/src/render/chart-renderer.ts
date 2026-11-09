@@ -1760,9 +1760,7 @@ export class ChartRenderer {
         context.lineTo(right, entry.y);
         context.stroke();
 
-        if (drawing.options.showLabels) {
-          this.drawPositionStats(context, model, pane, drawing, points);
-        }
+        this.drawPositionStats(context, model, pane, drawing, points);
         return;
       }
       case "long-short-position": {
@@ -2010,15 +2008,22 @@ export class ChartRenderer {
     if (points.length < 4) {
       return;
     }
+    const options = drawing.options;
+    if (
+      options.priceLabels === "never" ||
+      (options.priceLabels === "selected" && !drawing.selected)
+    ) {
+      return;
+    }
     const entry = points[0]!;
     const stop = points[1]!;
     const target = points[2]!;
     const widthPoint = points[3]!;
+    const left = Math.min(entry.x, widthPoint.x);
     const right = Math.max(entry.x, widthPoint.x);
     const entryPrice = drawing.anchors[0]!.price;
     const stopPrice = drawing.anchors[1]!.price;
     const targetPrice = drawing.anchors[2]!.price;
-    const options = drawing.options;
     const riskPrice = Math.abs(entryPrice - stopPrice);
     const rewardPrice = Math.abs(targetPrice - entryPrice);
     const riskAmount = options.accountSize * (options.riskPercent / 100);
@@ -2079,9 +2084,16 @@ export class ChartRenderer {
         top = lastBottom + 2;
       }
       top = Math.max(0, Math.min(model.height - height, top));
-      const x = Math.min(model.width - width, right - width - 8);
+      const position = options.statsPosition;
+      let x =
+        position === "left"
+          ? left + 8
+          : position === "center"
+            ? (left + right) / 2 - width / 2
+            : right - width - 8;
+      x = Math.min(model.width - width, x);
       context.fillStyle = box.color;
-      context.fillRect(x, top, width, height);
+      fillRoundedRect(context, x, top, width, height, 5);
       context.fillStyle = options.labelTextColor ?? "#ffffff";
       for (let index = 0; index < box.lines.length; index += 1) {
         context.fillText(
@@ -2769,6 +2781,29 @@ function surfaceContrast(canvas: readonly [number, number, number], background: 
   }
   const effective = compositeRgb(surface, canvas);
   return contrastRatio(relativeLuminance(effective), relativeLuminance(canvas));
+}
+
+function fillRoundedRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+): void {
+  const r = Math.max(0, Math.min(radius, width / 2, height / 2));
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.lineTo(x + width - r, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + r);
+  context.lineTo(x + width, y + height - r);
+  context.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  context.lineTo(x + r, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - r);
+  context.lineTo(x, y + r);
+  context.quadraticCurveTo(x, y, x + r, y);
+  context.closePath();
+  context.fill();
 }
 
 function contrastTextForColor(color: string): string {
