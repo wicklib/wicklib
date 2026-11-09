@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.25.1
+
+### Patch Changes
+
+- b36e934: Align position stats boxes by statsPosition, hide them with priceLabels, and round their corners.
+
 ## 0.25.0
 
 ### Minor Changes
