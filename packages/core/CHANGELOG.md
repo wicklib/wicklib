@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.25.0
+
+### Minor Changes
+
+- 67d7ea7: Add position sizing inputs and replace position label boxes with three zone-coloured stats boxes.
+
 ## 0.24.0
 
 ### Minor Changes
