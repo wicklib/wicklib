@@ -1,5 +1,13 @@
 # @wicklib/script-editor
 
+## 0.26.0
+
+### Patch Changes
+
+- Updated dependencies [8a3d66b]
+  - @wicklib/core@0.26.0
+  - @wicklib/script@0.26.0
+
 ## 0.25.1
 
 ### Patch Changes

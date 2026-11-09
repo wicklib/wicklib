@@ -1,6 +1,6 @@
 {
   "name": "wicklib",
-  "version": "0.25.1",
+  "version": "0.26.0",
   "description": "Wicklib umbrella package: core, indicators, and multi-chart layouts",
   "license": "Apache-2.0",
   "type": "module",

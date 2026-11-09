@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.26.0
+
+### Minor Changes
+
+- 8a3d66b: Modernize drawing styles, channel/Fibonacci/text settings, freehand selection, range borders, and default price precision.
+
 ## 0.25.1
 
 ### Patch Changes
