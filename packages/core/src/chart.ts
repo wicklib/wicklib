@@ -73,6 +73,8 @@ const POSITION_ATR_PERIOD = 14;
 const POSITION_RISK_REWARD = 2;
 const POSITION_DEFAULT_WIDTH_BARS = 20;
 const POSITION_FALLBACK_RISK = 0.01;
+const MAGNET_DRAWING_RADIUS = 12;
+const MAGNET_PRICE_LINE_RADIUS = 8;
 const MIN_AXIS_WIDTH = 40;
 const MAX_AXIS_WIDTH = 160;
 
@@ -159,6 +161,8 @@ class Chart implements ChartApi, SeriesHost {
     current: Point;
   } | null = null;
   private crosshairPoint: CrosshairRenderPoint | null = null;
+  private lastPointerPoint: Point | null = null;
+  private magnetModifierPressed = false;
   private readonly activePointers = new Map<number, Point>();
   private pinchDistance: number | null = null;
   private dragging = false;
@@ -977,12 +981,13 @@ class Chart implements ChartApi, SeriesHost {
       return null;
     }
 
-    const time = this.timeScaleModel.timeAtX(point.x);
+    const snapped = this.snapPointForMagnet(pane, point);
+    const time = snapped.time ?? this.timeScaleModel.timeAtX(snapped.point.x);
     if (time === null) {
       return null;
     }
 
-    const price = pane.priceScale.yToPrice(point.y, pane.plot.top, pane.plot.height);
+    const price = pane.priceScale.yToPrice(snapped.point.y, pane.plot.top, pane.plot.height);
     return { time, price };
   }
 
@@ -1661,6 +1666,8 @@ class Chart implements ChartApi, SeriesHost {
     }
 
     const point = this.localPoint(event);
+    this.lastPointerPoint = point;
+    this.magnetModifierPressed = event.metaKey || event.ctrlKey;
     const axisPane = this.priceAxisPaneAtPoint(point);
     if (axisPane) {
       if (!this.options.interaction.axisDrag) {
@@ -1798,6 +1805,8 @@ class Chart implements ChartApi, SeriesHost {
 
   private readonly onPointerMove = (event: PointerEvent): void => {
     const point = this.localPoint(event);
+    this.lastPointerPoint = point;
+    this.magnetModifierPressed = event.metaKey || event.ctrlKey;
 
     if (this.timeAxisDrag && event.pointerId === this.timeAxisDrag.pointerId) {
       this.updateTimeAxisDrag(point);
@@ -2006,6 +2015,8 @@ class Chart implements ChartApi, SeriesHost {
   };
 
   private readonly onPointerLeave = (): void => {
+    this.lastPointerPoint = null;
+    this.magnetModifierPressed = false;
     if (this.activeTool) {
       this.previewPoint = null;
       this.requestRender();
@@ -2077,6 +2088,7 @@ class Chart implements ChartApi, SeriesHost {
   };
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
+    this.updateMagnetModifier(event.metaKey || event.ctrlKey);
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {
       this.selectAllDrawings();
       event.preventDefault();
@@ -2163,6 +2175,21 @@ class Chart implements ChartApi, SeriesHost {
     this.emitVisibleRange();
     this.notifyViewChange();
   };
+
+  private readonly onKeyUp = (event: KeyboardEvent): void => {
+    this.updateMagnetModifier(event.metaKey || event.ctrlKey);
+  };
+
+  private updateMagnetModifier(pressed: boolean): void {
+    if (this.magnetModifierPressed === pressed) {
+      return;
+    }
+    this.magnetModifierPressed = pressed;
+    const point = this.lastPointerPoint;
+    if (point) {
+      this.updateCrosshair(point.x, point.y);
+    }
+  }
 
   private currentPinchDistance(): number | null {
     const points = Array.from(this.activePointers.values());
@@ -2475,33 +2502,149 @@ class Chart implements ChartApi, SeriesHost {
 
     const store = this.primaryStore();
     let time: number | null = null;
-    let price: number | null = pane.priceScale.yToPrice(y, pane.plot.top, pane.plot.height);
+    const snapped = this.snapPointForMagnet(pane, { x, y });
+    const point = snapped.point;
+    const price: number | null = pane.priceScale.yToPrice(point.y, pane.plot.top, pane.plot.height);
 
     if (store && store.length > 0) {
-      const index = Math.round(this.timeScaleModel.xToIndex(x));
+      const index = Math.round(this.timeScaleModel.xToIndex(point.x));
       if (index >= 0 && index < store.length) {
         time = store.timeAt(index);
-
-        if (this.options.crosshair.mode === "magnet") {
-          const snapStore = pane.series[0]?.getStore();
-          if (snapStore && snapStore.length > 0) {
-            const snapIndex = Math.round(this.timeScaleModel.xToIndex(x));
-            if (snapIndex >= 0 && snapIndex < snapStore.length) {
-              price = snapStore.valueAt(snapIndex);
-            }
-          }
-        }
       }
     }
+    if (snapped.time !== null) {
+      time = snapped.time;
+    }
 
-    this.crosshairPoint = { paneId: pane.id, point: { x, y } };
+    this.crosshairPoint = { paneId: pane.id, point };
     this.requestRender();
     this.bus.emit("crosshair", {
       time,
       price,
       paneId: pane.id,
-      point: { x, y },
+      point,
     });
+  }
+
+  private activeMagnetStrength(): "off" | "weak" | "strong" {
+    if (this.magnetModifierPressed && this.options.crosshair.modifierMagnet !== "off") {
+      return this.options.crosshair.modifierMagnet;
+    }
+    if (this.options.crosshair.mode === "magnet") {
+      return this.options.crosshair.magnet;
+    }
+    return "off";
+  }
+
+  private snapPointForMagnet(pane: Pane, point: Point): { point: Point; time: number | null } {
+    const strength = this.activeMagnetStrength();
+    if (strength === "off" || !pane.plot) {
+      return { point, time: null };
+    }
+
+    if (strength === "strong") {
+      const anchor = this.nearestDrawingAnchor(pane, point);
+      if (anchor) {
+        return { point: anchor.point, time: anchor.time };
+      }
+      const priceLine = this.nearestPriceLine(pane, point);
+      if (priceLine !== null) {
+        return { point: { x: point.x, y: priceLine }, time: null };
+      }
+    }
+
+    const ohlc = this.snapToOhlc(pane, point);
+    if (!ohlc) {
+      return { point, time: null };
+    }
+    return {
+      point: {
+        x: point.x,
+        y: pane.priceScale.priceToY(ohlc.price, pane.plot.top, pane.plot.height),
+      },
+      time: ohlc.time,
+    };
+  }
+
+  private nearestDrawingAnchor(pane: Pane, point: Point): { point: Point; time: number } | null {
+    const plot = pane.plot;
+    if (!plot) {
+      return null;
+    }
+    let nearest: { point: Point; time: number; distance: number } | null = null;
+    for (const drawing of this.drawings) {
+      if (drawing.paneId !== pane.id) {
+        continue;
+      }
+      for (const anchor of drawing.getAnchorsInternal()) {
+        const x = this.timeScaleModel.timeToX(anchor.time);
+        if (x === null) {
+          continue;
+        }
+        const y = pane.priceScale.priceToY(anchor.price, plot.top, plot.height);
+        const distance = Math.hypot(x - point.x, y - point.y);
+        if (distance > MAGNET_DRAWING_RADIUS) {
+          continue;
+        }
+        if (!nearest || distance < nearest.distance) {
+          nearest = { point: { x, y }, time: anchor.time, distance };
+        }
+      }
+    }
+    return nearest ? { point: nearest.point, time: nearest.time } : null;
+  }
+
+  private nearestPriceLine(pane: Pane, point: Point): number | null {
+    const plot = pane.plot;
+    if (!plot) {
+      return null;
+    }
+    let nearest: { y: number; distance: number } | null = null;
+    for (const series of pane.series) {
+      for (const line of series.toRenderData().priceLines) {
+        const y = pane.priceScale.priceToY(line.price, plot.top, plot.height);
+        const distance = Math.abs(y - point.y);
+        if (distance > MAGNET_PRICE_LINE_RADIUS) {
+          continue;
+        }
+        if (!nearest || distance < nearest.distance) {
+          nearest = { y, distance };
+        }
+      }
+    }
+    return nearest?.y ?? null;
+  }
+
+  private snapToOhlc(pane: Pane, point: Point): { price: number; time: number } | null {
+    const plot = pane.plot;
+    if (!plot) {
+      return null;
+    }
+    const series =
+      pane.series.find(
+        (candidate) => candidate.kind === "candlestick" && candidate.getStore().length > 0,
+      ) ?? pane.series.find((candidate) => candidate.getStore().length > 0);
+    if (!series) {
+      return null;
+    }
+    const store = series.getStore();
+    if (store.length === 0) {
+      return null;
+    }
+    const index = Math.round(this.timeScaleModel.xToIndex(point.x));
+    const clamped = Math.max(0, Math.min(store.length - 1, index));
+    const rawPrice = pane.priceScale.yToPrice(point.y, plot.top, plot.height);
+    const ohlc = series.kind === "candlestick" ? series.getOhlcStore() : null;
+    const candidates = ohlc
+      ? [ohlc.openAt(clamped), ohlc.highAt(clamped), ohlc.lowAt(clamped), ohlc.closeAt(clamped)]
+      : [store.valueAt(clamped)];
+    let price = candidates[0]!;
+    for (const candidate of candidates) {
+      if (Math.abs(candidate - rawPrice) < Math.abs(price - rawPrice)) {
+        price = candidate;
+      }
+    }
+    return { price, time: store.timeAt(clamped) };
   }
 
   private clearCrosshair(): void {
@@ -2526,22 +2669,24 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
+    const snapped = this.snapPointForMagnet(pane, point);
+    const snappedPoint = snapped.point;
     const store = this.primaryStore();
-    let time: number | null = null;
+    let time: number | null = snapped.time;
 
-    if (store && store.length > 0) {
-      const index = Math.round(this.timeScaleModel.xToIndex(point.x));
+    if (time === null && store && store.length > 0) {
+      const index = Math.round(this.timeScaleModel.xToIndex(snappedPoint.x));
       if (index >= 0 && index < store.length) {
         time = store.timeAt(index);
       }
     }
 
-    const price = pane.priceScale.yToPrice(point.y, pane.plot.top, pane.plot.height);
+    const price = pane.priceScale.yToPrice(snappedPoint.y, pane.plot.top, pane.plot.height);
     this.bus.emit("click", {
       time,
       price,
       paneId: pane.id,
-      point,
+      point: snappedPoint,
       button: "left",
     });
   }
@@ -2700,6 +2845,7 @@ class Chart implements ChartApi, SeriesHost {
     root.addEventListener("pointerleave", this.onPointerLeave);
     root.addEventListener("dblclick", this.onDoubleClick);
     root.addEventListener("keydown", this.onKeyDown);
+    root.addEventListener("keyup", this.onKeyUp);
     root.addEventListener("wheel", this.onWheel, { passive: false });
   }
 
@@ -2712,6 +2858,7 @@ class Chart implements ChartApi, SeriesHost {
     root.removeEventListener("pointerleave", this.onPointerLeave);
     root.removeEventListener("dblclick", this.onDoubleClick);
     root.removeEventListener("keydown", this.onKeyDown);
+    root.removeEventListener("keyup", this.onKeyUp);
     root.removeEventListener("wheel", this.onWheel);
   }
 }
@@ -2868,6 +3015,13 @@ function resolveCrosshair(options: CrosshairOptions | undefined): ResolvedCrossh
   const color = options?.color ?? "#9598a1";
   return {
     mode: options?.mode ?? "normal",
+    magnet: options?.magnet === "strong" ? "strong" : "weak",
+    modifierMagnet:
+      options?.modifierMagnet === "strong"
+        ? "strong"
+        : options?.modifierMagnet === "off"
+          ? "off"
+          : "weak",
     color,
     vertColor: options?.vertLine?.color ?? color,
     horzColor: options?.horzLine?.color ?? color,

@@ -905,6 +905,71 @@ describe("createChart", () => {
     expect(restored.serializeDrawings().drawings).toHaveLength(cases.length);
   });
 
+  it("snaps weak magnet to the nearest OHLC value", () => {
+    const element = mount();
+    const chart = track(createChart(element, { crosshair: { mode: "magnet", magnet: "weak" } }));
+    const source = [
+      { time: 0, open: 100, high: 110, low: 90, close: 105 },
+      { time: MINUTE, open: 105, high: 115, low: 95, close: 110 },
+    ];
+    chart.addSeries(CandlestickSeries).setData(source);
+    chart.timeScale().fitContent();
+
+    const events: CrosshairEvent[] = [];
+    chart.on("crosshair", (event) => events.push(event));
+    const root = element.firstElementChild as HTMLElement;
+    root.dispatchEvent(
+      new MouseEvent("pointermove", { clientX: 100, clientY: 100, bubbles: true }),
+    );
+
+    const event = events.at(-1);
+    expect(event).toBeDefined();
+    const bar = source.find((candidate) => candidate.time === event!.time)!;
+    expect([bar.open, bar.high, bar.low, bar.close]).toContain(event!.price);
+  });
+
+  it("uses strong modifier magnet for drawing anchors", () => {
+    const element = mount();
+    const chart = track(
+      createChart(element, {
+        crosshair: { mode: "normal", modifierMagnet: "strong" },
+      }),
+    );
+    chart.addSeries(CandlestickSeries).setData(bars(100));
+    chart.timeScale().fitContent();
+    const root = element.firstElementChild as HTMLElement;
+
+    const clicks: Array<{ price: number | null; time: number | null }> = [];
+    chart.on("click", (event) => clicks.push({ price: event.price, time: event.time }));
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 200, 150));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 200, 150));
+    const anchor = { time: clicks[0]!.time!, price: clicks[0]!.price! };
+    chart.addDrawing(HorizontalLine, { anchors: [anchor] });
+
+    const events: CrosshairEvent[] = [];
+    chart.on("crosshair", (event) => events.push(event));
+    root.dispatchEvent(
+      new MouseEvent("pointermove", {
+        clientX: 202,
+        clientY: 154,
+        ctrlKey: true,
+        bubbles: true,
+      }),
+    );
+
+    const snapped = events.at(-1);
+    expect(snapped?.time).toBe(anchor.time);
+    expect(snapped?.price).toBeCloseTo(anchor.price, 8);
+    expect(snapped?.point?.y).not.toBe(154);
+
+    events.length = 0;
+    root.dispatchEvent(
+      new MouseEvent("pointermove", { clientX: 202, clientY: 154, bubbles: true }),
+    );
+    const unsnapped = events.at(-1);
+    expect(unsnapped?.price).not.toBeCloseTo(anchor.price, 8);
+  });
+
   it("places drawing anchors at the pointer even with crosshair magnet enabled", () => {
     const element = mount();
     const chart = track(createChart(element, { crosshair: { mode: "magnet" } }));

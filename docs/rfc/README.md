@@ -29,6 +29,7 @@ changing its decisions requires a new RFC or an ADR.
 | 0027 | First-class axis styling               | Accepted |
 | 0028 | Position and range drawing suite       | Accepted |
 | 0029 | Modern drawing styling                 | Accepted |
+| 0030 | Weak, strong, and modifier magnet      | Accepted |
 
 Rules:
 

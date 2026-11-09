@@ -249,8 +249,12 @@ export interface CrosshairLineOptions {
  * Crosshair options.
  */
 export interface CrosshairOptions {
-  /** `normal` follows the pointer, `magnet` snaps to the nearest bar price. */
+  /** `normal` follows the pointer, `magnet` keeps magnet snapping active, `hidden` disables it. */
   mode?: "normal" | "magnet" | "hidden";
+  /** Strength used when magnet is active. Defaults to weak. */
+  magnet?: "weak" | "strong";
+  /** Temporary magnet strength while Ctrl or Command is held. Defaults to weak. */
+  modifierMagnet?: "off" | "weak" | "strong";
   color?: string;
   /** Crosshair label background. */
   labelBackground?: string;

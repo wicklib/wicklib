@@ -60,6 +60,8 @@ export interface ResolvedGrid {
 
 export interface ResolvedCrosshair {
   mode: "normal" | "magnet" | "hidden";
+  magnet: "weak" | "strong";
+  modifierMagnet: "off" | "weak" | "strong";
   color: string;
   vertColor: string;
   horzColor: string;
