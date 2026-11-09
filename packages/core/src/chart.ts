@@ -1158,6 +1158,23 @@ class Chart implements ChartApi, SeriesHost {
           continue;
         }
         next[this.draggingAnchorIndex] = anchor;
+        if (
+          (drawing.toolId === "long-position" || drawing.toolId === "short-position") &&
+          (this.draggingAnchorIndex === 1 || this.draggingAnchorIndex === 2)
+        ) {
+          next[this.draggingAnchorIndex] = {
+            time: anchors[this.draggingAnchorIndex]!.time,
+            price: anchor.price,
+          };
+        } else if (
+          (drawing.toolId === "long-position" || drawing.toolId === "short-position") &&
+          this.draggingAnchorIndex === 3
+        ) {
+          next[this.draggingAnchorIndex] = {
+            time: anchor.time,
+            price: anchors[this.draggingAnchorIndex]!.price,
+          };
+        }
       } else {
         const startPrice = pane.priceScale.yToPrice(start.y, pane.plot.top, pane.plot.height);
         const currentPrice = pane.priceScale.yToPrice(point.y, pane.plot.top, pane.plot.height);

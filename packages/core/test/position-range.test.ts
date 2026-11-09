@@ -145,8 +145,20 @@ describe("position drawings", () => {
     expect(shortAnchors[2]!.price).toBeLessThan(100);
     expect(longAnchors[3]!.time).toBeGreaterThan(20 * MINUTE);
     expect(long.getOptions().priceLabels).toBe("always");
-    expect(long.getOptions().statsFields).toEqual(["riskReward"]);
-    expect(short.getOptions().statsFields).toEqual(["riskReward"]);
+    expect(long.getOptions().positionStatsFields).toEqual([
+      "loss",
+      "riskAmount",
+      "entry",
+      "profit",
+      "riskReward",
+    ]);
+    expect(short.getOptions().positionStatsFields).toEqual([
+      "loss",
+      "riskAmount",
+      "entry",
+      "profit",
+      "riskReward",
+    ]);
   });
 
   it("renders position labels, fills, stats, and axis labels", async () => {
@@ -161,16 +173,21 @@ describe("position drawings", () => {
       options: {
         stopColor: "#ff0000",
         targetColor: "#00ff00",
-        stats: "always",
-        statsFields: ["riskReward"],
+        labelTextColor: "#abcdef",
+        positionStatsFields: ["loss", "riskAmount", "entry", "profit", "riskReward", "lotSize"],
       },
     });
     await settle();
 
-    expect(textCalls.some((call) => call.text === "Stop")).toBe(true);
-    expect(textCalls.some((call) => call.text === "Entry")).toBe(true);
-    expect(textCalls.some((call) => call.text === "Profit")).toBe(true);
+    expect(textCalls.some((call) => call.text === "Loss  100")).toBe(true);
+    expect(textCalls.some((call) => call.text === "Risk amount  100")).toBe(true);
+    expect(textCalls.some((call) => call.text === "Entry  100.00")).toBe(true);
+    expect(textCalls.some((call) => call.text === "Profit  200")).toBe(true);
     expect(textCalls.some((call) => call.text === "R/R  2.00")).toBe(true);
+    expect(textCalls.some((call) => call.text === "Lot size  50")).toBe(true);
+    expect(textCalls.filter((call) => call.fillStyle === "#abcdef").length).toBeGreaterThanOrEqual(
+      6,
+    );
     expect(fillRects.some((rect) => rect.fillStyle === "#ff0000")).toBe(true);
     expect(fillRects.some((rect) => rect.fillStyle === "#00ff00")).toBe(true);
     expect(strokes).toContain("#00ff00");

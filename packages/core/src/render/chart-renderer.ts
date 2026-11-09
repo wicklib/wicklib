@@ -1761,33 +1761,7 @@ export class ChartRenderer {
         context.stroke();
 
         if (drawing.options.showLabels) {
-          const fontSize = drawing.options.labelFontSize ?? model.layout.fontSize;
-          const labels = [
-            { text: "Profit", y: target.y, color: drawing.options.targetColor },
-            { text: "Entry", y: entry.y, color: drawing.options.targetColor },
-            { text: "Stop", y: stop.y, color: drawing.options.stopColor },
-          ].sort((first, second) => first.y - second.y);
-          context.font = this.font(model, fontSize);
-          const padding = 6;
-          const boxWidth =
-            Math.max(...labels.map((label) => context.measureText(label.text).width)) + padding * 2;
-          const boxHeight = fontSize + 6;
-          let lastBottom = Number.NEGATIVE_INFINITY;
-          for (const label of labels) {
-            let top = label.y - boxHeight / 2;
-            if (top < lastBottom + 2) {
-              top = lastBottom + 2;
-            }
-            top = Math.max(plot.top, Math.min(plot.bottom - boxHeight, top));
-            const x = Math.max(plot.left, right - boxWidth - 8);
-            context.fillStyle = label.color;
-            context.fillRect(x, top, boxWidth, boxHeight);
-            context.fillStyle = drawing.options.labelTextColor ?? contrastTextForColor(label.color);
-            context.textAlign = "left";
-            context.textBaseline = "middle";
-            context.fillText(label.text, x + padding, top + boxHeight / 2);
-            lastBottom = top + boxHeight;
-          }
+          this.drawPositionStats(context, model, pane, drawing, points);
         }
         return;
       }
@@ -2026,6 +2000,100 @@ export class ChartRenderer {
     }
   }
 
+  private drawPositionStats(
+    context: CanvasRenderingContext2D,
+    model: ChartRenderModel,
+    pane: PaneRenderModel,
+    drawing: DrawingRenderData,
+    points: readonly Point[],
+  ): void {
+    if (points.length < 4) {
+      return;
+    }
+    const entry = points[0]!;
+    const stop = points[1]!;
+    const target = points[2]!;
+    const widthPoint = points[3]!;
+    const right = Math.max(entry.x, widthPoint.x);
+    const entryPrice = drawing.anchors[0]!.price;
+    const stopPrice = drawing.anchors[1]!.price;
+    const targetPrice = drawing.anchors[2]!.price;
+    const options = drawing.options;
+    const riskPrice = Math.abs(entryPrice - stopPrice);
+    const rewardPrice = Math.abs(targetPrice - entryPrice);
+    const riskAmount = options.accountSize * (options.riskPercent / 100);
+    const lotSize = riskPrice > 0 ? riskAmount / (riskPrice * options.contractSize) : 0;
+    const profit = rewardPrice * lotSize * options.contractSize;
+    const loss = riskAmount;
+    const riskReward = riskPrice > 0 ? rewardPrice / riskPrice : 0;
+    const margin =
+      options.leverage > 0 ? (entryPrice * lotSize * options.contractSize) / options.leverage : 0;
+    const money = (value: number): string =>
+      new Intl.NumberFormat(model.locale, { maximumFractionDigits: 2 }).format(value);
+    const quantity = (value: number): string =>
+      new Intl.NumberFormat(model.locale, { maximumFractionDigits: 6 }).format(value);
+    const boxes: Array<{ y: number; color: string; lines: string[] }> = [
+      { y: stop.y, color: options.stopColor, lines: [] },
+      { y: entry.y, color: options.targetColor, lines: [] },
+      { y: target.y, color: options.targetColor, lines: [] },
+    ];
+    for (const field of options.positionStatsFields) {
+      if (field === "accountSize") {
+        boxes[1]!.lines.push(`Account  ${money(options.accountSize)}`);
+      } else if (field === "lotSize") {
+        boxes[1]!.lines.push(`Lot size  ${quantity(lotSize)}`);
+      } else if (field === "riskPercent") {
+        boxes[0]!.lines.push(`Risk  ${options.riskPercent.toFixed(2)}%`);
+      } else if (field === "riskAmount") {
+        boxes[0]!.lines.push(`Risk amount  ${money(riskAmount)}`);
+      } else if (field === "riskReward") {
+        boxes[2]!.lines.push(`R/R  ${riskPrice === 0 ? "∞" : riskReward.toFixed(2)}`);
+      } else if (field === "entry") {
+        boxes[1]!.lines.push(`Entry  ${pane.priceScale.formatValue(entryPrice, model.locale)}`);
+      } else if (field === "profit") {
+        boxes[2]!.lines.push(`Profit  ${money(profit)}`);
+      } else if (field === "loss") {
+        boxes[0]!.lines.push(`Loss  ${money(loss)}`);
+      } else if (field === "leverage") {
+        boxes[1]!.lines.push(`Leverage  ${quantity(options.leverage)}x`);
+      } else if (field === "margin") {
+        boxes[1]!.lines.push(`Margin  ${money(margin)}`);
+      }
+    }
+    const fontSize = options.labelFontSize ?? model.layout.fontSize;
+    const padding = 6;
+    const lineHeight = fontSize + 3;
+    context.font = this.font(model, fontSize);
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+    const ranked = boxes
+      .filter((box) => box.lines.length > 0)
+      .sort((first, second) => first.y - second.y);
+    let lastBottom = Number.NEGATIVE_INFINITY;
+    for (const box of ranked) {
+      const width =
+        Math.max(...box.lines.map((line) => context.measureText(line).width)) + padding * 2;
+      const height = box.lines.length * lineHeight + padding * 2;
+      let top = box.y - height / 2;
+      if (top < lastBottom + 2) {
+        top = lastBottom + 2;
+      }
+      top = Math.max(0, Math.min(model.height - height, top));
+      const x = Math.min(model.width - width, right - width - 8);
+      context.fillStyle = box.color;
+      context.fillRect(x, top, width, height);
+      context.fillStyle = options.labelTextColor ?? "#ffffff";
+      for (let index = 0; index < box.lines.length; index += 1) {
+        context.fillText(
+          box.lines[index]!,
+          x + padding,
+          top + padding + index * lineHeight + lineHeight / 2,
+        );
+      }
+      lastBottom = top + height;
+    }
+  }
+
   private drawDrawingStats(
     context: CanvasRenderingContext2D,
     model: ChartRenderModel,
@@ -2033,6 +2101,9 @@ export class ChartRenderer {
     drawing: DrawingRenderData,
     points: readonly Point[],
   ): void {
+    if (drawing.toolId === "long-position" || drawing.toolId === "short-position") {
+      return;
+    }
     const mode = drawing.options.stats;
     if (mode === "off" || (mode === "selected" && !drawing.selected)) {
       return;

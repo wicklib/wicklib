@@ -672,6 +672,11 @@ export type DrawingSetting =
   | "extendTop"
   | "extendBottom"
   | "labelTextColor"
+  | "accountSize"
+  | "riskPercent"
+  | "leverage"
+  | "contractSize"
+  | "positionStatsFields"
   | "stats"
   | "statsFields"
   | "statsPosition"
@@ -735,7 +740,15 @@ export type DrawingStatsField =
   | "reward"
   | "riskReward"
   | "riskPercent"
-  | "rewardPercent";
+  | "rewardPercent"
+  | "accountSize"
+  | "lotSize"
+  | "riskAmount"
+  | "entry"
+  | "profit"
+  | "loss"
+  | "leverage"
+  | "margin";
 
 /**
  * Horizontal placement of a drawing stats box.
@@ -787,6 +800,16 @@ export interface DrawingOptions {
   textColor?: DrawingColor | null;
   /** Optional label text colour. Defaults to automatic contrast. */
   labelTextColor?: DrawingColor | null;
+  /** Account size used by position drawings. */
+  accountSize?: number;
+  /** Risk percentage used by position drawings. */
+  riskPercent?: number;
+  /** Leverage used by position drawings for margin calculations. */
+  leverage?: number;
+  /** Contract size multiplier used by position drawings. */
+  contractSize?: number;
+  /** Position stats shown in the stop, entry, and profit boxes. */
+  positionStatsFields?: readonly DrawingStatsField[];
   /** Font style for trend-line text. Defaults to normal. */
   textStyle?: DrawingTextStyle;
   /**

@@ -26,8 +26,9 @@ target, and right-edge width. The generated levels are:
 - Width: 20 bars unless the chart has no data, in which case a fallback interval is used.
 - If ATR is unavailable, risk falls back to 1% of entry.
 
-The initial risk/reward is 1:2. The user can drag entry, stop, target, and the right edge. Width is
-not forced to the chart edge.
+The initial risk/reward is 1:2. The user can drag entry horizontally and vertically; stop and
+target handles are vertical-only; the right-edge handle is horizontal-only. Width is not forced to
+the chart edge.
 
 Position visuals:
 
@@ -35,21 +36,38 @@ Position visuals:
 - No zone borders; only the entry line remains.
 - Entry line, entry label, and target label use `targetColor`.
 - Stop label uses `stopColor`.
-- Labels are `"Stop"`, `"Entry"`, and `"Profit"`.
-- `labelTextColor` optionally overrides automatic label text contrast.
-- `labelFontSize` controls label size.
+- The three old label boxes are replaced by three zone-coloured stats boxes at stop, entry, and
+  profit. Boxes are right-anchored to the position edge and are not clamped to the chart's left
+  edge.
+- Stats-box text uses `labelTextColor` without automatic contrast and `labelFontSize` for size.
 - `priceLabels` defaults to `always`; stop/entry/target axis labels use their zone colours with
   automatic contrast text.
 
-Position stats:
+Position sizing inputs:
 
-- `risk`
-- `reward`
-- `riskReward`
+- `accountSize`, default 10,000
+- `riskPercent`, default 1 and limited to 0–100
+- `leverage`, default 1
+- `contractSize`, default 1
+- Risk amount = account size × risk percent.
+- Lot size = risk amount ÷ |entry − stop| ÷ contract size.
+- Profit = |target − entry| × lot size × contract size.
+- Margin = entry × lot size × contract size ÷ leverage.
+
+Position stats fields:
+
+- `accountSize`
+- `lotSize`
 - `riskPercent`
-- `rewardPercent`
+- `riskAmount`
+- `riskReward`
+- `entry`
+- `profit`
+- `loss`
+- `leverage`
+- `margin`
 
-New positions default to `stats: "selected"` with `statsFields: ["riskReward"]`.
+New positions default to stop: loss + risk amount; entry: entry; profit: profit + R/R.
 
 The existing `long-short-position` tool remains loadable for saved documents.
 

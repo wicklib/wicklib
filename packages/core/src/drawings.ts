@@ -38,6 +38,11 @@ export interface ResolvedDrawingOptions {
   extendTop: boolean;
   extendBottom: boolean;
   labelTextColor?: DrawingColor;
+  accountSize: number;
+  riskPercent: number;
+  leverage: number;
+  contractSize: number;
+  positionStatsFields: readonly DrawingStatsField[];
   stats: DrawingStatsMode;
   statsFields: readonly DrawingStatsField[];
   statsPosition: DrawingStatsPosition;
@@ -143,9 +148,11 @@ const POSITION_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "targetColor",
   "labelTextColor",
   "labelFontSize",
-  "stats",
-  "statsFields",
-  "statsPosition",
+  "accountSize",
+  "riskPercent",
+  "leverage",
+  "contractSize",
+  "positionStatsFields",
   "locked",
   "visible",
 ]);
@@ -255,6 +262,14 @@ const DEFAULT_STATS_FIELDS: readonly DrawingStatsField[] = Object.freeze([
   "angle",
 ]);
 
+const DEFAULT_POSITION_STATS_FIELDS: readonly DrawingStatsField[] = Object.freeze([
+  "loss",
+  "riskAmount",
+  "entry",
+  "profit",
+  "riskReward",
+]);
+
 const DEFAULTS: DrawingOptions = {
   color: "#2962ff",
   lineWidth: 1,
@@ -272,6 +287,11 @@ const DEFAULTS: DrawingOptions = {
   extend: false,
   extendTop: false,
   extendBottom: false,
+  accountSize: 10_000,
+  riskPercent: 1,
+  leverage: 1,
+  contractSize: 1,
+  positionStatsFields: DEFAULT_POSITION_STATS_FIELDS,
   stats: "off",
   statsFields: DEFAULT_STATS_FIELDS,
   statsPosition: "auto",
@@ -557,9 +577,13 @@ export const LongPosition: DrawingToolDefinition = Object.freeze({
     targetColor: "#26a69a",
     fillOpacity: 0.16,
     priceLabels: "always" as const,
-    stats: "selected" as const,
-    statsFields: ["riskReward"] as const,
+    labelTextColor: "#ffffff",
     labelFontSize: 12,
+    accountSize: 10_000,
+    riskPercent: 1,
+    leverage: 1,
+    contractSize: 1,
+    positionStatsFields: ["loss", "riskAmount", "entry", "profit", "riskReward"] as const,
   },
 });
 
@@ -578,9 +602,13 @@ export const ShortPosition: DrawingToolDefinition = Object.freeze({
     targetColor: "#26a69a",
     fillOpacity: 0.16,
     priceLabels: "always" as const,
-    stats: "selected" as const,
-    statsFields: ["riskReward"] as const,
+    labelTextColor: "#ffffff",
     labelFontSize: 12,
+    accountSize: 10_000,
+    riskPercent: 1,
+    leverage: 1,
+    contractSize: 1,
+    positionStatsFields: ["loss", "riskAmount", "entry", "profit", "riskReward"] as const,
   },
 });
 
@@ -956,6 +984,10 @@ export function resolveDrawingOptions(
   const stopColor = normalizeDrawingColor(merged.stopColor, "#ef5350");
   const targetColor = normalizeDrawingColor(merged.targetColor, "#26a69a");
   const labelTextColor = normalizeOptionalDrawingColor(merged.labelTextColor, textColor);
+  const accountSize = normalizedPositiveNumber(merged.accountSize, 10_000, "accountSize");
+  const riskPercent = normalizedRiskPercent(merged.riskPercent);
+  const leverage = normalizedPositiveNumber(merged.leverage, 1, "leverage");
+  const contractSize = normalizedPositiveNumber(merged.contractSize, 1, "contractSize");
   const resolved: ResolvedDrawingOptions = {
     color,
     lineWidth: merged.lineWidth ?? 1,
@@ -974,6 +1006,11 @@ export function resolveDrawingOptions(
     timeLabels: normalizedPriceLabels(merged.timeLabels),
     stopColor,
     targetColor,
+    accountSize,
+    riskPercent,
+    leverage,
+    contractSize,
+    positionStatsFields: normalizedPositionStatsFields(merged.positionStatsFields),
     stats: normalizedStats(merged.stats),
     statsFields: normalizedStatsFields(merged.statsFields),
     statsPosition: normalizedStatsPosition(merged.statsPosition),
@@ -1022,6 +1059,14 @@ export function mergeDrawingOptions(
     timeLabels: patch.timeLabels ?? base.timeLabels,
     stopColor: mergeDrawingColor(patch.stopColor, base.stopColor),
     targetColor: mergeDrawingColor(patch.targetColor, base.targetColor),
+    accountSize: patch.accountSize ?? base.accountSize,
+    riskPercent: patch.riskPercent ?? base.riskPercent,
+    leverage: patch.leverage ?? base.leverage,
+    contractSize: patch.contractSize ?? base.contractSize,
+    positionStatsFields:
+      patch.positionStatsFields !== undefined
+        ? normalizedPositionStatsFields(patch.positionStatsFields)
+        : base.positionStatsFields,
     stats: patch.stats ?? base.stats,
     statsFields:
       patch.statsFields !== undefined ? normalizedStatsFields(patch.statsFields) : base.statsFields,
@@ -1128,9 +1173,72 @@ function normalizedStatsFields(
       field !== "reward" &&
       field !== "riskReward" &&
       field !== "riskPercent" &&
-      field !== "rewardPercent"
+      field !== "rewardPercent" &&
+      field !== "accountSize" &&
+      field !== "lotSize" &&
+      field !== "riskAmount" &&
+      field !== "entry" &&
+      field !== "profit" &&
+      field !== "loss" &&
+      field !== "leverage" &&
+      field !== "margin"
     ) {
       fail("INVALID_ARGUMENT", "statsFields contains an unsupported field");
+    }
+    if (!fields.includes(field)) {
+      fields.push(field);
+    }
+  }
+  return fields;
+}
+
+function normalizedPositiveNumber(
+  value: number | undefined,
+  fallback: number,
+  name: string,
+): number {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (!Number.isFinite(value) || value <= 0) {
+    fail("INVALID_ARGUMENT", `${name} must be a positive number`);
+  }
+  return value;
+}
+
+function normalizedRiskPercent(value: number | undefined): number {
+  const riskPercent = normalizedPositiveNumber(value, 1, "riskPercent");
+  if (riskPercent > 100) {
+    fail("INVALID_ARGUMENT", "riskPercent must be between 0 and 100");
+  }
+  return riskPercent;
+}
+
+function normalizedPositionStatsFields(
+  value: readonly DrawingStatsField[] | undefined,
+): readonly DrawingStatsField[] {
+  if (value === undefined) {
+    return DEFAULT_POSITION_STATS_FIELDS;
+  }
+  if (!Array.isArray(value)) {
+    fail("INVALID_ARGUMENT", "positionStatsFields must be an array");
+  }
+  const allowed: readonly DrawingStatsField[] = [
+    "accountSize",
+    "lotSize",
+    "riskPercent",
+    "riskAmount",
+    "riskReward",
+    "entry",
+    "profit",
+    "loss",
+    "leverage",
+    "margin",
+  ];
+  const fields: DrawingStatsField[] = [];
+  for (const field of value) {
+    if (!allowed.includes(field)) {
+      fail("INVALID_ARGUMENT", "positionStatsFields contains an unsupported field");
     }
     if (!fields.includes(field)) {
       fields.push(field);
