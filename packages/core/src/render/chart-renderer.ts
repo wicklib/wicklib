@@ -24,6 +24,7 @@ import { formatCrosshairTime, formatTimeLabel } from "../scale/ticks";
 import type {
   ChartOverlay,
   DrawingAnchor,
+  DrawingFibLevel,
   LastValueMode,
   OverlayRenderFrame,
   Point,
@@ -1261,7 +1262,15 @@ export class ChartRenderer {
         context.beginPath();
         context.rect(pane.plot.left, pane.plot.top, pane.plot.width, pane.plot.height);
         context.clip();
-        for (const point of points) {
+        const handlePoints =
+          drawing.toolId === "brush" ||
+          drawing.toolId === "highlighter" ||
+          drawing.toolId === "path"
+            ? points.length > 1
+              ? [points[0]!, points[points.length - 1]!]
+              : points
+            : points;
+        for (const point of handlePoints) {
           context.fillStyle = model.layout.background;
           context.fillRect(point.x - 4, point.y - 4, 8, 8);
           context.strokeStyle = renderDrawing.options.color;
@@ -1496,7 +1505,21 @@ export class ChartRenderer {
         context.fillRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top));
         context.globalAlpha = drawing.preview ? 0.65 : 1;
         if (drawing.options.showLine) {
-          context.strokeRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top));
+          context.beginPath();
+          if (drawing.toolId === "price-range") {
+            context.moveTo(left, top);
+            context.lineTo(right, top);
+            context.moveTo(left, bottom);
+            context.lineTo(right, bottom);
+          } else if (drawing.toolId === "time-range") {
+            context.moveTo(left, top);
+            context.lineTo(left, bottom);
+            context.moveTo(right, top);
+            context.lineTo(right, bottom);
+          } else {
+            context.rect(left, top, Math.max(1, right - left), Math.max(1, bottom - top));
+          }
+          context.stroke();
         }
         return;
       }
@@ -1536,29 +1559,64 @@ export class ChartRenderer {
           return;
         }
         if (points.length < 3) {
-          context.beginPath();
-          context.moveTo(points[0]!.x, points[0]!.y);
-          context.lineTo(points[1]!.x, points[1]!.y);
-          context.stroke();
+          drawStyledLine(
+            context,
+            points[0]!,
+            points[1]!,
+            drawing.options.color,
+            drawing.options.lineWidth,
+            drawing.options.lineStyle,
+          );
           return;
         }
         const channel = parallelLines(points);
-        context.beginPath();
-        context.moveTo(channel[0][0].x, channel[0][0].y);
-        context.lineTo(channel[0][1].x, channel[0][1].y);
-        context.lineTo(channel[1][1].x, channel[1][1].y);
-        context.lineTo(channel[1][0].x, channel[1][0].y);
-        context.closePath();
-        context.globalAlpha = drawing.preview ? 0.15 : drawing.options.fillOpacity;
-        context.fill();
-        context.globalAlpha = drawing.preview ? 0.65 : 1;
-        context.stroke();
-        for (const line of channel) {
-          context.beginPath();
-          context.moveTo(line[0].x, line[0].y);
-          context.lineTo(line[1].x, line[1].y);
-          context.stroke();
+        let left = Math.min(channel[0][0].x, channel[0][1].x);
+        let right = Math.max(channel[0][0].x, channel[0][1].x);
+        if (drawing.options.extendLeft) {
+          left = plot.left;
         }
+        if (drawing.options.extendRight) {
+          right = plot.right;
+        }
+        const top = extendChannelLine(channel[0], left, right);
+        const bottom = extendChannelLine(channel[1], left, right);
+        if (drawing.options.channelBackgroundVisible) {
+          context.globalAlpha = drawing.preview ? 0.15 : drawing.options.fillOpacity;
+          context.beginPath();
+          context.moveTo(top[0].x, top[0].y);
+          context.lineTo(top[1].x, top[1].y);
+          context.lineTo(bottom[1].x, bottom[1].y);
+          context.lineTo(bottom[0].x, bottom[0].y);
+          context.closePath();
+          context.fill();
+          context.globalAlpha = drawing.preview ? 0.65 : 1;
+        }
+        drawStyledLine(
+          context,
+          top[0],
+          top[1],
+          drawing.options.topLineColor,
+          drawing.options.topLineWidth,
+          drawing.options.topLineStyle,
+        );
+        if (drawing.options.middleLineVisible) {
+          drawStyledLine(
+            context,
+            { x: left, y: (top[0].y + bottom[0].y) / 2 },
+            { x: right, y: (top[1].y + bottom[1].y) / 2 },
+            drawing.options.middleLineColor,
+            drawing.options.middleLineWidth,
+            drawing.options.middleLineStyle,
+          );
+        }
+        drawStyledLine(
+          context,
+          bottom[0],
+          bottom[1],
+          drawing.options.bottomLineColor,
+          drawing.options.bottomLineWidth,
+          drawing.options.bottomLineStyle,
+        );
         return;
       }
       case "regression-trend": {
@@ -1569,11 +1627,37 @@ export class ChartRenderer {
         if (!regression) {
           return;
         }
-        drawChannelPolygon(context, drawing, regression.channel);
-        context.beginPath();
-        context.moveTo(regression.line[0].x, regression.line[0].y);
-        context.lineTo(regression.line[1].x, regression.line[1].y);
-        context.stroke();
+        if (drawing.options.channelBackgroundVisible) {
+          context.globalAlpha = drawing.preview ? 0.15 : drawing.options.fillOpacity;
+          drawChannelPolygon(context, drawing, regression.channel);
+          context.globalAlpha = drawing.preview ? 0.65 : 1;
+        }
+        drawStyledLine(
+          context,
+          regression.channel[0][0],
+          regression.channel[0][1],
+          drawing.options.topLineColor,
+          drawing.options.topLineWidth,
+          drawing.options.topLineStyle,
+        );
+        if (drawing.options.middleLineVisible) {
+          drawStyledLine(
+            context,
+            regression.line[0],
+            regression.line[1],
+            drawing.options.middleLineColor,
+            drawing.options.middleLineWidth,
+            drawing.options.middleLineStyle,
+          );
+        }
+        drawStyledLine(
+          context,
+          regression.channel[1][0],
+          regression.channel[1][1],
+          drawing.options.bottomLineColor,
+          drawing.options.bottomLineWidth,
+          drawing.options.bottomLineStyle,
+        );
         return;
       }
       case "flat-top-bottom": {
@@ -1818,24 +1902,50 @@ export class ChartRenderer {
         }
         const first = points[0]!;
         const second = points[1]!;
-        for (const level of FIB_LEVELS) {
-          const y = first.y + (second.y - first.y) * level;
-          context.beginPath();
-          context.moveTo(plot.left, y);
-          context.lineTo(plot.right, y);
-          context.stroke();
-
-          if (drawing.options.showLabels) {
+        const levels: readonly DrawingFibLevel[] =
+          drawing.options.fibLevels ?? FIB_LEVELS.map((ratio): DrawingFibLevel => ({ ratio }));
+        let left = Math.min(first.x, second.x);
+        let right = Math.max(first.x, second.x);
+        if (drawing.options.extendLeft) {
+          left = plot.left;
+        }
+        if (drawing.options.extendRight) {
+          right = plot.right;
+        }
+        const levelYs: number[] = [];
+        for (const level of levels) {
+          if (level.visible === false) {
+            continue;
+          }
+          const y = first.y + (second.y - first.y) * level.ratio;
+          levelYs.push(y);
+          drawStyledLine(
+            context,
+            { x: left, y },
+            { x: right, y },
+            level.color ?? drawing.options.color,
+            level.lineWidth ?? drawing.options.lineWidth,
+            level.lineStyle ?? drawing.options.lineStyle,
+          );
+          if (level.labelVisible !== false && drawing.options.showLabels) {
             const value = pane.priceScale.yToPrice(y, plot.top, plot.height);
             this.drawLabel(
               context,
               model,
-              `${level.toFixed(3)}  ${pane.priceScale.formatValue(value, model.locale)}`,
-              plot.left + 8,
+              `${level.ratio.toFixed(3)}  ${pane.priceScale.formatValue(value, model.locale)}`,
+              left + 8,
               y,
               drawing.options,
+              level.labelColor ?? level.color ?? undefined,
             );
           }
+        }
+        if (drawing.options.fibBackgroundVisible && levelYs.length > 1) {
+          const top = Math.min(...levelYs);
+          const bottom = Math.max(...levelYs);
+          context.globalAlpha = drawing.preview ? 0.15 : drawing.options.fillOpacity;
+          context.fillRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top));
+          context.globalAlpha = drawing.preview ? 0.65 : 1;
         }
         return;
       }
@@ -1844,24 +1954,51 @@ export class ChartRenderer {
           return;
         }
         const delta = points[1]!.y - points[0]!.y;
-        for (const level of FIB_EXTENSION_LEVELS) {
-          const y = points[2]!.y + delta * level;
-          context.beginPath();
-          context.moveTo(plot.left, y);
-          context.lineTo(plot.right, y);
-          context.stroke();
-
-          if (drawing.options.showLabels) {
+        const levels: readonly DrawingFibLevel[] =
+          drawing.options.fibLevels ??
+          FIB_EXTENSION_LEVELS.map((ratio): DrawingFibLevel => ({ ratio }));
+        let left = Math.min(points[2]!.x, points[1]!.x);
+        let right = Math.max(points[2]!.x, points[1]!.x);
+        if (drawing.options.extendLeft) {
+          left = plot.left;
+        }
+        if (drawing.options.extendRight) {
+          right = plot.right;
+        }
+        const levelYs: number[] = [];
+        for (const level of levels) {
+          if (level.visible === false) {
+            continue;
+          }
+          const y = points[2]!.y + delta * level.ratio;
+          levelYs.push(y);
+          drawStyledLine(
+            context,
+            { x: left, y },
+            { x: right, y },
+            level.color ?? drawing.options.color,
+            level.lineWidth ?? drawing.options.lineWidth,
+            level.lineStyle ?? drawing.options.lineStyle,
+          );
+          if (level.labelVisible !== false && drawing.options.showLabels) {
             const value = pane.priceScale.yToPrice(y, plot.top, plot.height);
             this.drawLabel(
               context,
               model,
-              `${level.toFixed(3)}  ${pane.priceScale.formatValue(value, model.locale)}`,
-              plot.left + 8,
+              `${level.ratio.toFixed(3)}  ${pane.priceScale.formatValue(value, model.locale)}`,
+              left + 8,
               y,
               drawing.options,
+              level.labelColor ?? level.color ?? undefined,
             );
           }
+        }
+        if (drawing.options.fibBackgroundVisible && levelYs.length > 1) {
+          const top = Math.min(...levelYs);
+          const bottom = Math.max(...levelYs);
+          context.globalAlpha = drawing.preview ? 0.15 : drawing.options.fillOpacity;
+          context.fillRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top));
+          context.globalAlpha = drawing.preview ? 0.65 : 1;
         }
         return;
       }
@@ -1932,6 +2069,7 @@ export class ChartRenderer {
         context.save();
         context.lineCap = "round";
         context.lineJoin = "round";
+        context.globalAlpha = drawing.preview ? 0.65 : drawing.options.lineOpacity;
         context.beginPath();
         context.moveTo(points[0]!.x, points[0]!.y);
         for (let index = 1; index < points.length; index += 1) {
@@ -1946,11 +2084,50 @@ export class ChartRenderer {
         if (!text) {
           return;
         }
-        context.fillStyle = drawing.options.color;
-        context.font = `${drawing.options.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        const fontStyle = [
+          drawing.options.textStyle.includes("bold") ? "bold" : "",
+          drawing.options.textStyle.includes("italic") ? "italic" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        context.font = `${fontStyle ? `${fontStyle} ` : ""}${drawing.options.fontSize}px ${drawing.options.fontFamily}`;
+        const textWidth = context.measureText(text).width;
+        const textHeight = drawing.options.fontSize;
+        const padding = drawing.options.padding;
+        const width = textWidth + padding * 2;
+        const height = textHeight + padding * 2;
+        const anchor = points[0]!;
+        let x = anchor.x;
+        if (drawing.options.textAlign === "center") {
+          x -= width / 2;
+        } else if (drawing.options.textAlign === "right") {
+          x -= width;
+        }
+        let y = anchor.y;
+        if (drawing.options.textVerticalAlign === "middle") {
+          y -= height / 2;
+        } else if (drawing.options.textVerticalAlign === "bottom") {
+          y -= height;
+        }
+        if (drawing.options.backgroundColor !== undefined) {
+          context.globalAlpha = drawing.options.backgroundOpacity;
+          context.fillStyle = drawing.options.backgroundColor;
+          if (drawing.options.borderRadius > 0) {
+            fillRoundedRect(context, x, y, width, height, drawing.options.borderRadius);
+          } else {
+            context.fillRect(x, y, width, height);
+          }
+          context.globalAlpha = 1;
+        }
+        if (drawing.options.borderColor !== undefined && drawing.options.borderWidth > 0) {
+          context.strokeStyle = drawing.options.borderColor;
+          context.lineWidth = drawing.options.borderWidth;
+          context.strokeRect(x, y, width, height);
+        }
+        context.fillStyle = drawing.options.textColor;
         context.textAlign = "left";
-        context.textBaseline = "bottom";
-        context.fillText(text, points[0]!.x, points[0]!.y);
+        context.textBaseline = "top";
+        context.fillText(text, x + padding, y + padding);
         return;
       }
       case "measure":
@@ -2067,7 +2244,6 @@ export class ChartRenderer {
     }
     const fontSize = options.labelFontSize ?? model.layout.fontSize;
     const padding = 6;
-    const lineHeight = fontSize + 3;
     context.font = this.font(model, fontSize);
     context.textAlign = "left";
     context.textBaseline = "middle";
@@ -2076,9 +2252,9 @@ export class ChartRenderer {
       .sort((first, second) => first.y - second.y);
     let lastBottom = Number.NEGATIVE_INFINITY;
     for (const box of ranked) {
-      const width =
-        Math.max(...box.lines.map((line) => context.measureText(line).width)) + padding * 2;
-      const height = box.lines.length * lineHeight + padding * 2;
+      const text = box.lines.join("   ·   ");
+      const width = context.measureText(text).width + padding * 2;
+      const height = fontSize + padding * 2;
       let top = box.y - height / 2;
       if (top < lastBottom + 2) {
         top = lastBottom + 2;
@@ -2095,13 +2271,8 @@ export class ChartRenderer {
       context.fillStyle = box.color;
       fillRoundedRect(context, x, top, width, height, 5);
       context.fillStyle = options.labelTextColor ?? "#ffffff";
-      for (let index = 0; index < box.lines.length; index += 1) {
-        context.fillText(
-          box.lines[index]!,
-          x + padding,
-          top + padding + index * lineHeight + lineHeight / 2,
-        );
-      }
+      context.textBaseline = "middle";
+      context.fillText(text, x + padding, top + height / 2);
       lastBottom = top + height;
     }
   }
@@ -2458,6 +2629,19 @@ function resolveDrawingOptionsForModel(
     targetColor: resolve(options.targetColor),
     ...(options.labelTextColor !== undefined
       ? { labelTextColor: resolve(options.labelTextColor) }
+      : {}),
+    ...(options.fibLevels !== undefined
+      ? {
+          fibLevels: options.fibLevels.map((level) => ({
+            ...level,
+            ...(level.color !== undefined && level.color !== null
+              ? { color: resolve(level.color) }
+              : {}),
+            ...(level.labelColor !== undefined && level.labelColor !== null
+              ? { labelColor: resolve(level.labelColor) }
+              : {}),
+          })),
+        }
       : {}),
   };
 }
@@ -2888,6 +3072,38 @@ function relativeLuminance([red, green, blue]: readonly number[]): number {
     return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
   };
   return 0.2126 * channel(red!) + 0.7152 * channel(green!) + 0.0722 * channel(blue!);
+}
+
+function extendChannelLine(line: [Point, Point], left: number, right: number): [Point, Point] {
+  const [first, second] = line;
+  const dx = second.x - first.x;
+  if (Math.abs(dx) < 0.0001) {
+    return [first, second];
+  }
+  const slope = (second.y - first.y) / dx;
+  return [
+    { x: left, y: first.y + slope * (left - first.x) },
+    { x: right, y: first.y + slope * (right - first.x) },
+  ];
+}
+
+function drawStyledLine(
+  context: CanvasRenderingContext2D,
+  first: Point,
+  second: Point,
+  color: string,
+  lineWidth: number,
+  lineStyle: "solid" | "dotted" | "dashed",
+): void {
+  context.save();
+  context.strokeStyle = color;
+  context.lineWidth = lineWidth;
+  context.setLineDash(dash(lineStyle));
+  context.beginPath();
+  context.moveTo(first.x, first.y);
+  context.lineTo(second.x, second.y);
+  context.stroke();
+  context.restore();
 }
 
 function drawChannelPolygon(

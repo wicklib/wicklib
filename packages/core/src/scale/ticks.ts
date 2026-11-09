@@ -101,7 +101,7 @@ export function precisionForStep(step: number): number {
   if (!Number.isFinite(step) || step <= 0) {
     return 2;
   }
-  return Math.max(0, Math.min(8, Math.ceil(-Math.log10(step))));
+  return Math.max(2, Math.min(8, Math.ceil(-Math.log10(step))));
 }
 
 /**

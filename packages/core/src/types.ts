@@ -654,6 +654,7 @@ export type DrawingSetting =
   | "color"
   | "lineWidth"
   | "lineStyle"
+  | "lineOpacity"
   | "fillColor"
   | "fillOpacity"
   | "showLabels"
@@ -672,6 +673,26 @@ export type DrawingSetting =
   | "extendTop"
   | "extendBottom"
   | "labelTextColor"
+  | "topLineColor"
+  | "topLineWidth"
+  | "topLineStyle"
+  | "middleLineColor"
+  | "middleLineWidth"
+  | "middleLineStyle"
+  | "middleLineVisible"
+  | "bottomLineColor"
+  | "bottomLineWidth"
+  | "bottomLineStyle"
+  | "channelBackgroundVisible"
+  | "fontFamily"
+  | "backgroundColor"
+  | "backgroundOpacity"
+  | "borderColor"
+  | "borderWidth"
+  | "borderRadius"
+  | "padding"
+  | "fibLevels"
+  | "fibBackgroundVisible"
   | "accountSize"
   | "riskPercent"
   | "leverage"
@@ -756,12 +777,27 @@ export type DrawingStatsField =
 export type DrawingStatsPosition = "auto" | "left" | "center" | "right";
 
 /**
+ * Style for one Fibonacci level.
+ */
+export interface DrawingFibLevel {
+  ratio: number;
+  visible?: boolean;
+  color?: DrawingColor | null;
+  lineWidth?: number;
+  lineStyle?: DrawingLineStyle;
+  labelVisible?: boolean;
+  labelColor?: DrawingColor | null;
+}
+
+/**
  * Drawing style and state options.
  */
 export interface DrawingOptions {
   color?: DrawingColor | null;
   lineWidth?: number;
   lineStyle?: DrawingLineStyle;
+  /** Line opacity from 0 to 1. Defaults to 1. */
+  lineOpacity?: number;
   fillColor?: DrawingColor | null;
   fillOpacity?: number;
   showLabels?: boolean;
@@ -800,6 +836,36 @@ export interface DrawingOptions {
   textColor?: DrawingColor | null;
   /** Optional label text colour. Defaults to automatic contrast. */
   labelTextColor?: DrawingColor | null;
+  /** Top channel/band line colour. */
+  topLineColor?: DrawingColor | null;
+  topLineWidth?: number;
+  topLineStyle?: DrawingLineStyle;
+  /** Middle channel/band line colour. */
+  middleLineColor?: DrawingColor | null;
+  middleLineWidth?: number;
+  middleLineStyle?: DrawingLineStyle;
+  middleLineVisible?: boolean;
+  /** Bottom channel/band line colour. */
+  bottomLineColor?: DrawingColor | null;
+  bottomLineWidth?: number;
+  bottomLineStyle?: DrawingLineStyle;
+  /** Show channel/regression background fill. */
+  channelBackgroundVisible?: boolean;
+  /** Text drawing font family. */
+  fontFamily?: string;
+  /** Text drawing background colour. */
+  backgroundColor?: DrawingColor | null;
+  backgroundOpacity?: number;
+  /** Text drawing border. */
+  borderColor?: DrawingColor | null;
+  borderWidth?: number;
+  borderRadius?: number;
+  /** Text drawing padding in CSS pixels. */
+  padding?: number;
+  /** Per-level Fibonacci settings. */
+  fibLevels?: readonly DrawingFibLevel[];
+  /** Show Fibonacci background fill. */
+  fibBackgroundVisible?: boolean;
   /** Account size used by position drawings. */
   accountSize?: number;
   /** Risk percentage used by position drawings. */

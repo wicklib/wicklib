@@ -1,11 +1,17 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
+  Brush,
   CandlestickSeries,
+  FibExtension,
+  FibRetracement,
   LongPosition,
+  ParallelChannel,
   PriceDateRange,
   PriceRangeDrawing,
+  RegressionTrend,
   ShortPosition,
+  Text,
   TimeRangeDrawing,
   createChart,
   type ChartApi,
@@ -232,12 +238,21 @@ describe("position drawings", () => {
     });
     await settle();
 
-    expect(textCalls.some((call) => call.text === "Loss  100")).toBe(true);
-    expect(textCalls.some((call) => call.text === "Risk amount  100")).toBe(true);
-    expect(textCalls.some((call) => call.text === "Entry  100.00")).toBe(true);
-    expect(textCalls.some((call) => call.text === "Profit  200")).toBe(true);
-    expect(textCalls.some((call) => call.text === "R/R  2.00")).toBe(true);
-    expect(textCalls.some((call) => call.text === "Lot size  50")).toBe(true);
+    expect(
+      textCalls.some(
+        (call) => call.text.includes("Loss  100") && call.text.includes("Risk amount  100"),
+      ),
+    ).toBe(true);
+    expect(
+      textCalls.some(
+        (call) => call.text.includes("Entry  100.00") && call.text.includes("Lot size  50"),
+      ),
+    ).toBe(true);
+    expect(
+      textCalls.some(
+        (call) => call.text.includes("Profit  200") && call.text.includes("R/R  2.00"),
+      ),
+    ).toBe(true);
     expect(textCalls.filter((call) => call.fillStyle === "#abcdef").length).toBeGreaterThanOrEqual(
       6,
     );
@@ -282,5 +297,75 @@ describe("range drawings", () => {
     expect(textCalls.some((call) => call.text.startsWith("Bars  "))).toBe(true);
     expect(textCalls.some((call) => call.text.startsWith("Time  "))).toBe(true);
     expect(textCalls.some((call) => call.text.startsWith("Volume  "))).toBe(true);
+  });
+  it("renders modern channel, regression, Fibonacci, text, and freehand styles", async () => {
+    const chart = addChart();
+    chart.addDrawing(ParallelChannel, {
+      anchors: [
+        { time: 20 * MINUTE, price: 101 },
+        { time: 60 * MINUTE, price: 106 },
+        { time: 20 * MINUTE, price: 99 },
+      ],
+      options: {
+        channelBackgroundVisible: true,
+        topLineStyle: "dashed",
+        bottomLineStyle: "dotted",
+        middleLineVisible: true,
+      },
+    });
+    chart.addDrawing(RegressionTrend, {
+      anchors: [
+        { time: 20 * MINUTE, price: 101 },
+        { time: 60 * MINUTE, price: 106 },
+      ],
+      options: { channelBackgroundVisible: true },
+    });
+    chart.addDrawing(FibRetracement, {
+      anchors: [
+        { time: 20 * MINUTE, price: 101 },
+        { time: 60 * MINUTE, price: 106 },
+      ],
+      options: {
+        fibBackgroundVisible: true,
+        fibLevels: [
+          { ratio: 0, color: "#ff0000" },
+          { ratio: 0.5, color: "#00ff00", lineStyle: "dashed" },
+          { ratio: 1, color: "#0000ff", visible: false },
+        ],
+      },
+    });
+    chart.addDrawing(FibExtension, {
+      anchors: [
+        { time: 20 * MINUTE, price: 101 },
+        { time: 30 * MINUTE, price: 103 },
+        { time: 40 * MINUTE, price: 102 },
+      ],
+      options: { fibLevels: [{ ratio: 1.618, labelVisible: true }] },
+    });
+    chart.addDrawing(Text, {
+      anchors: [{ time: 20 * MINUTE, price: 104 }],
+      options: {
+        text: "Styled",
+        fontFamily: "serif",
+        backgroundColor: "#ffffff",
+        borderColor: "#000000",
+        borderWidth: 1,
+        borderRadius: 4,
+        padding: 6,
+      },
+    });
+    chart.addDrawing(Brush, {
+      anchors: [
+        { time: 20 * MINUTE, price: 102 },
+        { time: 25 * MINUTE, price: 103 },
+        { time: 30 * MINUTE, price: 102.5 },
+      ],
+      options: { lineOpacity: 0.5 },
+    });
+    await settle();
+
+    expect(textCalls.some((call) => call.text.startsWith("0.500  "))).toBe(true);
+    expect(textCalls.some((call) => call.text.startsWith("1.618  "))).toBe(true);
+    expect(textCalls.some((call) => call.text === "Styled")).toBe(true);
   });
 });

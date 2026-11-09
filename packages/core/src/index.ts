@@ -75,6 +75,7 @@ export type {
   DrawingAnchor,
   DrawingApi,
   DrawingDocument,
+  DrawingFibLevel,
   DrawingLabelPlacement,
   DrawingTextVerticalAlign,
   DrawingTextStyle,

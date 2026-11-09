@@ -2,6 +2,7 @@ import { fail } from "./errors";
 import type {
   DrawingAnchor,
   DrawingColor,
+  DrawingFibLevel,
   DrawingLabelPlacement,
   DrawingLineStyle,
   DrawingOptions,
@@ -23,6 +24,7 @@ export interface ResolvedDrawingOptions {
   color: DrawingColor;
   lineWidth: number;
   lineStyle: DrawingLineStyle;
+  lineOpacity: number;
   fillColor: DrawingColor;
   fillOpacity: number;
   showLabels: boolean;
@@ -38,6 +40,26 @@ export interface ResolvedDrawingOptions {
   extendTop: boolean;
   extendBottom: boolean;
   labelTextColor?: DrawingColor;
+  topLineColor: DrawingColor;
+  topLineWidth: number;
+  topLineStyle: DrawingLineStyle;
+  middleLineColor: DrawingColor;
+  middleLineWidth: number;
+  middleLineStyle: DrawingLineStyle;
+  middleLineVisible: boolean;
+  bottomLineColor: DrawingColor;
+  bottomLineWidth: number;
+  bottomLineStyle: DrawingLineStyle;
+  channelBackgroundVisible: boolean;
+  fontFamily: string;
+  backgroundColor?: DrawingColor;
+  backgroundOpacity: number;
+  borderColor?: DrawingColor;
+  borderWidth: number;
+  borderRadius: number;
+  padding: number;
+  fibLevels?: readonly DrawingFibLevel[];
+  fibBackgroundVisible: boolean;
   accountSize: number;
   riskPercent: number;
   leverage: number;
@@ -90,6 +112,14 @@ const STROKE_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "color",
   "lineWidth",
   "lineStyle",
+  "lineOpacity",
+  "locked",
+  "visible",
+]);
+const FREEHAND_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "color",
+  "lineWidth",
+  "lineOpacity",
   "locked",
   "visible",
 ]);
@@ -176,10 +206,56 @@ const RANGE_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "locked",
   "visible",
 ]);
+const CHANNEL_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "topLineColor",
+  "topLineWidth",
+  "topLineStyle",
+  "middleLineColor",
+  "middleLineWidth",
+  "middleLineStyle",
+  "middleLineVisible",
+  "bottomLineColor",
+  "bottomLineWidth",
+  "bottomLineStyle",
+  "channelBackgroundVisible",
+  "fillColor",
+  "fillOpacity",
+  "extendLeft",
+  "extendRight",
+  "locked",
+  "visible",
+]);
 const TEXT_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "color",
   "text",
+  "fontFamily",
   "fontSize",
+  "textStyle",
+  "textAlign",
+  "textVerticalAlign",
+  "backgroundColor",
+  "backgroundOpacity",
+  "borderColor",
+  "borderWidth",
+  "borderRadius",
+  "padding",
+  "locked",
+  "visible",
+]);
+const FIB_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "color",
+  "lineWidth",
+  "lineStyle",
+  "showLabels",
+  "labelPlacement",
+  "labelFontSize",
+  "labelBackgroundVisible",
+  "fibLevels",
+  "fibBackgroundVisible",
+  "fillColor",
+  "fillOpacity",
+  "extendLeft",
+  "extendRight",
   "locked",
   "visible",
 ]);
@@ -220,8 +296,8 @@ const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Objec
   "horizontal-ray": STROKE_SETTINGS,
   "vertical-line": STROKE_SETTINGS,
   "cross-line": STROKE_SETTINGS,
-  "parallel-channel": FILL_SETTINGS,
-  "regression-trend": FILL_SETTINGS,
+  "parallel-channel": CHANNEL_SETTINGS,
+  "regression-trend": CHANNEL_SETTINGS,
   "flat-top-bottom": FILL_SETTINGS,
   "disjoint-channel": FILL_SETTINGS,
   "fib-channel": LABEL_FILL_SETTINGS,
@@ -232,8 +308,8 @@ const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Objec
   "gann-fan": LABEL_SETTINGS,
   "speed-lines": STROKE_SETTINGS,
   rectangle: FILL_SETTINGS,
-  "fib-retracement": LABEL_SETTINGS,
-  "fib-extension": LABEL_SETTINGS,
+  "fib-retracement": FIB_SETTINGS,
+  "fib-extension": FIB_SETTINGS,
   "long-short-position": LONG_SHORT_SETTINGS,
   "long-position": POSITION_SETTINGS,
   "short-position": POSITION_SETTINGS,
@@ -246,9 +322,9 @@ const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Objec
   "elliott-triangle": ELLIOTT_SETTINGS,
   "elliott-double-combo": ELLIOTT_SETTINGS,
   "elliott-triple-combo": ELLIOTT_SETTINGS,
-  brush: STROKE_SETTINGS,
-  highlighter: STROKE_SETTINGS,
-  path: STROKE_SETTINGS,
+  brush: FREEHAND_SETTINGS,
+  highlighter: FREEHAND_SETTINGS,
+  path: FREEHAND_SETTINGS,
   text: TEXT_SETTINGS,
   measure: LABEL_SETTINGS,
   "stats-line": LABEL_SETTINGS,
@@ -274,6 +350,7 @@ const DEFAULTS: DrawingOptions = {
   color: "#2962ff",
   lineWidth: 1,
   lineStyle: "solid",
+  lineOpacity: 1,
   fillOpacity: 0.12,
   showLabels: true,
   showLine: true,
@@ -301,6 +378,14 @@ const DEFAULTS: DrawingOptions = {
   textVerticalAlign: "middle",
   labelPlacement: "auto",
   labelBackgroundVisible: true,
+  middleLineVisible: true,
+  channelBackgroundVisible: false,
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  backgroundOpacity: 1,
+  borderWidth: 0,
+  borderRadius: 0,
+  padding: 4,
+  fibBackgroundVisible: false,
   fontSize: 13,
   locked: false,
   visible: true,
@@ -584,6 +669,7 @@ export const LongPosition: DrawingToolDefinition = Object.freeze({
     leverage: 1,
     contractSize: 1,
     positionStatsFields: ["loss", "riskAmount", "entry", "profit", "riskReward"] as const,
+    statsPosition: "center" as const,
   },
 });
 
@@ -609,6 +695,7 @@ export const ShortPosition: DrawingToolDefinition = Object.freeze({
     leverage: 1,
     contractSize: 1,
     positionStatsFields: ["loss", "riskAmount", "entry", "profit", "riskReward"] as const,
+    statsPosition: "center" as const,
   },
 });
 
@@ -984,6 +1071,12 @@ export function resolveDrawingOptions(
   const stopColor = normalizeDrawingColor(merged.stopColor, "#ef5350");
   const targetColor = normalizeDrawingColor(merged.targetColor, "#26a69a");
   const labelTextColor = normalizeOptionalDrawingColor(merged.labelTextColor, textColor);
+  const topLineColor = normalizeDrawingColor(merged.topLineColor, color);
+  const middleLineColor = normalizeDrawingColor(merged.middleLineColor, color);
+  const bottomLineColor = normalizeDrawingColor(merged.bottomLineColor, color);
+  const backgroundColor = normalizeOptionalDrawingColor(merged.backgroundColor, color);
+  const borderColor = normalizeOptionalDrawingColor(merged.borderColor, color);
+  const fibLevels = normalizedFibLevels(merged.fibLevels, color);
   const accountSize = normalizedPositiveNumber(merged.accountSize, 10_000, "accountSize");
   const riskPercent = normalizedRiskPercent(merged.riskPercent);
   const leverage = normalizedPositiveNumber(merged.leverage, 1, "leverage");
@@ -992,6 +1085,7 @@ export function resolveDrawingOptions(
     color,
     lineWidth: merged.lineWidth ?? 1,
     lineStyle: merged.lineStyle ?? "solid",
+    lineOpacity: normalizedLineOpacity(merged.lineOpacity),
     fillColor,
     fillOpacity: merged.fillOpacity ?? 0.12,
     showLabels: merged.showLabels ?? true,
@@ -1006,6 +1100,36 @@ export function resolveDrawingOptions(
     timeLabels: normalizedPriceLabels(merged.timeLabels),
     stopColor,
     targetColor,
+    topLineColor,
+    topLineWidth: normalizedPositiveNumber(
+      merged.topLineWidth,
+      merged.lineWidth ?? 1,
+      "topLineWidth",
+    ),
+    topLineStyle: merged.topLineStyle ?? merged.lineStyle ?? "solid",
+    middleLineColor,
+    middleLineWidth: normalizedPositiveNumber(
+      merged.middleLineWidth,
+      merged.lineWidth ?? 1,
+      "middleLineWidth",
+    ),
+    middleLineStyle: merged.middleLineStyle ?? merged.lineStyle ?? "solid",
+    middleLineVisible: merged.middleLineVisible ?? true,
+    bottomLineColor,
+    bottomLineWidth: normalizedPositiveNumber(
+      merged.bottomLineWidth,
+      merged.lineWidth ?? 1,
+      "bottomLineWidth",
+    ),
+    bottomLineStyle: merged.bottomLineStyle ?? merged.lineStyle ?? "solid",
+    channelBackgroundVisible: merged.channelBackgroundVisible ?? false,
+    fontFamily:
+      merged.fontFamily ?? '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    backgroundOpacity: normalizedOpacity(merged.backgroundOpacity, "backgroundOpacity"),
+    borderWidth: normalizedNonNegativeNumber(merged.borderWidth, 0, "borderWidth"),
+    borderRadius: normalizedNonNegativeNumber(merged.borderRadius, 0, "borderRadius"),
+    padding: normalizedNonNegativeNumber(merged.padding, 4, "padding"),
+    fibBackgroundVisible: merged.fibBackgroundVisible ?? false,
     accountSize,
     riskPercent,
     leverage,
@@ -1028,6 +1152,15 @@ export function resolveDrawingOptions(
   if (labelTextColor !== undefined) {
     resolved.labelTextColor = labelTextColor;
   }
+  if (backgroundColor !== undefined) {
+    resolved.backgroundColor = backgroundColor;
+  }
+  if (borderColor !== undefined) {
+    resolved.borderColor = borderColor;
+  }
+  if (fibLevels !== undefined) {
+    resolved.fibLevels = fibLevels;
+  }
   if (merged.labels !== undefined) {
     resolved.labels = validateLabels(merged.labels);
   }
@@ -1045,6 +1178,7 @@ export function mergeDrawingOptions(
     color: mergeDrawingColor(patch.color, base.color),
     lineWidth: patch.lineWidth ?? base.lineWidth,
     lineStyle: patch.lineStyle ?? base.lineStyle,
+    lineOpacity: patch.lineOpacity ?? base.lineOpacity,
     fillColor: mergeDrawingColor(patch.fillColor, base.fillColor),
     fillOpacity: patch.fillOpacity ?? base.fillOpacity,
     showLabels: patch.showLabels ?? base.showLabels,
@@ -1059,6 +1193,23 @@ export function mergeDrawingOptions(
     timeLabels: patch.timeLabels ?? base.timeLabels,
     stopColor: mergeDrawingColor(patch.stopColor, base.stopColor),
     targetColor: mergeDrawingColor(patch.targetColor, base.targetColor),
+    topLineColor: mergeDrawingColor(patch.topLineColor, base.topLineColor),
+    topLineWidth: patch.topLineWidth ?? base.topLineWidth,
+    topLineStyle: patch.topLineStyle ?? base.topLineStyle,
+    middleLineColor: mergeDrawingColor(patch.middleLineColor, base.middleLineColor),
+    middleLineWidth: patch.middleLineWidth ?? base.middleLineWidth,
+    middleLineStyle: patch.middleLineStyle ?? base.middleLineStyle,
+    middleLineVisible: patch.middleLineVisible ?? base.middleLineVisible,
+    bottomLineColor: mergeDrawingColor(patch.bottomLineColor, base.bottomLineColor),
+    bottomLineWidth: patch.bottomLineWidth ?? base.bottomLineWidth,
+    bottomLineStyle: patch.bottomLineStyle ?? base.bottomLineStyle,
+    channelBackgroundVisible: patch.channelBackgroundVisible ?? base.channelBackgroundVisible,
+    fontFamily: patch.fontFamily ?? base.fontFamily,
+    backgroundOpacity: patch.backgroundOpacity ?? base.backgroundOpacity,
+    borderWidth: patch.borderWidth ?? base.borderWidth,
+    borderRadius: patch.borderRadius ?? base.borderRadius,
+    padding: patch.padding ?? base.padding,
+    fibBackgroundVisible: patch.fibBackgroundVisible ?? base.fibBackgroundVisible,
     accountSize: patch.accountSize ?? base.accountSize,
     riskPercent: patch.riskPercent ?? base.riskPercent,
     leverage: patch.leverage ?? base.leverage,
@@ -1082,6 +1233,36 @@ export function mergeDrawingOptions(
     locked: patch.locked ?? base.locked,
     visible: patch.visible ?? base.visible,
   };
+  if (patch.backgroundColor !== undefined) {
+    const backgroundColor = normalizeOptionalDrawingColor(patch.backgroundColor, merged.textColor);
+    if (backgroundColor !== undefined) {
+      merged.backgroundColor = backgroundColor;
+    } else {
+      delete merged.backgroundColor;
+    }
+  } else if (base.backgroundColor !== undefined) {
+    merged.backgroundColor = base.backgroundColor;
+  }
+  if (patch.borderColor !== undefined) {
+    const borderColor = normalizeOptionalDrawingColor(patch.borderColor, merged.textColor);
+    if (borderColor !== undefined) {
+      merged.borderColor = borderColor;
+    } else {
+      delete merged.borderColor;
+    }
+  } else if (base.borderColor !== undefined) {
+    merged.borderColor = base.borderColor;
+  }
+  if (patch.fibLevels !== undefined) {
+    const fibLevels = normalizedFibLevels(patch.fibLevels, merged.color);
+    if (fibLevels !== undefined) {
+      merged.fibLevels = fibLevels;
+    } else {
+      delete merged.fibLevels;
+    }
+  } else if (base.fibLevels !== undefined) {
+    merged.fibLevels = base.fibLevels;
+  }
   if (patch.labelTextColor !== undefined) {
     const labelTextColor = normalizeOptionalDrawingColor(patch.labelTextColor, merged.textColor);
     if (labelTextColor !== undefined) {
@@ -1142,6 +1323,16 @@ function normalizedPriceLabels(value: DrawingPriceLabelsMode | undefined): Drawi
   fail("INVALID_ARGUMENT", "priceLabels must be never, selected, or always");
 }
 
+function normalizedLineOpacity(value: number | undefined): number {
+  if (value === undefined) {
+    return 1;
+  }
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    fail("INVALID_ARGUMENT", "lineOpacity must be between 0 and 1");
+  }
+  return value;
+}
+
 function normalizedStats(value: DrawingStatsMode | undefined): DrawingStatsMode {
   if (value === undefined || value === "off" || value === "selected" || value === "always") {
     return value ?? "off";
@@ -1190,6 +1381,56 @@ function normalizedStatsFields(
     }
   }
   return fields;
+}
+
+function normalizedNonNegativeNumber(
+  value: number | undefined,
+  fallback: number,
+  name: string,
+): number {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (!Number.isFinite(value) || value < 0) {
+    fail("INVALID_ARGUMENT", `${name} must be a non-negative number`);
+  }
+  return value;
+}
+
+function normalizedOpacity(value: number | undefined, name: string): number {
+  return Math.min(1, normalizedNonNegativeNumber(value, 1, name));
+}
+
+function normalizedFibLevels(
+  value: readonly DrawingFibLevel[] | undefined,
+  fallbackColor: DrawingColor,
+): readonly DrawingFibLevel[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    fail("INVALID_ARGUMENT", "fibLevels must be an array");
+  }
+  return value.map((level) => {
+    if (!level || !Number.isFinite(level.ratio)) {
+      fail("INVALID_ARGUMENT", "fibLevels entries require a finite ratio");
+    }
+    return {
+      ratio: level.ratio,
+      ...(level.visible !== undefined ? { visible: level.visible } : {}),
+      ...(level.color !== undefined
+        ? { color: normalizeDrawingColor(level.color, fallbackColor) }
+        : {}),
+      ...(level.lineWidth !== undefined
+        ? { lineWidth: normalizedPositiveNumber(level.lineWidth, 1, "fibLevels.lineWidth") }
+        : {}),
+      ...(level.lineStyle !== undefined ? { lineStyle: level.lineStyle } : {}),
+      ...(level.labelVisible !== undefined ? { labelVisible: level.labelVisible } : {}),
+      ...(level.labelColor !== undefined
+        ? { labelColor: normalizeDrawingColor(level.labelColor, fallbackColor) }
+        : {}),
+    };
+  });
 }
 
 function normalizedPositiveNumber(
@@ -1438,7 +1679,7 @@ export function hitTestDrawing(
       if (points.length < 2) {
         return false;
       }
-      return distanceToLine(point, points[0]!, points[1]!) <= tolerance;
+      return pointInRect(point, points[0]!, points[1]!, tolerance);
     }
     case "fib-time-zone": {
       if (points.length < 2) {
@@ -1576,8 +1817,13 @@ export function hitTestDrawing(
       if (points.length < 2) {
         return false;
       }
-      return FIB_LEVELS.some((level) => {
-        const y = points[0]!.y + (points[1]!.y - points[0]!.y) * level;
+      const levels: readonly DrawingFibLevel[] =
+        target.options.fibLevels ?? FIB_LEVELS.map((ratio): DrawingFibLevel => ({ ratio }));
+      return levels.some((level) => {
+        if (level.visible === false) {
+          return false;
+        }
+        const y = points[0]!.y + (points[1]!.y - points[0]!.y) * level.ratio;
         return Math.abs(point.y - y) <= tolerance;
       });
     }
@@ -1586,8 +1832,13 @@ export function hitTestDrawing(
         return false;
       }
       const delta = points[1]!.y - points[0]!.y;
-      return FIB_EXTENSION_LEVELS.some(
-        (level) => Math.abs(point.y - (points[2]!.y + delta * level)) <= tolerance,
+      const levels: readonly DrawingFibLevel[] =
+        target.options.fibLevels ??
+        FIB_EXTENSION_LEVELS.map((ratio): DrawingFibLevel => ({ ratio }));
+      return levels.some(
+        (level) =>
+          level.visible !== false &&
+          Math.abs(point.y - (points[2]!.y + delta * level.ratio)) <= tolerance,
       );
     }
     case "long-position":
@@ -1632,12 +1883,27 @@ export function hitTestDrawing(
     }
     case "text": {
       const anchor = points[0]!;
-      const width = Math.max(20, target.options.text.length * target.options.fontSize * 0.6);
+      const padding = target.options.padding;
+      const width =
+        Math.max(20, target.options.text.length * target.options.fontSize * 0.6) + padding * 2;
+      const height = target.options.fontSize + padding * 2;
+      const left =
+        target.options.textAlign === "center"
+          ? anchor.x - width / 2
+          : target.options.textAlign === "right"
+            ? anchor.x - width
+            : anchor.x;
+      const top =
+        target.options.textVerticalAlign === "middle"
+          ? anchor.y - height / 2
+          : target.options.textVerticalAlign === "bottom"
+            ? anchor.y - height
+            : anchor.y;
       return (
-        point.x >= anchor.x - tolerance &&
-        point.x <= anchor.x + width + tolerance &&
-        point.y >= anchor.y - target.options.fontSize - tolerance &&
-        point.y <= anchor.y + tolerance
+        point.x >= left - tolerance &&
+        point.x <= left + width + tolerance &&
+        point.y >= top - tolerance &&
+        point.y <= top + height + tolerance
       );
     }
     default: {

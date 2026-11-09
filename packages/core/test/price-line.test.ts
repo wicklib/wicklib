@@ -137,7 +137,7 @@ describe("price-line titles", () => {
     const title = fillText.mock.calls.find(
       ([text]) => typeof text === "string" && text.startsWith("Exit "),
     );
-    expect(title?.[1]).toBeGreaterThanOrEqual(736);
+    expect(title?.[1]).toBeGreaterThanOrEqual(700);
   });
 
   it("widens the price axis for longer titles", async () => {

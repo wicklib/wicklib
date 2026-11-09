@@ -348,6 +348,41 @@ describe("line drawing hit testing", () => {
     ).toBe(true);
   });
 
+  it("resolves modern channel, text, and Fibonacci style options", () => {
+    const resolved = resolveDrawingOptions(undefined, {
+      lineOpacity: 0.5,
+      topLineColor: "#ff0000",
+      topLineWidth: 3,
+      middleLineVisible: false,
+      bottomLineStyle: "dashed",
+      channelBackgroundVisible: true,
+      fontFamily: "serif",
+      backgroundColor: "#ffffff",
+      backgroundOpacity: 0.5,
+      borderColor: "#000000",
+      borderWidth: 2,
+      borderRadius: 6,
+      padding: 8,
+      fibLevels: [{ ratio: 0.5, color: "#123456", labelVisible: false }],
+      fibBackgroundVisible: true,
+    });
+
+    expect(resolved.lineOpacity).toBe(0.5);
+    expect(resolved.topLineColor).toBe("#ff0000");
+    expect(resolved.topLineWidth).toBe(3);
+    expect(resolved.middleLineVisible).toBe(false);
+    expect(resolved.bottomLineStyle).toBe("dashed");
+    expect(resolved.channelBackgroundVisible).toBe(true);
+    expect(resolved.fontFamily).toBe("serif");
+    expect(resolved.backgroundColor).toBe("#ffffff");
+    expect(resolved.backgroundOpacity).toBe(0.5);
+    expect(resolved.borderWidth).toBe(2);
+    expect(resolved.borderRadius).toBe(6);
+    expect(resolved.padding).toBe(8);
+    expect(resolved.fibLevels?.[0]).toMatchObject({ ratio: 0.5, color: "#123456" });
+    expect(resolved.fibBackgroundVisible).toBe(true);
+  });
+
   it("uses the anchor line as the regression selection proxy", () => {
     expect(hitTestDrawing(target("regression-trend"), { x: 150, y: 150 }, pane, timeScale)).toBe(
       true,

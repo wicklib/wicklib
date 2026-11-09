@@ -388,6 +388,24 @@ export interface DrawingDocument {
 }
 
 // @public
+export interface DrawingFibLevel {
+    // (undocumented)
+    color?: DrawingColor | null;
+    // (undocumented)
+    labelColor?: DrawingColor | null;
+    // (undocumented)
+    labelVisible?: boolean;
+    // (undocumented)
+    lineStyle?: DrawingLineStyle;
+    // (undocumented)
+    lineWidth?: number;
+    // (undocumented)
+    ratio: number;
+    // (undocumented)
+    visible?: boolean;
+}
+
+// @public
 export type DrawingLabelPlacement = "auto" | "above" | "below";
 
 // @public
@@ -396,6 +414,20 @@ export type DrawingLineStyle = "solid" | "dotted" | "dashed";
 // @public
 export interface DrawingOptions {
     accountSize?: number;
+    backgroundColor?: DrawingColor | null;
+    // (undocumented)
+    backgroundOpacity?: number;
+    borderColor?: DrawingColor | null;
+    // (undocumented)
+    borderRadius?: number;
+    // (undocumented)
+    borderWidth?: number;
+    bottomLineColor?: DrawingColor | null;
+    // (undocumented)
+    bottomLineStyle?: DrawingLineStyle;
+    // (undocumented)
+    bottomLineWidth?: number;
+    channelBackgroundVisible?: boolean;
     // (undocumented)
     color?: DrawingColor | null;
     contractSize?: number;
@@ -404,10 +436,13 @@ export interface DrawingOptions {
     extendLeft?: boolean;
     extendRight?: boolean;
     extendTop?: boolean;
+    fibBackgroundVisible?: boolean;
+    fibLevels?: readonly DrawingFibLevel[];
     // (undocumented)
     fillColor?: DrawingColor | null;
     // (undocumented)
     fillOpacity?: number;
+    fontFamily?: string;
     fontSize?: number;
     labelBackgroundVisible?: boolean;
     labelFontSize?: number;
@@ -415,12 +450,21 @@ export interface DrawingOptions {
     labels?: readonly string[];
     labelTextColor?: DrawingColor | null;
     leverage?: number;
+    lineOpacity?: number;
     // (undocumented)
     lineStyle?: DrawingLineStyle;
     // (undocumented)
     lineWidth?: number;
     // (undocumented)
     locked?: boolean;
+    middleLineColor?: DrawingColor | null;
+    // (undocumented)
+    middleLineStyle?: DrawingLineStyle;
+    // (undocumented)
+    middleLineVisible?: boolean;
+    // (undocumented)
+    middleLineWidth?: number;
+    padding?: number;
     positionStatsFields?: readonly DrawingStatsField[];
     priceLabels?: DrawingPriceLabelsMode;
     riskPercent?: number;
@@ -439,6 +483,11 @@ export interface DrawingOptions {
     textStyle?: DrawingTextStyle;
     textVerticalAlign?: DrawingTextVerticalAlign;
     timeLabels?: DrawingTimeLabelsMode;
+    topLineColor?: DrawingColor | null;
+    // (undocumented)
+    topLineStyle?: DrawingLineStyle;
+    // (undocumented)
+    topLineWidth?: number;
     // (undocumented)
     visible?: boolean;
 }
@@ -450,7 +499,7 @@ export type DrawingPriceLabelsMode = "never" | "selected" | "always";
 export type DrawingSelectionMode = "replace" | "add" | "toggle";
 
 // @public
-export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "fillColor" | "fillOpacity" | "showLabels" | "labelPlacement" | "labelFontSize" | "labelBackgroundVisible" | "showLine" | "extendLeft" | "extendRight" | "showMidpoint" | "priceLabels" | "timeLabels" | "stopColor" | "targetColor" | "extend" | "extendTop" | "extendBottom" | "labelTextColor" | "accountSize" | "riskPercent" | "leverage" | "contractSize" | "positionStatsFields" | "stats" | "statsFields" | "statsPosition" | "text" | "textColor" | "textStyle" | "textAlign" | "textVerticalAlign" | "fontSize" | "locked" | "visible";
+export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "lineOpacity" | "fillColor" | "fillOpacity" | "showLabels" | "labelPlacement" | "labelFontSize" | "labelBackgroundVisible" | "showLine" | "extendLeft" | "extendRight" | "showMidpoint" | "priceLabels" | "timeLabels" | "stopColor" | "targetColor" | "extend" | "extendTop" | "extendBottom" | "labelTextColor" | "topLineColor" | "topLineWidth" | "topLineStyle" | "middleLineColor" | "middleLineWidth" | "middleLineStyle" | "middleLineVisible" | "bottomLineColor" | "bottomLineWidth" | "bottomLineStyle" | "channelBackgroundVisible" | "fontFamily" | "backgroundColor" | "backgroundOpacity" | "borderColor" | "borderWidth" | "borderRadius" | "padding" | "fibLevels" | "fibBackgroundVisible" | "accountSize" | "riskPercent" | "leverage" | "contractSize" | "positionStatsFields" | "stats" | "statsFields" | "statsPosition" | "text" | "textColor" | "textStyle" | "textAlign" | "textVerticalAlign" | "fontSize" | "locked" | "visible";
 
 // @public
 export type DrawingStatsField = "range" | "change" | "bars" | "date" | "timeRange" | "duration" | "volume" | "angle" | "risk" | "reward" | "riskReward" | "riskPercent" | "rewardPercent" | "accountSize" | "lotSize" | "riskAmount" | "entry" | "profit" | "loss" | "leverage" | "margin";
@@ -1269,8 +1318,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:1082:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:1097:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1126:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1141:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
