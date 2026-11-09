@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.28.0
+
+### Minor Changes
+
+- 5133a5b: Snap line and channel drawing angles to 45-degree increments while Shift is held.
+
 ## 0.27.0
 
 ### Minor Changes

@@ -1,5 +1,12 @@
 # @wicklib/indicators
 
+## 0.28.0
+
+### Patch Changes
+
+- Updated dependencies [5133a5b]
+  - @wicklib/core@0.28.0
+
 ## 0.27.0
 
 ### Patch Changes
