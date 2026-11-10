@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.29.1
+
+### Patch Changes
+
+- c52efaf: Render dense candles as a high/low envelope with a close line instead of solid 1px slabs.
+
 ## 0.29.0
 
 ### Minor Changes
