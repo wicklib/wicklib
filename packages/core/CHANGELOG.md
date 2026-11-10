@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.29.2
+
+### Patch Changes
+
+- 2a8a6e0: Render dense candles as sub-pixel candle bodies and wicks instead of an envelope/close line.
+
 ## 0.29.1
 
 ### Patch Changes
