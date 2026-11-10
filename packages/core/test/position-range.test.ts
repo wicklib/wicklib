@@ -153,6 +153,7 @@ describe("position drawings", () => {
     expect(long.getOptions().priceLabels).toBe("always");
     expect(long.getOptions().positionStatsFields).toEqual([
       "loss",
+      "lossPercent",
       "riskAmount",
       "entry",
       "profit",
@@ -160,6 +161,7 @@ describe("position drawings", () => {
     ]);
     expect(short.getOptions().positionStatsFields).toEqual([
       "loss",
+      "lossPercent",
       "riskAmount",
       "entry",
       "profit",

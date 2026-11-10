@@ -437,6 +437,7 @@ class Chart implements ChartApi, SeriesHost {
 
   startDrawing(tool: DrawingToolDefinition, options?: Partial<AddDrawingOptions>): void {
     this.assertAlive();
+    this.removeMeasureDrawings();
     if (this.activeTool) {
       this.cancelDrawing();
     }
@@ -807,6 +808,15 @@ class Chart implements ChartApi, SeriesHost {
     this.requestRender();
   }
 
+  private removeMeasureDrawings(): void {
+    for (let index = this.drawings.length - 1; index >= 0; index -= 1) {
+      const drawing = this.drawings[index]!;
+      if (drawing.toolId === "measure") {
+        this.removeDrawing(drawing);
+      }
+    }
+  }
+
   private removeDrawing(drawing: Drawing): void {
     const index = this.drawings.indexOf(drawing);
     if (index < 0) {
@@ -1003,6 +1013,20 @@ class Chart implements ChartApi, SeriesHost {
 
     const price = pane.priceScale.yToPrice(snappedPoint.y, pane.plot.top, pane.plot.height);
     return { time, price };
+  }
+
+  private screenPointToAnchor(pane: Pane, point: Point): DrawingAnchor | null {
+    if (!pane.plot) {
+      return null;
+    }
+    const time = this.timeScaleModel.timeAtX(point.x);
+    if (time === null) {
+      return null;
+    }
+    return {
+      time,
+      price: pane.priceScale.yToPrice(point.y, pane.plot.top, pane.plot.height),
+    };
   }
 
   private anchorScreenPoint(pane: Pane, anchor: DrawingAnchor): Point | null {
@@ -1207,6 +1231,37 @@ class Chart implements ChartApi, SeriesHost {
       }
       const next = anchors.map((anchor) => ({ ...anchor }));
 
+      if (this.draggingAnchorIndex >= 0 && drawing.toolId === "rectangle") {
+        const first = this.anchorScreenPoint(pane, anchors[0]!);
+        const second = this.anchorScreenPoint(pane, anchors[1]!);
+        if (!first || !second) {
+          continue;
+        }
+        let left = Math.min(first.x, second.x);
+        let right = Math.max(first.x, second.x);
+        let top = Math.min(first.y, second.y);
+        let bottom = Math.max(first.y, second.y);
+        const handle = this.draggingAnchorIndex;
+        if (handle === 0 || handle === 6 || handle === 7) {
+          left = point.x;
+        }
+        if (handle === 2 || handle === 3 || handle === 4) {
+          right = point.x;
+        }
+        if (handle === 0 || handle === 1 || handle === 2) {
+          top = point.y;
+        }
+        if (handle === 4 || handle === 5 || handle === 6) {
+          bottom = point.y;
+        }
+        const topLeft = this.screenPointToAnchor(pane, { x: left, y: top });
+        const bottomRight = this.screenPointToAnchor(pane, { x: right, y: bottom });
+        if (topLeft && bottomRight) {
+          drawing.setAnchors([topLeft, bottomRight]);
+          this.drawingDragMoved = true;
+        }
+        continue;
+      }
       if (this.draggingAnchorIndex >= 0) {
         const referenceIndex = dragAngleReference(drawing.toolId, this.draggingAnchorIndex);
         const referenceAnchor = referenceIndex === null ? null : (anchors[referenceIndex] ?? null);
@@ -1215,7 +1270,17 @@ class Chart implements ChartApi, SeriesHost {
           continue;
         }
         next[this.draggingAnchorIndex] = anchor;
-        if (
+        if (drawing.toolId === "horizontal-line") {
+          next[this.draggingAnchorIndex] = {
+            time: anchors[this.draggingAnchorIndex]!.time,
+            price: anchor.price,
+          };
+        } else if (drawing.toolId === "vertical-line") {
+          next[this.draggingAnchorIndex] = {
+            time: anchor.time,
+            price: anchors[this.draggingAnchorIndex]!.price,
+          };
+        } else if (
           (drawing.toolId === "long-position" || drawing.toolId === "short-position") &&
           (this.draggingAnchorIndex === 1 || this.draggingAnchorIndex === 2)
         ) {
@@ -1709,6 +1774,9 @@ class Chart implements ChartApi, SeriesHost {
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button !== 0) {
       return;
+    }
+    if (!this.activeTool) {
+      this.removeMeasureDrawings();
     }
 
     try {

@@ -661,6 +661,7 @@ export type DrawingSetting =
   | "lineOpacity"
   | "fillColor"
   | "fillOpacity"
+  | "fillVisible"
   | "showLabels"
   | "labelPlacement"
   | "labelFontSize"
@@ -772,6 +773,7 @@ export type DrawingStatsField =
   | "entry"
   | "profit"
   | "loss"
+  | "lossPercent"
   | "leverage"
   | "margin";
 
@@ -804,6 +806,8 @@ export interface DrawingOptions {
   lineOpacity?: number;
   fillColor?: DrawingColor | null;
   fillOpacity?: number;
+  /** Show shape fill. Defaults to true. */
+  fillVisible?: boolean;
   showLabels?: boolean;
   /** Draw the drawing's line geometry. Defaults to true. */
   showLine?: boolean;

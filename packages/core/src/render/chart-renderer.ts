@@ -1265,19 +1265,21 @@ export class ChartRenderer {
         context.rect(pane.plot.left, pane.plot.top, pane.plot.width, pane.plot.height);
         context.clip();
         const handlePoints =
-          drawing.toolId === "brush" ||
-          drawing.toolId === "highlighter" ||
-          drawing.toolId === "path"
-            ? points.length > 1
-              ? [points[0]!, points[points.length - 1]!]
-              : points
-            : points;
+          drawing.toolId === "rectangle"
+            ? rectangleHandlePoints(points[0]!, points[1]!)
+            : drawing.toolId === "brush" || drawing.toolId === "highlighter"
+              ? points.length > 1
+                ? [points[0]!, points[points.length - 1]!]
+                : points
+              : points;
         for (const point of handlePoints) {
-          context.fillStyle = model.layout.background;
-          context.fillRect(point.x - 4, point.y - 4, 8, 8);
-          context.strokeStyle = renderDrawing.options.color;
-          context.lineWidth = 1;
-          context.strokeRect(point.x - 4, point.y - 4, 8, 8);
+          drawRoundedKnob(
+            context,
+            point.x,
+            point.y,
+            model.layout.background,
+            renderDrawing.options.color,
+          );
         }
         context.restore();
       }
@@ -1314,14 +1316,21 @@ export class ChartRenderer {
 
     switch (drawing.toolId) {
       case "horizontal-line": {
-        if (!drawing.options.showLine) {
-          return;
+        if (drawing.options.showLine) {
+          const y = crisp(points[0]!.y);
+          context.beginPath();
+          context.moveTo(plot.left, y);
+          context.lineTo(plot.right, y);
+          context.stroke();
         }
-        const y = crisp(points[0]!.y);
-        context.beginPath();
-        context.moveTo(plot.left, y);
-        context.lineTo(plot.right, y);
-        context.stroke();
+        this.drawAxisLineText(
+          context,
+          model,
+          drawing.options.text,
+          plot.left + plot.width / 2,
+          points[0]!.y,
+          drawing.options,
+        );
         return;
       }
       case "horizontal-ray": {
@@ -1336,28 +1345,42 @@ export class ChartRenderer {
         return;
       }
       case "vertical-line": {
-        if (!drawing.options.showLine) {
-          return;
+        if (drawing.options.showLine) {
+          const x = crisp(points[0]!.x);
+          context.beginPath();
+          context.moveTo(x, plot.top);
+          context.lineTo(x, plot.bottom);
+          context.stroke();
         }
-        const x = crisp(points[0]!.x);
-        context.beginPath();
-        context.moveTo(x, plot.top);
-        context.lineTo(x, plot.bottom);
-        context.stroke();
+        this.drawAxisLineText(
+          context,
+          model,
+          drawing.options.text,
+          points[0]!.x,
+          plot.top + plot.height / 2,
+          drawing.options,
+        );
         return;
       }
       case "cross-line": {
-        if (!drawing.options.showLine) {
-          return;
+        if (drawing.options.showLine) {
+          const x = crisp(points[0]!.x);
+          const y = crisp(points[0]!.y);
+          context.beginPath();
+          context.moveTo(plot.left, y);
+          context.lineTo(plot.right, y);
+          context.moveTo(x, plot.top);
+          context.lineTo(x, plot.bottom);
+          context.stroke();
         }
-        const x = crisp(points[0]!.x);
-        const y = crisp(points[0]!.y);
-        context.beginPath();
-        context.moveTo(plot.left, y);
-        context.lineTo(plot.right, y);
-        context.moveTo(x, plot.top);
-        context.lineTo(x, plot.bottom);
-        context.stroke();
+        this.drawAxisLineText(
+          context,
+          model,
+          drawing.options.text,
+          points[0]!.x,
+          points[0]!.y,
+          drawing.options,
+        );
         return;
       }
       case "trend-line": {
@@ -1428,27 +1451,30 @@ export class ChartRenderer {
         if (points.length < 2) {
           return;
         }
-        if (!drawing.options.showLine) {
-          return;
-        }
         const first = points[0]!;
         const second = points[1]!;
-        const clipped = clipLineToRect(first, second, plot);
+        const clipped = clipTrendLine(first, second, plot, drawing.options);
         if (!clipped) {
           return;
         }
-        context.beginPath();
-        context.moveTo(clipped[0].x, clipped[0].y);
-        context.lineTo(clipped[1].x, clipped[1].y);
-        context.stroke();
+        if (drawing.options.showLine) {
+          context.beginPath();
+          context.moveTo(clipped[0].x, clipped[0].y);
+          context.lineTo(clipped[1].x, clipped[1].y);
+          context.stroke();
+        }
+        const head = clipped[1];
         if (
-          second.x >= plot.left &&
-          second.x <= plot.right &&
-          second.y >= plot.top &&
-          second.y <= plot.bottom
+          head.x >= plot.left &&
+          head.x <= plot.right &&
+          head.y >= plot.top &&
+          head.y <= plot.bottom
         ) {
-          const angle = Math.atan2(second.y - first.y, second.x - first.x);
-          drawArrowHead(context, second, angle);
+          const angle = Math.atan2(clipped[1].y - clipped[0].y, clipped[1].x - clipped[0].x);
+          drawArrowHead(context, head, angle);
+        }
+        if (drawing.options.text) {
+          drawDrawingText(context, model, drawing.options.text, first, second, drawing.options);
         }
         return;
       }
@@ -1529,15 +1555,45 @@ export class ChartRenderer {
         if (points.length < 2) {
           return;
         }
-        const x = Math.min(points[0]!.x, points[1]!.x);
-        const y = Math.min(points[0]!.y, points[1]!.y);
-        const width = Math.abs(points[1]!.x - points[0]!.x);
-        const height = Math.abs(points[1]!.y - points[0]!.y);
+        let left = Math.min(points[0]!.x, points[1]!.x);
+        let right = Math.max(points[0]!.x, points[1]!.x);
+        const top = Math.min(points[0]!.y, points[1]!.y);
+        const bottom = Math.max(points[0]!.y, points[1]!.y);
+        if (drawing.options.extendLeft) {
+          left = plot.left;
+        }
+        if (drawing.options.extendRight) {
+          right = plot.right;
+        }
+        const width = Math.max(1, right - left);
+        const height = Math.max(1, bottom - top);
 
-        context.globalAlpha = drawing.preview ? 0.3 : drawing.options.fillOpacity;
-        context.fillRect(x, y, width, height);
-        context.globalAlpha = drawing.preview ? 0.65 : 1;
-        context.strokeRect(x, y, width, height);
+        if (drawing.options.fillVisible) {
+          context.globalAlpha = drawing.preview ? 0.3 : drawing.options.fillOpacity;
+          context.fillRect(left, top, width, height);
+          context.globalAlpha = drawing.preview ? 0.65 : 1;
+        }
+        if (drawing.options.showLine) {
+          context.strokeRect(left, top, width, height);
+        }
+        if (drawing.options.middleLineVisible) {
+          drawStyledLine(
+            context,
+            { x: left, y: (top + bottom) / 2 },
+            { x: right, y: (top + bottom) / 2 },
+            drawing.options.middleLineColor,
+            drawing.options.middleLineWidth,
+            drawing.options.middleLineStyle,
+          );
+        }
+        this.drawAxisLineText(
+          context,
+          model,
+          drawing.options.text,
+          (left + right) / 2,
+          (top + bottom) / 2,
+          drawing.options,
+        );
         return;
       }
       case "circle": {
@@ -2177,6 +2233,32 @@ export class ChartRenderer {
     }
   }
 
+  private drawAxisLineText(
+    context: CanvasRenderingContext2D,
+    model: ChartRenderModel,
+    text: string,
+    x: number,
+    y: number,
+    options: ResolvedDrawingOptions,
+  ): void {
+    if (!text) {
+      return;
+    }
+    const style = [
+      options.textStyle.includes("bold") ? "bold" : "",
+      options.textStyle.includes("italic") ? "italic" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    context.save();
+    context.font = `${style ? `${style} ` : ""}${options.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    context.fillStyle = options.textColor;
+    context.textAlign = options.textAlign;
+    context.textBaseline = options.textVerticalAlign;
+    context.fillText(text, x, y);
+    context.restore();
+  }
+
   private drawPositionStats(
     context: CanvasRenderingContext2D,
     model: ChartRenderModel,
@@ -2238,6 +2320,8 @@ export class ChartRenderer {
         boxes[2]!.lines.push(`Profit  ${money(profit)}`);
       } else if (field === "loss") {
         boxes[0]!.lines.push(`Loss  ${money(loss)}`);
+      } else if (field === "lossPercent") {
+        boxes[0]!.lines.push(`Loss %  ${options.riskPercent.toFixed(2)}%`);
       } else if (field === "leverage") {
         boxes[1]!.lines.push(`Leverage  ${quantity(options.leverage)}x`);
       } else if (field === "margin") {
@@ -2383,10 +2467,12 @@ export class ChartRenderer {
         continue;
       }
       const levels: Array<{ price: number; color: string; axis: boolean }> = [];
-      if (drawing.toolId === "trend-line") {
+      if (drawing.toolId === "trend-line" || drawing.toolId === "arrow") {
         for (const anchor of drawing.anchors.slice(0, 2)) {
           levels.push({ price: anchor.price, color: options.color, axis: false });
         }
+      } else if (drawing.toolId === "horizontal-line" || drawing.toolId === "cross-line") {
+        levels.push({ price: drawing.anchors[0]!.price, color: options.color, axis: true });
       } else if (
         (drawing.toolId === "long-position" || drawing.toolId === "short-position") &&
         drawing.anchors.length >= 3
@@ -2447,7 +2533,13 @@ export class ChartRenderer {
 
     const entries: Array<{ left: number; width: number; label: string; color: string }> = [];
     for (const drawing of model.drawings) {
-      if (drawing.preview || drawing.toolId !== "trend-line") {
+      if (
+        drawing.preview ||
+        (drawing.toolId !== "trend-line" &&
+          drawing.toolId !== "arrow" &&
+          drawing.toolId !== "vertical-line" &&
+          drawing.toolId !== "cross-line")
+      ) {
         continue;
       }
       const options = resolveDrawingOptionsForModel(drawing.options, model);
@@ -2457,7 +2549,11 @@ export class ChartRenderer {
       if (options.timeLabels === "selected" && !drawing.selected) {
         continue;
       }
-      for (const anchor of drawing.anchors.slice(0, 2)) {
+      const anchors =
+        drawing.toolId === "vertical-line" || drawing.toolId === "cross-line"
+          ? drawing.anchors.slice(0, 1)
+          : drawing.anchors.slice(0, 2);
+      for (const anchor of anchors) {
         const x = this.timeScale.timeToX(anchor.time);
         if (x === null || x < bottomPane.plot.left || x > bottomPane.plot.right) {
           continue;
@@ -2969,7 +3065,7 @@ function surfaceContrast(canvas: readonly [number, number, number], background: 
   return contrastRatio(relativeLuminance(effective), relativeLuminance(canvas));
 }
 
-function fillRoundedRect(
+function roundedRectPath(
   context: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -2989,6 +3085,51 @@ function fillRoundedRect(
   context.lineTo(x, y + r);
   context.quadraticCurveTo(x, y, x + r, y);
   context.closePath();
+}
+
+function rectangleHandlePoints(first: Point, second: Point): Point[] {
+  const left = Math.min(first.x, second.x);
+  const right = Math.max(first.x, second.x);
+  const top = Math.min(first.y, second.y);
+  const bottom = Math.max(first.y, second.y);
+  const centerX = (left + right) / 2;
+  const centerY = (top + bottom) / 2;
+  return [
+    { x: left, y: top },
+    { x: centerX, y: top },
+    { x: right, y: top },
+    { x: right, y: centerY },
+    { x: right, y: bottom },
+    { x: centerX, y: bottom },
+    { x: left, y: bottom },
+    { x: left, y: centerY },
+  ];
+}
+
+function drawRoundedKnob(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  fill: string,
+  stroke: string,
+): void {
+  context.fillStyle = fill;
+  context.strokeStyle = stroke;
+  context.lineWidth = 1;
+  roundedRectPath(context, x - 4, y - 4, 8, 8, 4);
+  context.fill();
+  context.stroke();
+}
+
+function fillRoundedRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+): void {
+  roundedRectPath(context, x, y, width, height, radius);
   context.fill();
 }
 

@@ -27,6 +27,7 @@ export interface ResolvedDrawingOptions {
   lineOpacity: number;
   fillColor: DrawingColor;
   fillOpacity: number;
+  fillVisible: boolean;
   showLabels: boolean;
   showLine: boolean;
   extendLeft: boolean;
@@ -225,6 +226,45 @@ const CHANNEL_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "locked",
   "visible",
 ]);
+const AXIS_LINE_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "color",
+  "lineWidth",
+  "lineStyle",
+  "showLine",
+  "text",
+  "textColor",
+  "textStyle",
+  "textAlign",
+  "textVerticalAlign",
+  "fontSize",
+  "priceLabels",
+  "timeLabels",
+  "locked",
+  "visible",
+]);
+const RECTANGLE_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "color",
+  "lineWidth",
+  "lineStyle",
+  "fillColor",
+  "fillOpacity",
+  "fillVisible",
+  "showLine",
+  "extendLeft",
+  "extendRight",
+  "middleLineVisible",
+  "middleLineColor",
+  "middleLineWidth",
+  "middleLineStyle",
+  "text",
+  "textColor",
+  "textStyle",
+  "textAlign",
+  "textVerticalAlign",
+  "fontSize",
+  "locked",
+  "visible",
+]);
 const TEXT_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "color",
   "text",
@@ -292,10 +332,10 @@ const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Objec
   "extended-line": STROKE_SETTINGS,
   "trend-angle": LABEL_SETTINGS,
   arrow: STROKE_SETTINGS,
-  "horizontal-line": STROKE_SETTINGS,
+  "horizontal-line": AXIS_LINE_SETTINGS,
   "horizontal-ray": STROKE_SETTINGS,
-  "vertical-line": STROKE_SETTINGS,
-  "cross-line": STROKE_SETTINGS,
+  "vertical-line": AXIS_LINE_SETTINGS,
+  "cross-line": AXIS_LINE_SETTINGS,
   "parallel-channel": CHANNEL_SETTINGS,
   "regression-trend": CHANNEL_SETTINGS,
   "flat-top-bottom": FILL_SETTINGS,
@@ -307,7 +347,7 @@ const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Objec
   "modified-schiff-pitchfork": STROKE_SETTINGS,
   "gann-fan": LABEL_SETTINGS,
   "speed-lines": STROKE_SETTINGS,
-  rectangle: FILL_SETTINGS,
+  rectangle: RECTANGLE_SETTINGS,
   "fib-retracement": FIB_SETTINGS,
   "fib-extension": FIB_SETTINGS,
   "long-short-position": LONG_SHORT_SETTINGS,
@@ -326,7 +366,7 @@ const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Objec
   highlighter: FREEHAND_SETTINGS,
   path: FREEHAND_SETTINGS,
   text: TEXT_SETTINGS,
-  measure: LABEL_SETTINGS,
+  measure: [],
   "stats-line": LABEL_SETTINGS,
 });
 
@@ -340,6 +380,7 @@ const DEFAULT_STATS_FIELDS: readonly DrawingStatsField[] = Object.freeze([
 
 const DEFAULT_POSITION_STATS_FIELDS: readonly DrawingStatsField[] = Object.freeze([
   "loss",
+  "lossPercent",
   "riskAmount",
   "entry",
   "profit",
@@ -352,6 +393,7 @@ const DEFAULTS: DrawingOptions = {
   lineStyle: "solid",
   lineOpacity: 1,
   fillOpacity: 0.12,
+  fillVisible: true,
   showLabels: true,
   showLine: true,
   extendLeft: false,
@@ -456,7 +498,10 @@ export const HorizontalLine: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 1,
-  defaultOptions: { color: "#f0b90b" },
+  defaultOptions: {
+    color: "#787b86",
+    priceLabels: "selected" as const,
+  },
 });
 
 export const HorizontalRay: DrawingToolDefinition = Object.freeze({
@@ -480,7 +525,10 @@ export const VerticalLine: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 1,
-  defaultOptions: { color: "#787b86" },
+  defaultOptions: {
+    color: "#787b86",
+    timeLabels: "selected" as const,
+  },
 });
 
 export const CrossLine: DrawingToolDefinition = Object.freeze({
@@ -492,7 +540,11 @@ export const CrossLine: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 1,
-  defaultOptions: { color: "#787b86" },
+  defaultOptions: {
+    color: "#787b86",
+    priceLabels: "selected" as const,
+    timeLabels: "selected" as const,
+  },
 });
 
 export const ParallelChannel: DrawingToolDefinition = Object.freeze({
@@ -668,7 +720,14 @@ export const LongPosition: DrawingToolDefinition = Object.freeze({
     riskPercent: 1,
     leverage: 1,
     contractSize: 1,
-    positionStatsFields: ["loss", "riskAmount", "entry", "profit", "riskReward"] as const,
+    positionStatsFields: [
+      "loss",
+      "lossPercent",
+      "riskAmount",
+      "entry",
+      "profit",
+      "riskReward",
+    ] as const,
     statsPosition: "center" as const,
   },
 });
@@ -694,7 +753,14 @@ export const ShortPosition: DrawingToolDefinition = Object.freeze({
     riskPercent: 1,
     leverage: 1,
     contractSize: 1,
-    positionStatsFields: ["loss", "riskAmount", "entry", "profit", "riskReward"] as const,
+    positionStatsFields: [
+      "loss",
+      "lossPercent",
+      "riskAmount",
+      "entry",
+      "profit",
+      "riskReward",
+    ] as const,
     statsPosition: "center" as const,
   },
 });
@@ -1088,6 +1154,7 @@ export function resolveDrawingOptions(
     lineOpacity: normalizedLineOpacity(merged.lineOpacity),
     fillColor,
     fillOpacity: merged.fillOpacity ?? 0.12,
+    fillVisible: merged.fillVisible ?? true,
     showLabels: merged.showLabels ?? true,
     showLine: merged.showLine ?? true,
     extend: merged.extend ?? false,
@@ -1181,6 +1248,7 @@ export function mergeDrawingOptions(
     lineOpacity: patch.lineOpacity ?? base.lineOpacity,
     fillColor: mergeDrawingColor(patch.fillColor, base.fillColor),
     fillOpacity: patch.fillOpacity ?? base.fillOpacity,
+    fillVisible: patch.fillVisible ?? base.fillVisible,
     showLabels: patch.showLabels ?? base.showLabels,
     showLine: patch.showLine ?? base.showLine,
     extend: patch.extend ?? base.extend,
@@ -1365,6 +1433,7 @@ function normalizedStatsFields(
       field !== "riskReward" &&
       field !== "riskPercent" &&
       field !== "rewardPercent" &&
+      field !== "lossPercent" &&
       field !== "accountSize" &&
       field !== "lotSize" &&
       field !== "riskAmount" &&
@@ -1469,6 +1538,7 @@ function normalizedPositionStatsFields(
     "lotSize",
     "riskPercent",
     "riskAmount",
+    "lossPercent",
     "riskReward",
     "entry",
     "profit",
@@ -1670,7 +1740,12 @@ export function hitTestDrawing(
         return (
           distanceToLine(point, channel[0][0], channel[0][1]) <= tolerance ||
           distanceToLine(point, channel[1][0], channel[1][1]) <= tolerance ||
-          pointInChannel(point, channel, tolerance)
+          (target.options.middleLineVisible &&
+            distanceToLine(
+              point,
+              { x: channel[0][0].x, y: (channel[0][0].y + channel[1][0].y) / 2 },
+              { x: channel[0][1].x, y: (channel[0][1].y + channel[1][1].y) / 2 },
+            ) <= tolerance)
         );
       }
       return distanceToLine(point, points[0]!, points[1]!) <= tolerance;
@@ -1726,8 +1801,7 @@ export function hitTestDrawing(
       const channel = flatChannelLines(points);
       return (
         distanceToLine(point, channel[0][0], channel[0][1]) <= tolerance ||
-        distanceToLine(point, channel[1][0], channel[1][1]) <= tolerance ||
-        pointInChannel(point, channel, tolerance)
+        distanceToLine(point, channel[1][0], channel[1][1]) <= tolerance
       );
     }
     case "disjoint-channel": {
@@ -1741,23 +1815,6 @@ export function hitTestDrawing(
       ) {
         return true;
       }
-      if (geometry.right > geometry.left) {
-        const polygon = [
-          pointOnLine(geometry.first, geometry.left),
-          pointOnLine(geometry.first, geometry.right),
-          pointOnLine(geometry.second, geometry.right),
-          pointOnLine(geometry.second, geometry.left),
-        ];
-        if (
-          pointInPolygon(point, polygon) ||
-          polygon.some((candidate, index) => {
-            const next = polygon[(index + 1) % polygon.length]!;
-            return distanceToSegment(point, candidate, next) <= tolerance;
-          })
-        ) {
-          return true;
-        }
-      }
       return false;
     }
     case "fib-channel": {
@@ -1767,8 +1824,7 @@ export function hitTestDrawing(
       const channel = parallelLines(points);
       return (
         distanceToLine(point, channel[0][0], channel[0][1]) <= tolerance ||
-        distanceToLine(point, channel[1][0], channel[1][1]) <= tolerance ||
-        pointInChannel(point, channel, tolerance)
+        distanceToLine(point, channel[1][0], channel[1][1]) <= tolerance
       );
     }
     case "rectangle": {
@@ -1926,6 +1982,34 @@ export function hitTestAnchor(
     return -1;
   }
   const points = anchorPoints(target.anchors, pane, timeScale);
+
+  if (target.toolId === "rectangle" && points[0] && points[1]) {
+    const first = points[0];
+    const second = points[1];
+    const left = Math.min(first.x, second.x);
+    const right = Math.max(first.x, second.x);
+    const top = Math.min(first.y, second.y);
+    const bottom = Math.max(first.y, second.y);
+    const centerX = (left + right) / 2;
+    const centerY = (top + bottom) / 2;
+    const handles = [
+      { x: left, y: top },
+      { x: centerX, y: top },
+      { x: right, y: top },
+      { x: right, y: centerY },
+      { x: right, y: bottom },
+      { x: centerX, y: bottom },
+      { x: left, y: bottom },
+      { x: left, y: centerY },
+    ];
+    for (let index = 0; index < handles.length; index += 1) {
+      const candidate = handles[index]!;
+      if (Math.hypot(candidate.x - point.x, candidate.y - point.y) <= radius) {
+        return index;
+      }
+    }
+    return -1;
+  }
 
   for (let index = 0; index < points.length; index += 1) {
     const candidate = points[index];
@@ -2211,21 +2295,6 @@ export function speedLineLines(points: readonly Point[]): Array<[Point, Point]> 
   ];
 }
 
-function pointInChannel(
-  point: Point,
-  lines: [[Point, Point], [Point, Point]],
-  tolerance: number,
-): boolean {
-  const polygon = [lines[0][0], lines[0][1], lines[1][1], lines[1][0]];
-  if (pointInPolygon(point, polygon)) {
-    return true;
-  }
-  return polygon.some((candidate, index) => {
-    const next = polygon[(index + 1) % polygon.length]!;
-    return distanceToSegment(point, candidate, next) <= tolerance;
-  });
-}
-
 function pointInEllipse(point: Point, first: Point, second: Point, tolerance: number): boolean {
   const cx = (first.x + second.x) / 2;
   const cy = (first.y + second.y) / 2;
@@ -2235,19 +2304,4 @@ function pointInEllipse(point: Point, first: Point, second: Point, tolerance: nu
     return Math.hypot(point.x - cx, point.y - cy) <= tolerance;
   }
   return ((point.x - cx) / rx) ** 2 + ((point.y - cy) / ry) ** 2 <= 1;
-}
-
-function pointInPolygon(point: Point, polygon: readonly Point[]): boolean {
-  let inside = false;
-  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
-    const current = polygon[index]!;
-    const prior = polygon[previous]!;
-    const intersects =
-      current.y > point.y !== prior.y > point.y &&
-      point.x < ((prior.x - current.x) * (point.y - current.y)) / (prior.y - current.y) + current.x;
-    if (intersects) {
-      inside = !inside;
-    }
-  }
-  return inside;
 }
