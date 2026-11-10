@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.29.0
+
+### Minor Changes
+
+- c547206: Polish channel hit testing, line/arrow/text labels, rectangle handles and styles, transient measure, path handles, and rounded selection knobs.
+
 ## 0.28.0
 
 ### Minor Changes
