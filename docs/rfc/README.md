@@ -32,6 +32,7 @@ changing its decisions requires a new RFC or an ADR.
 | 0030 | Weak, strong, and modifier magnet      | Accepted |
 | 0031 | Shift angle snapping while drawing     | Accepted |
 | 0032 | Drawing interaction polish             | Accepted |
+| 0033 | Dense candle rendering                 | Accepted |
 
 Rules:
 

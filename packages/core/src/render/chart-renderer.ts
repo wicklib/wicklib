@@ -600,6 +600,12 @@ export class ChartRenderer {
     const from = Math.max(0, first);
     const to = Math.min(count - 1, last);
     const columns = Math.ceil(plot.width);
+    const spacing = this.timeScale.getBarSpacing();
+    const envelopeAlpha = Math.min(0.34, Math.max(0.18, 0.18 + spacing * 0.1));
+    const closeAlpha = series.borderVisible ? 0.95 : 0.86;
+
+    context.save();
+    context.lineWidth = 1;
 
     for (let column = 0; column < columns; column += 1) {
       if (this.timeScale.isGapX(column)) {
@@ -615,7 +621,6 @@ export class ChartRenderer {
       const close = series.store.closeAt(end);
       let high = series.store.highAt(start);
       let low = series.store.lowAt(start);
-
       for (let index = start + 1; index <= end; index += 1) {
         const nextHigh = series.store.highAt(index);
         const nextLow = series.store.lowAt(index);
@@ -629,12 +634,44 @@ export class ChartRenderer {
 
       const yHigh = pane.priceScale.priceToY(high, plot.top, plot.height);
       const yLow = pane.priceScale.priceToY(low, plot.top, plot.height);
-      const top = Math.min(yHigh, yLow);
-      const height = Math.max(1, Math.abs(yLow - yHigh));
-
-      context.fillStyle = close >= open ? series.upColor : series.downColor;
-      context.fillRect(plot.left + column, top, 1, height);
+      const x = plot.left + column + 0.5;
+      context.globalAlpha = envelopeAlpha;
+      context.strokeStyle = close >= open ? series.upColor : series.downColor;
+      context.beginPath();
+      context.moveTo(x, Math.min(yHigh, yLow));
+      context.lineTo(x, Math.max(yHigh, yLow));
+      context.stroke();
     }
+
+    let previous: { x: number; y: number } | null = null;
+    for (let column = 0; column < columns; column += 1) {
+      if (this.timeScale.isGapX(column)) {
+        previous = null;
+        continue;
+      }
+      const start = Math.max(from, Math.floor(this.timeScale.xToIndex(column)));
+      const end = Math.min(to, Math.floor(this.timeScale.xToIndex(column + 1)));
+      if (start > end || this.timeScale.hasGapBetween(start, end)) {
+        previous = null;
+        continue;
+      }
+
+      const open = series.store.openAt(start);
+      const close = series.store.closeAt(end);
+      const x = plot.left + column + 0.5;
+      const y = pane.priceScale.priceToY(close, plot.top, plot.height);
+      if (previous) {
+        context.globalAlpha = closeAlpha;
+        context.strokeStyle = close >= open ? series.upColor : series.downColor;
+        context.beginPath();
+        context.moveTo(previous.x, previous.y);
+        context.lineTo(x, y);
+        context.stroke();
+      }
+      previous = { x, y };
+    }
+
+    context.restore();
   }
 
   private drawLineSeries(
