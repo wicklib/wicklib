@@ -529,16 +529,12 @@ export class ChartRenderer {
   ): void {
     const { plot } = pane;
     const spacing = this.timeScale.getBarSpacing();
-
-    if (spacing < 1.5) {
-      this.drawAggregatedCandles(context, model, pane, series, first, last);
-      return;
-    }
-
-    const bodyWidth = Math.max(1, spacing * 0.7);
+    const dense = spacing < 1.5;
+    const bodyWidth = Math.max(dense ? 0.35 : 1, spacing * 0.7);
+    const wickWidth = dense ? Math.max(0.5, spacing * 0.65) : 1;
     const yOf = (price: number): number => pane.priceScale.priceToY(price, plot.top, plot.height);
 
-    context.lineWidth = 1;
+    context.lineWidth = wickWidth;
 
     for (const direction of ["up", "down"] as const) {
       context.strokeStyle = direction === "up" ? series.wickUpColor : series.wickDownColor;
@@ -551,7 +547,8 @@ export class ChartRenderer {
         if ((direction === "up") !== isUp) {
           continue;
         }
-        const x = crisp(this.timeScale.indexToX(index));
+        const rawX = this.timeScale.indexToX(index);
+        const x = dense ? rawX : crisp(rawX);
         context.moveTo(x, yOf(series.store.highAt(index)));
         context.lineTo(x, yOf(series.store.lowAt(index)));
       }
@@ -577,101 +574,14 @@ export class ChartRenderer {
         const yOpen = yOf(open);
         const yClose = yOf(close);
         const top = Math.min(yOpen, yClose);
-        const height = Math.max(1, Math.abs(yClose - yOpen));
+        const height = Math.max(dense ? 0.5 : 1, Math.abs(yClose - yOpen));
 
         context.fillRect(x - bodyWidth / 2, top, bodyWidth, height);
-        if (series.borderVisible) {
+        if (series.borderVisible && bodyWidth >= 1) {
           context.strokeRect(x - bodyWidth / 2, top, bodyWidth, height);
         }
       }
     }
-  }
-
-  private drawAggregatedCandles(
-    context: CanvasRenderingContext2D,
-    model: ChartRenderModel,
-    pane: PaneRenderModel,
-    series: CandlestickSeriesRenderData,
-    first: number,
-    last: number,
-  ): void {
-    const { plot } = pane;
-    const count = series.store.length;
-    const from = Math.max(0, first);
-    const to = Math.min(count - 1, last);
-    const columns = Math.ceil(plot.width);
-    const spacing = this.timeScale.getBarSpacing();
-    const envelopeAlpha = Math.min(0.34, Math.max(0.18, 0.18 + spacing * 0.1));
-    const closeAlpha = series.borderVisible ? 0.95 : 0.86;
-
-    context.save();
-    context.lineWidth = 1;
-
-    for (let column = 0; column < columns; column += 1) {
-      if (this.timeScale.isGapX(column)) {
-        continue;
-      }
-      const start = Math.max(from, Math.floor(this.timeScale.xToIndex(column)));
-      const end = Math.min(to, Math.floor(this.timeScale.xToIndex(column + 1)));
-      if (start > end || this.timeScale.hasGapBetween(start, end)) {
-        continue;
-      }
-
-      const open = series.store.openAt(start);
-      const close = series.store.closeAt(end);
-      let high = series.store.highAt(start);
-      let low = series.store.lowAt(start);
-      for (let index = start + 1; index <= end; index += 1) {
-        const nextHigh = series.store.highAt(index);
-        const nextLow = series.store.lowAt(index);
-        if (nextHigh > high) {
-          high = nextHigh;
-        }
-        if (nextLow < low) {
-          low = nextLow;
-        }
-      }
-
-      const yHigh = pane.priceScale.priceToY(high, plot.top, plot.height);
-      const yLow = pane.priceScale.priceToY(low, plot.top, plot.height);
-      const x = plot.left + column + 0.5;
-      context.globalAlpha = envelopeAlpha;
-      context.strokeStyle = close >= open ? series.upColor : series.downColor;
-      context.beginPath();
-      context.moveTo(x, Math.min(yHigh, yLow));
-      context.lineTo(x, Math.max(yHigh, yLow));
-      context.stroke();
-    }
-
-    let previous: { x: number; y: number } | null = null;
-    for (let column = 0; column < columns; column += 1) {
-      if (this.timeScale.isGapX(column)) {
-        previous = null;
-        continue;
-      }
-      const start = Math.max(from, Math.floor(this.timeScale.xToIndex(column)));
-      const end = Math.min(to, Math.floor(this.timeScale.xToIndex(column + 1)));
-      if (start > end || this.timeScale.hasGapBetween(start, end)) {
-        previous = null;
-        continue;
-      }
-
-      const open = series.store.openAt(start);
-      const close = series.store.closeAt(end);
-      const x = plot.left + column + 0.5;
-      const y = pane.priceScale.priceToY(close, plot.top, plot.height);
-      if (previous) {
-        context.globalAlpha = closeAlpha;
-        context.strokeStyle = close >= open ? series.upColor : series.downColor;
-        context.beginPath();
-        context.moveTo(previous.x, previous.y);
-        context.lineTo(x, y);
-        context.stroke();
-      }
-      previous = { x, y };
-    }
-
-    context.restore();
   }
 
   private drawLineSeries(

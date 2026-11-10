@@ -12,20 +12,23 @@ panes many columns became contiguous solid slabs, losing candle direction and vi
 
 ## 2. Approach
 
-The high-density path now renders a stable dense representation instead of filled columns:
+Dense candles now use sub-pixel candle geometry instead of aggregated columns or a line-style
+representation:
 
-- One low-opacity high/low envelope column per screen pixel, coloured by aggregated direction.
-- A higher-opacity close-price line connecting adjacent columns.
-- Gaps break the close line instead of bridging.
-- Fractional bar spacing and high-DPI scaling continue to use CSS-pixel coordinates.
-- Normal candle bodies, wicks, borders, and custom colours remain unchanged above the threshold.
+- Every candle keeps its own wick and body.
+- Body width scales below one CSS pixel instead of being forced to a 1px slab.
+- Wicks use a fractional line width in dense mode to avoid solid pixel columns.
+- Body minimum height is reduced in dense mode while preserving direction and high/low.
+- Borders are skipped when the body is narrower than one pixel.
+- Fractional spacing and high-DPI rendering use CSS-pixel coordinates.
+- Normal candle geometry, colours, and borders remain unchanged at wider spacing.
 - Line/area/histogram series are unaffected.
 
 No public option, `maxVisibleBars`, or `minBarSpacing` semantics changed.
 
 ## 3. Acceptance criteria
 
-- A 300px pane with 720 bars uses the dense representation without solid candle fills.
+- A 300px pane with 720 bars renders sub-pixel candle bodies and wicks, not aggregated slabs.
 - A 1200px pane with the same data still renders normal candle bodies.
-- Narrow panes remain readable through the envelope and close line.
+- Narrow panes keep candle shape, direction, wicks, and high/low.
 - No host-side zoom or spacing workaround is required.

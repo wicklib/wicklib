@@ -99,12 +99,13 @@ async function renderAtWidth(width: number): Promise<ChartApi> {
 }
 
 describe("dense candle rendering", () => {
-  it("uses the dense representation in narrow panes", async () => {
+  it("uses sub-pixel candle bodies in narrow panes", async () => {
     await renderAtWidth(300);
     const candleFills = fillRects.filter(
       (rect) => (rect.fillStyle === "#00ff00" || rect.fillStyle === "#ff0000") && rect.width < 5,
     );
-    expect(candleFills).toHaveLength(0);
+    expect(candleFills.length).toBeGreaterThan(0);
+    expect(candleFills.every((rect) => rect.width < 1.5)).toBe(true);
   });
 
   it("keeps normal candle bodies in wide panes", async () => {
@@ -113,5 +114,6 @@ describe("dense candle rendering", () => {
       (rect) => (rect.fillStyle === "#00ff00" || rect.fillStyle === "#ff0000") && rect.width < 30,
     );
     expect(candleFills.length).toBeGreaterThan(0);
+    expect(candleFills.some((rect) => rect.width > 1)).toBe(true);
   });
 });
