@@ -1,5 +1,12 @@
 # @wicklib/layouts
 
+## 0.31.0
+
+### Patch Changes
+
+- Updated dependencies [b0682c9]
+  - @wicklib/core@0.31.0
+
 ## 0.30.0
 
 ### Patch Changes

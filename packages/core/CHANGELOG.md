@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.31.0
+
+### Minor Changes
+
+- b0682c9: Unify drawing defaults and fix line text alignment, channel handles, stats box clamping, channel styles, circle/text/path settings, and legacy position visibility.
+
 ## 0.30.0
 
 ### Minor Changes
