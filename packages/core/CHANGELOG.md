@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.30.0
+
+### Minor Changes
+
+- 4db37d6: Add draggable price lines with constraints, magnet/tick snapping, keyboard control, and drag callbacks.
+
 ## 0.29.2
 
 ### Patch Changes

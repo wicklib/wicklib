@@ -1,6 +1,6 @@
 {
   "name": "@wicklib/script-editor",
-  "version": "0.29.2",
+  "version": "0.30.0",
   "description": "Monaco-based WickScript editor",
   "license": "Apache-2.0",
   "type": "module",
@@ -37,8 +37,8 @@
     "directory": "packages/script-editor"
   },
   "peerDependencies": {
-    "@wicklib/core": "^0.29.2",
-    "@wicklib/script": "^0.29.2",
+    "@wicklib/core": "^0.30.0",
+    "@wicklib/script": "^0.30.0",
     "monaco-editor": "^0.57.0"
   },
   "devDependencies": {
