@@ -1248,6 +1248,42 @@ class Chart implements ChartApi, SeriesHost {
       }
       const next = anchors.map((anchor) => ({ ...anchor }));
 
+      if (this.draggingAnchorIndex >= 0 && drawing.toolId === "parallel-channel") {
+        const first = this.anchorScreenPoint(pane, anchors[0]!);
+        const second = this.anchorScreenPoint(pane, anchors[1]!);
+        const third = this.anchorScreenPoint(pane, anchors[2]!);
+        if (!first || !second || !third) {
+          continue;
+        }
+        const handle = this.draggingAnchorIndex;
+        if (handle === 1) {
+          const start = this.drawingDragStart ?? point;
+          const startPrice = pane.priceScale.yToPrice(start.y, pane.plot.top, pane.plot.height);
+          const currentPrice = pane.priceScale.yToPrice(point.y, pane.plot.top, pane.plot.height);
+          const delta = currentPrice - startPrice;
+          next[0] = { ...anchors[0]!, price: anchors[0]!.price + delta };
+          next[1] = { ...anchors[1]!, price: anchors[1]!.price + delta };
+        } else if (handle === 0 || handle === 2) {
+          const baseIndex = first.x <= second.x ? (handle === 0 ? 0 : 1) : handle === 0 ? 1 : 0;
+          const anchor = this.screenPointToAnchor(pane, point);
+          if (anchor) {
+            next[baseIndex] = anchor;
+          }
+        } else {
+          const dx = second.x - first.x;
+          const slope = Math.abs(dx) < 0.0001 ? 0 : (second.y - first.y) / dx;
+          const baseAt = (x: number): number => first.y + slope * (x - first.x);
+          const offset = point.y - baseAt(point.x);
+          const newBottomY = baseAt(third.x) + offset;
+          next[2] = {
+            time: anchors[2]!.time,
+            price: pane.priceScale.yToPrice(newBottomY, pane.plot.top, pane.plot.height),
+          };
+        }
+        drawing.setAnchors(next);
+        this.drawingDragMoved = true;
+        continue;
+      }
       if (this.draggingAnchorIndex >= 0 && drawing.toolId === "rectangle") {
         const first = this.anchorScreenPoint(pane, anchors[0]!);
         const second = this.anchorScreenPoint(pane, anchors[1]!);

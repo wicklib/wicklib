@@ -124,32 +124,35 @@ const FREEHAND_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "locked",
   "visible",
 ]);
+const PATH_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "color",
+  "lineWidth",
+  "lineStyle",
+  "lineOpacity",
+  "locked",
+  "visible",
+]);
+const CIRCLE_SETTINGS: readonly DrawingSetting[] = Object.freeze([
+  "color",
+  "lineWidth",
+  "lineStyle",
+  "fillColor",
+  "fillOpacity",
+  "fillVisible",
+  "showLine",
+  "text",
+  "textColor",
+  "textStyle",
+  "textAlign",
+  "textVerticalAlign",
+  "fontSize",
+  "locked",
+  "visible",
+]);
 const LABEL_SETTINGS: readonly DrawingSetting[] = Object.freeze([
   "color",
   "lineWidth",
   "lineStyle",
-  "showLabels",
-  "labelPlacement",
-  "labelFontSize",
-  "labelBackgroundVisible",
-  "locked",
-  "visible",
-]);
-const FILL_SETTINGS: readonly DrawingSetting[] = Object.freeze([
-  "color",
-  "lineWidth",
-  "lineStyle",
-  "fillColor",
-  "fillOpacity",
-  "locked",
-  "visible",
-]);
-const LABEL_FILL_SETTINGS: readonly DrawingSetting[] = Object.freeze([
-  "color",
-  "lineWidth",
-  "lineStyle",
-  "fillColor",
-  "fillOpacity",
   "showLabels",
   "labelPlacement",
   "labelFontSize",
@@ -331,16 +334,16 @@ const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Objec
   ray: STROKE_SETTINGS,
   "extended-line": STROKE_SETTINGS,
   "trend-angle": LABEL_SETTINGS,
-  arrow: STROKE_SETTINGS,
+  arrow: TREND_SETTINGS,
   "horizontal-line": AXIS_LINE_SETTINGS,
   "horizontal-ray": STROKE_SETTINGS,
   "vertical-line": AXIS_LINE_SETTINGS,
   "cross-line": AXIS_LINE_SETTINGS,
   "parallel-channel": CHANNEL_SETTINGS,
   "regression-trend": CHANNEL_SETTINGS,
-  "flat-top-bottom": FILL_SETTINGS,
-  "disjoint-channel": FILL_SETTINGS,
-  "fib-channel": LABEL_FILL_SETTINGS,
+  "flat-top-bottom": CHANNEL_SETTINGS,
+  "disjoint-channel": CHANNEL_SETTINGS,
+  "fib-channel": FIB_SETTINGS,
   "fib-time-zone": LABEL_SETTINGS,
   pitchfork: STROKE_SETTINGS,
   "schiff-pitchfork": STROKE_SETTINGS,
@@ -356,7 +359,7 @@ const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Objec
   "price-range": RANGE_SETTINGS,
   "time-range": RANGE_SETTINGS,
   "price-date-range": RANGE_SETTINGS,
-  circle: FILL_SETTINGS,
+  circle: CIRCLE_SETTINGS,
   "elliott-impulse": ELLIOTT_SETTINGS,
   "elliott-correction": ELLIOTT_SETTINGS,
   "elliott-triangle": ELLIOTT_SETTINGS,
@@ -364,7 +367,7 @@ const TOOL_SETTINGS: Readonly<Record<string, readonly DrawingSetting[]>> = Objec
   "elliott-triple-combo": ELLIOTT_SETTINGS,
   brush: FREEHAND_SETTINGS,
   highlighter: FREEHAND_SETTINGS,
-  path: FREEHAND_SETTINGS,
+  path: PATH_SETTINGS,
   text: TEXT_SETTINGS,
   measure: [],
   "stats-line": LABEL_SETTINGS,
@@ -388,7 +391,7 @@ const DEFAULT_POSITION_STATS_FIELDS: readonly DrawingStatsField[] = Object.freez
 ]);
 
 const DEFAULTS: DrawingOptions = {
-  color: "#2962ff",
+  color: "#787b86",
   lineWidth: 1,
   lineStyle: "solid",
   lineOpacity: 1,
@@ -513,7 +516,7 @@ export const HorizontalRay: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 1,
-  defaultOptions: { color: "#f0b90b" },
+  defaultOptions: { color: "#787b86" },
 });
 
 export const VerticalLine: DrawingToolDefinition = Object.freeze({
@@ -556,7 +559,11 @@ export const ParallelChannel: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 3,
-  defaultOptions: { fillOpacity: 0.1 },
+  defaultOptions: {
+    color: "#787b86",
+    middleLineStyle: "dashed" as const,
+    fillOpacity: 0.1,
+  },
 });
 
 export const RegressionTrend: DrawingToolDefinition = Object.freeze({
@@ -580,7 +587,7 @@ export const FlatTopBottom: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 3,
-  defaultOptions: { fillOpacity: 0.1 },
+  defaultOptions: { fillOpacity: 0.1, channelBackgroundVisible: true },
 });
 
 export const DisjointChannel: DrawingToolDefinition = Object.freeze({
@@ -592,7 +599,7 @@ export const DisjointChannel: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 4,
-  defaultOptions: { fillOpacity: 0.1 },
+  defaultOptions: { fillOpacity: 0.1, channelBackgroundVisible: true },
 });
 
 export const FibChannel: DrawingToolDefinition = Object.freeze({
@@ -604,7 +611,7 @@ export const FibChannel: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 3,
-  defaultOptions: { fillOpacity: 0.08, showLabels: true },
+  defaultOptions: { fillOpacity: 0.08, showLabels: true, fibBackgroundVisible: true },
 });
 
 export const FibTimeZone: DrawingToolDefinition = Object.freeze({
@@ -838,7 +845,7 @@ export const ElliottImpulse: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 6,
-  defaultOptions: { color: "#2962ff" },
+  defaultOptions: { color: "#787b86" },
 });
 
 export const ElliottCorrection: DrawingToolDefinition = Object.freeze({
@@ -850,7 +857,7 @@ export const ElliottCorrection: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 4,
-  defaultOptions: { color: "#2962ff" },
+  defaultOptions: { color: "#787b86" },
 });
 
 export const ElliottTriangle: DrawingToolDefinition = Object.freeze({
@@ -862,7 +869,7 @@ export const ElliottTriangle: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 6,
-  defaultOptions: { color: "#2962ff" },
+  defaultOptions: { color: "#787b86" },
 });
 
 export const ElliottDoubleCombo: DrawingToolDefinition = Object.freeze({
@@ -874,7 +881,7 @@ export const ElliottDoubleCombo: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 4,
-  defaultOptions: { color: "#2962ff" },
+  defaultOptions: { color: "#787b86" },
 });
 
 export const ElliottTripleCombo: DrawingToolDefinition = Object.freeze({
@@ -886,7 +893,7 @@ export const ElliottTripleCombo: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 6,
-  defaultOptions: { color: "#2962ff" },
+  defaultOptions: { color: "#787b86" },
 });
 
 export const Rectangle: DrawingToolDefinition = Object.freeze({
@@ -898,7 +905,7 @@ export const Rectangle: DrawingToolDefinition = Object.freeze({
     license: "free" as const,
   },
   anchors: 2,
-  defaultOptions: { fillOpacity: 0.12 },
+  defaultOptions: { fillOpacity: 0.12, middleLineVisible: false },
 });
 
 export const FibRetracement: DrawingToolDefinition = Object.freeze({
@@ -923,7 +930,7 @@ export const Brush: DrawingToolDefinition = Object.freeze({
   },
   anchors: 2,
   capture: "freehand",
-  defaultOptions: { color: "#2962ff", lineWidth: 2 },
+  defaultOptions: { color: "#787b86", lineWidth: 2 },
 });
 
 export const Highlighter: DrawingToolDefinition = Object.freeze({
@@ -949,7 +956,7 @@ export const Path: DrawingToolDefinition = Object.freeze({
   },
   anchors: 2,
   capture: "path",
-  defaultOptions: { color: "#2962ff", lineWidth: 2 },
+  defaultOptions: { color: "#787b86", lineWidth: 2 },
 });
 
 export const Text: DrawingToolDefinition = Object.freeze({
@@ -1110,13 +1117,15 @@ export interface DrawingToolCatalogEntry {
  * Built-in drawing tools in menu order. Hosts own labels, icons, localization, and layout.
  */
 export const DRAWING_TOOL_CATALOG: readonly DrawingToolCatalogEntry[] = Object.freeze(
-  [...DRAWING_TOOLS.values()].map((definition) =>
-    Object.freeze({
-      definition,
-      category: TOOL_CATEGORIES[definition.id] ?? "lines",
-      settings: drawingToolSettings(definition.id),
-    }),
-  ),
+  [...DRAWING_TOOLS.values()]
+    .filter((definition) => definition.id !== "long-short-position")
+    .map((definition) =>
+      Object.freeze({
+        definition,
+        category: TOOL_CATEGORIES[definition.id] ?? "lines",
+        settings: drawingToolSettings(definition.id),
+      }),
+    ),
 );
 
 export function drawingToolSettings(toolId: string): readonly DrawingSetting[] {
@@ -1983,6 +1992,21 @@ export function hitTestAnchor(
   }
   const points = anchorPoints(target.anchors, pane, timeScale);
 
+  if (target.toolId === "parallel-channel") {
+    const channelPoints = points.filter((candidate): candidate is Point => candidate !== null);
+    if (channelPoints.length < 3) {
+      return -1;
+    }
+    const handles = parallelChannelHandles(channelPoints, target.options, pane.plot);
+    for (let index = 0; index < handles.length; index += 1) {
+      const candidate = handles[index]!;
+      if (Math.hypot(candidate.x - point.x, candidate.y - point.y) <= radius) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
   if (target.toolId === "rectangle" && points[0] && points[1]) {
     const first = points[0];
     const second = points[1];
@@ -2129,6 +2153,47 @@ function pointInRect(point: Point, first: Point, second: Point, tolerance: numbe
   const top = Math.min(first.y, second.y) - tolerance;
   const bottom = Math.max(first.y, second.y) + tolerance;
   return point.x >= left && point.x <= right && point.y >= top && point.y <= bottom;
+}
+
+export function parallelChannelHandles(
+  points: readonly Point[],
+  options: { extendLeft: boolean; extendRight: boolean },
+  plot: { left: number; right: number },
+): Point[] {
+  if (points.length < 3) {
+    return [];
+  }
+  const channel = parallelLines(points);
+  let left = Math.min(channel[0][0].x, channel[0][1].x);
+  let right = Math.max(channel[0][0].x, channel[0][1].x);
+  if (options.extendLeft) {
+    left = plot.left;
+  }
+  if (options.extendRight) {
+    right = plot.right;
+  }
+  const extend = (line: [Point, Point]): [Point, Point] => {
+    const [first, second] = line;
+    const dx = second.x - first.x;
+    if (Math.abs(dx) < 0.0001) {
+      return [first, second];
+    }
+    const slope = (second.y - first.y) / dx;
+    return [
+      { x: left, y: first.y + slope * (left - first.x) },
+      { x: right, y: first.y + slope * (right - first.x) },
+    ];
+  };
+  const top = extend(channel[0]);
+  const bottom = extend(channel[1]);
+  return [
+    top[0]!,
+    { x: (top[0]!.x + top[1]!.x) / 2, y: (top[0]!.y + top[1]!.y) / 2 },
+    top[1]!,
+    bottom[0]!,
+    { x: (bottom[0]!.x + bottom[1]!.x) / 2, y: (bottom[0]!.y + bottom[1]!.y) / 2 },
+    bottom[1]!,
+  ];
 }
 
 export function parallelLines(points: readonly Point[]): [[Point, Point], [Point, Point]] {

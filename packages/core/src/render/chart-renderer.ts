@@ -11,6 +11,7 @@ import {
   fibTimeZoneValues,
   flatChannelLines,
   gannFanLines,
+  parallelChannelHandles,
   parallelLines,
   pitchforkLines,
   pointOnLine,
@@ -1230,11 +1231,13 @@ export class ChartRenderer {
         const handlePoints =
           drawing.toolId === "rectangle"
             ? rectangleHandlePoints(points[0]!, points[1]!)
-            : drawing.toolId === "brush" || drawing.toolId === "highlighter"
-              ? points.length > 1
-                ? [points[0]!, points[points.length - 1]!]
-                : points
-              : points;
+            : drawing.toolId === "parallel-channel"
+              ? parallelChannelHandles(points, drawing.options, pane.plot)
+              : drawing.toolId === "brush" || drawing.toolId === "highlighter"
+                ? points.length > 1
+                  ? [points[0]!, points[points.length - 1]!]
+                  : points
+                : points;
         for (const point of handlePoints) {
           drawRoundedKnob(
             context,
@@ -1290,9 +1293,11 @@ export class ChartRenderer {
           context,
           model,
           drawing.options.text,
-          plot.left + plot.width / 2,
+          points[0]!.x,
           points[0]!.y,
           drawing.options,
+          "horizontal",
+          plot,
         );
         return;
       }
@@ -1320,8 +1325,10 @@ export class ChartRenderer {
           model,
           drawing.options.text,
           points[0]!.x,
-          plot.top + plot.height / 2,
+          points[0]!.y,
           drawing.options,
+          "vertical",
+          plot,
         );
         return;
       }
@@ -1343,6 +1350,8 @@ export class ChartRenderer {
           points[0]!.x,
           points[0]!.y,
           drawing.options,
+          "cross",
+          plot,
         );
         return;
       }
@@ -1556,6 +1565,8 @@ export class ChartRenderer {
           (left + right) / 2,
           (top + bottom) / 2,
           drawing.options,
+          "cross",
+          { left, top, right, bottom, width: right - left, height: bottom - top },
         );
         return;
       }
@@ -1569,10 +1580,24 @@ export class ChartRenderer {
         const ry = Math.abs(points[1]!.y - points[0]!.y) / 2;
         context.beginPath();
         context.ellipse(cx, cy, Math.max(0.5, rx), Math.max(0.5, ry), 0, 0, Math.PI * 2);
-        context.globalAlpha = drawing.preview ? 0.3 : drawing.options.fillOpacity;
-        context.fill();
-        context.globalAlpha = drawing.preview ? 0.65 : 1;
-        context.stroke();
+        if (drawing.options.fillVisible) {
+          context.globalAlpha = drawing.preview ? 0.3 : drawing.options.fillOpacity;
+          context.fill();
+          context.globalAlpha = drawing.preview ? 0.65 : 1;
+        }
+        if (drawing.options.showLine) {
+          context.stroke();
+        }
+        this.drawAxisLineText(
+          context,
+          model,
+          drawing.options.text,
+          cx,
+          cy,
+          drawing.options,
+          "cross",
+          plot,
+        );
         return;
       }
       case "parallel-channel": {
@@ -1685,7 +1710,34 @@ export class ChartRenderer {
         if (points.length < 3) {
           return;
         }
-        drawChannelPolygon(context, drawing, flatChannelLines(points));
+        const channel = flatChannelLines(points);
+        if (drawing.options.channelBackgroundVisible) {
+          context.globalAlpha = drawing.preview ? 0.15 : drawing.options.fillOpacity;
+          context.beginPath();
+          context.moveTo(channel[0][0].x, channel[0][0].y);
+          context.lineTo(channel[0][1].x, channel[0][1].y);
+          context.lineTo(channel[1][1].x, channel[1][1].y);
+          context.lineTo(channel[1][0].x, channel[1][0].y);
+          context.closePath();
+          context.fill();
+          context.globalAlpha = drawing.preview ? 0.65 : 1;
+        }
+        drawStyledLine(
+          context,
+          channel[0][0],
+          channel[0][1],
+          drawing.options.topLineColor,
+          drawing.options.topLineWidth,
+          drawing.options.topLineStyle,
+        );
+        drawStyledLine(
+          context,
+          channel[1][0],
+          channel[1][1],
+          drawing.options.bottomLineColor,
+          drawing.options.bottomLineWidth,
+          drawing.options.bottomLineStyle,
+        );
         return;
       }
       case "disjoint-channel": {
@@ -1693,7 +1745,7 @@ export class ChartRenderer {
           return;
         }
         const geometry = disjointChannelGeometry(points);
-        if (geometry.right > geometry.left) {
+        if (drawing.options.channelBackgroundVisible && geometry.right > geometry.left) {
           const polygon = [
             pointOnLine(geometry.first, geometry.left),
             pointOnLine(geometry.first, geometry.right),
@@ -1710,12 +1762,22 @@ export class ChartRenderer {
           context.fill();
           context.globalAlpha = drawing.preview ? 0.65 : 1;
         }
-        context.beginPath();
-        context.moveTo(geometry.first[0].x, geometry.first[0].y);
-        context.lineTo(geometry.first[1].x, geometry.first[1].y);
-        context.moveTo(geometry.second[0].x, geometry.second[0].y);
-        context.lineTo(geometry.second[1].x, geometry.second[1].y);
-        context.stroke();
+        drawStyledLine(
+          context,
+          geometry.first[0],
+          geometry.first[1],
+          drawing.options.topLineColor,
+          drawing.options.topLineWidth,
+          drawing.options.topLineStyle,
+        );
+        drawStyledLine(
+          context,
+          geometry.second[0],
+          geometry.second[1],
+          drawing.options.bottomLineColor,
+          drawing.options.bottomLineWidth,
+          drawing.options.bottomLineStyle,
+        );
         return;
       }
       case "fib-channel": {
@@ -1723,23 +1785,49 @@ export class ChartRenderer {
           return;
         }
         const channel = parallelLines(points);
-        drawChannelPolygon(context, drawing, channel);
-        for (const level of FIB_LEVELS) {
+        if (drawing.options.fibBackgroundVisible) {
+          context.globalAlpha = drawing.preview ? 0.15 : drawing.options.fillOpacity;
+          context.beginPath();
+          context.moveTo(channel[0][0].x, channel[0][0].y);
+          context.lineTo(channel[0][1].x, channel[0][1].y);
+          context.lineTo(channel[1][1].x, channel[1][1].y);
+          context.lineTo(channel[1][0].x, channel[1][0].y);
+          context.closePath();
+          context.fill();
+          context.globalAlpha = drawing.preview ? 0.65 : 1;
+        }
+        const levels: readonly DrawingFibLevel[] =
+          drawing.options.fibLevels ?? FIB_LEVELS.map((ratio): DrawingFibLevel => ({ ratio }));
+        for (const level of levels) {
+          if (level.visible === false) {
+            continue;
+          }
           const start = {
             x: channel[0][0].x,
-            y: channel[0][0].y + (channel[1][0].y - channel[0][0].y) * level,
+            y: channel[0][0].y + (channel[1][0].y - channel[0][0].y) * level.ratio,
           };
           const end = {
             x: channel[0][1].x,
-            y: channel[0][1].y + (channel[1][1].y - channel[0][1].y) * level,
+            y: channel[0][1].y + (channel[1][1].y - channel[0][1].y) * level.ratio,
           };
-          context.beginPath();
-          context.moveTo(start.x, start.y);
-          context.lineTo(end.x, end.y);
-          context.stroke();
-
-          if (drawing.options.showLabels) {
-            this.drawLabel(context, model, level.toFixed(3), start.x + 8, start.y, drawing.options);
+          drawStyledLine(
+            context,
+            start,
+            end,
+            level.color ?? drawing.options.color,
+            level.lineWidth ?? drawing.options.lineWidth,
+            level.lineStyle ?? drawing.options.lineStyle,
+          );
+          if (level.labelVisible !== false && drawing.options.showLabels) {
+            this.drawLabel(
+              context,
+              model,
+              level.ratio.toFixed(3),
+              start.x + 8,
+              start.y,
+              drawing.options,
+              level.labelColor ?? level.color ?? undefined,
+            );
           }
         }
         return;
@@ -2143,7 +2231,12 @@ export class ChartRenderer {
         if (drawing.options.borderColor !== undefined && drawing.options.borderWidth > 0) {
           context.strokeStyle = drawing.options.borderColor;
           context.lineWidth = drawing.options.borderWidth;
-          context.strokeRect(x, y, width, height);
+          if (drawing.options.borderRadius > 0) {
+            roundedRectPath(context, x, y, width, height, drawing.options.borderRadius);
+            context.stroke();
+          } else {
+            context.strokeRect(x, y, width, height);
+          }
         }
         context.fillStyle = drawing.options.textColor;
         context.textAlign = "left";
@@ -2200,9 +2293,18 @@ export class ChartRenderer {
     context: CanvasRenderingContext2D,
     model: ChartRenderModel,
     text: string,
-    x: number,
-    y: number,
+    anchorX: number,
+    anchorY: number,
     options: ResolvedDrawingOptions,
+    orientation: "horizontal" | "vertical" | "cross",
+    plot: {
+      left: number;
+      top: number;
+      right: number;
+      bottom: number;
+      width: number;
+      height: number;
+    },
   ): void {
     if (!text) {
       return;
@@ -2213,11 +2315,76 @@ export class ChartRenderer {
     ]
       .filter(Boolean)
       .join(" ");
+    let x = anchorX;
+    let y = anchorY;
+    let align: CanvasTextAlign = options.textAlign;
+    let baseline: CanvasTextBaseline = "middle";
+    const offset = 8;
+
+    if (orientation === "horizontal") {
+      if (options.textAlign === "left") {
+        x = plot.left + offset;
+        align = "left";
+      } else if (options.textAlign === "right") {
+        x = plot.right - offset;
+        align = "right";
+      } else {
+        x = plot.left + plot.width / 2;
+        align = "center";
+      }
+      if (options.textVerticalAlign === "top") {
+        y = anchorY - offset;
+        baseline = "bottom";
+      } else if (options.textVerticalAlign === "bottom") {
+        y = anchorY + offset;
+        baseline = "top";
+      } else {
+        y = anchorY;
+        baseline = "middle";
+      }
+    } else if (orientation === "vertical") {
+      if (options.textVerticalAlign === "top") {
+        y = plot.top + offset;
+        baseline = "top";
+      } else if (options.textVerticalAlign === "bottom") {
+        y = plot.bottom - offset;
+        baseline = "bottom";
+      } else {
+        y = plot.top + plot.height / 2;
+        baseline = "middle";
+      }
+      if (options.textAlign === "left") {
+        x = anchorX - offset;
+        align = "right";
+      } else if (options.textAlign === "right") {
+        x = anchorX + offset;
+        align = "left";
+      } else {
+        x = anchorX;
+        align = "center";
+      }
+    } else {
+      if (options.textAlign === "left") {
+        x = anchorX - offset;
+        align = "right";
+      } else if (options.textAlign === "right") {
+        x = anchorX + offset;
+        align = "left";
+      }
+      if (options.textVerticalAlign === "top") {
+        y = anchorY - offset;
+        baseline = "bottom";
+      } else if (options.textVerticalAlign === "bottom") {
+        y = anchorY + offset;
+        baseline = "top";
+      }
+    }
+
     context.save();
     context.font = `${style ? `${style} ` : ""}${options.fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
     context.fillStyle = options.textColor;
-    context.textAlign = options.textAlign;
-    context.textBaseline = options.textVerticalAlign;
+    context.textAlign = align;
+    context.textBaseline = baseline;
     context.fillText(text, x, y);
     context.restore();
   }
@@ -2344,7 +2511,9 @@ export class ChartRenderer {
     if (lines.length === 0) {
       return;
     }
-    const fontSize = drawing.options.labelFontSize ?? model.layout.fontSize;
+    const fontSize = drawing.toolId.startsWith("elliott-")
+      ? model.layout.fontSize
+      : (drawing.options.labelFontSize ?? model.layout.fontSize);
     const padding = 8;
     const gap = 10;
     const lineHeight = fontSize + 4;
@@ -2387,7 +2556,7 @@ export class ChartRenderer {
       }
     }
 
-    x = Math.max(pane.plot.left + padding, Math.min(pane.plot.right - width - padding, x));
+    x = Math.min(pane.plot.right - width - padding, x);
     let y = referenceY - height - gap;
     if (y < pane.plot.top + padding) {
       y = referenceY + gap;

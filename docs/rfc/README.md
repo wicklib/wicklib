@@ -34,6 +34,7 @@ changing its decisions requires a new RFC or an ADR.
 | 0032 | Drawing interaction polish             | Accepted |
 | 0033 | Dense candle rendering                 | Accepted |
 | 0034 | Draggable price lines                  | Accepted |
+| 0035 | Drawing consistency fixes              | Accepted |
 
 Rules:
 

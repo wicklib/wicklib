@@ -6,6 +6,7 @@ import {
   elliottLabelPlacement,
   hitTestDrawing,
   mergeDrawingOptions,
+  parallelChannelHandles,
   parallelLines,
   resolveDrawingOptions,
   type ResolvedDrawingOptions,
@@ -97,6 +98,8 @@ describe("drawing settings", () => {
     expect(drawingToolSettings("trend-line")).toContain("extendLeft");
     expect(drawingToolSettings("trend-line")).toContain("priceLabels");
     expect(drawingToolSettings("trend-line")).toContain("statsPosition");
+    expect(drawingToolSettings("arrow")).toContain("text");
+    expect(drawingToolSettings("arrow")).toContain("priceLabels");
     expect(drawingToolSettings("trend-line")).toContain("statsFields");
     expect(drawingToolSettings("elliott-impulse")).toContain("statsFields");
     expect(drawingToolSettings("long-position")).toContain("stopColor");
@@ -346,6 +349,25 @@ describe("line drawing hit testing", () => {
     expect(
       hitTestDrawing({ ...three, toolId: "speed-lines" }, { x: 150, y: 150 }, pane, timeScale),
     ).toBe(true);
+  });
+
+  it("resolves unified drawing defaults and channel handles", () => {
+    expect(resolveDrawingOptions(undefined, {}).color).toBe("#787b86");
+    const rectangle = DRAWING_TOOL_CATALOG.find((entry) => entry.definition.id === "rectangle")
+      ?.definition.defaultOptions;
+    expect(rectangle?.middleLineVisible).toBe(false);
+    const channel = parallelChannelHandles(
+      [
+        { x: 0, y: 100 },
+        { x: 200, y: 100 },
+        { x: 100, y: 140 },
+      ],
+      { extendLeft: false, extendRight: false },
+      { left: 0, right: 200 },
+    );
+    expect(channel).toHaveLength(6);
+    expect(channel[0]!.y).toBe(100);
+    expect(channel[3]!.y).toBe(140);
   });
 
   it("resolves modern channel, text, and Fibonacci style options", () => {
