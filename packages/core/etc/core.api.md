@@ -994,19 +994,73 @@ export interface PriceLineApi {
     // (undocumented)
     applyOptions(options: Partial<PriceLineOptions>): void;
     // (undocumented)
+    focus(): void;
+    // (undocumented)
+    getPrice(): number;
+    // (undocumented)
     remove(): void;
+    // (undocumented)
+    setDragConstraint(constraint: PriceLineDragConstraint): void;
+    // (undocumented)
+    setDraggable(draggable: boolean): void;
+    // (undocumented)
+    setPrice(price: number, source?: "api" | "user"): void;
 }
+
+// @public
+export interface PriceLineDragConstraint {
+    // (undocumented)
+    kind: "none" | "above" | "below" | "range";
+    // (undocumented)
+    max?: number;
+    // (undocumented)
+    min?: number;
+}
+
+// @public
+export interface PriceLineDragEvent {
+    // (undocumented)
+    id: string;
+    // (undocumented)
+    originalPrice: number;
+    // (undocumented)
+    phase: "start" | "move" | "end" | "cancel";
+    // (undocumented)
+    pointer: {
+        x: number;
+        y: number;
+    };
+    // (undocumented)
+    previousPrice: number;
+    // (undocumented)
+    price: number;
+    // (undocumented)
+    source: "pointer" | "keyboard" | "api";
+}
+
+// @public
+export type PriceLineDragSnap = "none" | "tick" | "magnet";
 
 // @public
 export interface PriceLineOptions {
     axisLabelVisible?: boolean;
     // (undocumented)
     color?: string;
+    dragConstraint?: PriceLineDragConstraint;
+    draggable?: boolean;
+    dragSnap?: PriceLineDragSnap;
+    id?: string;
     // (undocumented)
     lineStyle?: PriceLineStyle;
     lineVisible?: boolean;
     // (undocumented)
     lineWidth?: number;
+    // (undocumented)
+    onDragEnd?: (event: PriceLineDragEvent) => void;
+    // (undocumented)
+    onDragMove?: (event: PriceLineDragEvent) => void;
+    // (undocumented)
+    onDragStart?: (event: PriceLineDragEvent) => void;
     // (undocumented)
     price: number;
     title?: string;
@@ -1321,8 +1375,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:1132:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:1147:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1175:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1190:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

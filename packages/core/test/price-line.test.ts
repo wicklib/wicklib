@@ -27,6 +27,23 @@ function settle(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 25));
 }
 
+function pointerEvent(type: string, pointerId: number, x: number, y: number): MouseEvent {
+  const event = new MouseEvent(type, {
+    clientX: x,
+    clientY: y,
+    bubbles: true,
+    button: 0,
+  });
+  Object.defineProperty(event, "pointerId", { value: pointerId });
+  return event;
+}
+
+function priceY(chart: ChartApi, price: number): number {
+  const pane = chart.getPanes()[0]!;
+  const range = pane.getPriceScale().getVisibleRange();
+  return ((range.max - price) / (range.max - range.min)) * 372;
+}
+
 beforeAll(() => {
   fillText = vi.fn();
   const context = new Proxy(
@@ -182,5 +199,103 @@ describe("price-line titles", () => {
         titlePosition: "outside" as never,
       }),
     ).toThrow(/price line/);
+  });
+
+  it("drags a price line with pointer capture and commits", async () => {
+    const element = mount();
+    const chart = createChart(element);
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    chart.timeScale().fitContent();
+    const events: string[] = [];
+    const line = series.createPriceLine({
+      price: 105,
+      id: "stop",
+      draggable: true,
+      onDragStart: (event) => events.push(`${event.phase}:${event.id}`),
+      onDragMove: (event) => events.push(`${event.phase}:${event.id}`),
+      onDragEnd: (event) => events.push(`${event.phase}:${event.id}`),
+    });
+    await settle();
+
+    const root = element.firstElementChild as HTMLElement;
+    const y = priceY(chart, 105);
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 300, y));
+    root.dispatchEvent(pointerEvent("pointermove", 1, 300, y + 25));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 300, y + 25));
+
+    expect(line.getPrice()).toBeLessThan(105);
+    expect(events[0]).toBe("start:stop");
+    expect(events).toContain("move:stop");
+    expect(events.at(-1)).toBe("end:stop");
+  });
+
+  it("clamps draggable price lines to drag constraints", async () => {
+    const element = mount();
+    const chart = createChart(element);
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    chart.timeScale().fitContent();
+    const line = series.createPriceLine({
+      price: 105,
+      draggable: true,
+      dragConstraint: { kind: "above", min: 104.5 },
+    });
+    await settle();
+
+    const root = element.firstElementChild as HTMLElement;
+    const y = priceY(chart, 105);
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 300, y));
+    root.dispatchEvent(pointerEvent("pointermove", 1, 300, y + 40));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 300, y + 40));
+
+    expect(line.getPrice()).toBeGreaterThanOrEqual(104.5);
+  });
+
+  it("supports programmatic updates without drag callbacks", async () => {
+    const chart = createChart(mount());
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    chart.timeScale().fitContent();
+    const events: string[] = [];
+    const line = series.createPriceLine({
+      price: 105,
+      draggable: true,
+      onDragStart: () => events.push("start"),
+      onDragMove: () => events.push("move"),
+      onDragEnd: () => events.push("end"),
+    });
+    line.setPrice(107);
+    expect(line.getPrice()).toBe(107);
+    expect(events).toHaveLength(0);
+  });
+
+  it("drags focused price lines with the keyboard", async () => {
+    const element = mount();
+    const chart = createChart(element);
+    charts.push(chart);
+    const series = chart.addSeries(CandlestickSeries);
+    series.setData(bars());
+    chart.timeScale().fitContent();
+    const events: string[] = [];
+    const line = series.createPriceLine({
+      price: 105,
+      draggable: true,
+      onDragStart: (event) => events.push(event.phase),
+      onDragMove: (event) => events.push(event.phase),
+      onDragEnd: (event) => events.push(event.phase),
+    });
+    line.focus();
+    const root = element.firstElementChild as HTMLElement;
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    expect(line.getPrice()).toBeGreaterThan(105);
+    expect(events[0]).toBe("start");
+    expect(events).toContain("move");
+    expect(events.at(-1)).toBe("end");
   });
 });

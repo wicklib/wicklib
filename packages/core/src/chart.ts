@@ -27,7 +27,7 @@ import {
   type ResolvedLayout,
 } from "./render/chart-renderer";
 import { TimeScale, type TimeScaleSource, type TimeScaleView } from "./scale/time-scale";
-import { Series, type SeriesHost } from "./series";
+import { Series, type PriceLineHandle, type SeriesHost } from "./series";
 import type {
   AddDrawingOptions,
   AddIndicatorOptions,
@@ -52,6 +52,7 @@ import type {
   PaneOptions,
   Point,
   PriceRange,
+  PriceLineDragEvent,
   PriceScaleApi,
   PriceScaleOptions,
   SeriesApi,
@@ -185,6 +186,22 @@ class Chart implements ChartApi, SeriesHost {
     lastX: number;
     anchorX: number;
     moved: boolean;
+  } | null = null;
+  private priceLineDrag: {
+    series: Series;
+    key: string;
+    paneId: string;
+    originalPrice: number;
+    currentPrice: number;
+    pointerId: number;
+    pointer: Point;
+  } | null = null;
+  private focusedPriceLine: {
+    series: Series;
+    key: string;
+    originalPrice: number;
+    currentPrice: number;
+    active: boolean;
   } | null = null;
 
   constructor(container: HTMLElement, rawOptions: ChartOptions) {
@@ -1767,6 +1784,40 @@ class Chart implements ChartApi, SeriesHost {
     return null;
   }
 
+  focusPriceLine(series: Series, key: string): void {
+    const entry = series.priceLineHandle(key);
+    if (!entry) {
+      return;
+    }
+    this.focusedPriceLine = {
+      series,
+      key,
+      originalPrice: entry.options.price,
+      currentPrice: entry.options.price,
+      active: false,
+    };
+    try {
+      this.backend.root.focus({ preventScroll: true });
+    } catch {
+      // Focus is best-effort.
+    }
+  }
+
+  priceLineRemoved(series: Series, key: string): void {
+    if (this.priceLineDrag?.series === series && this.priceLineDrag.key === key) {
+      try {
+        this.backend.root.releasePointerCapture(this.priceLineDrag.pointerId);
+      } catch {
+        // Pointer capture is best-effort.
+      }
+      this.priceLineDrag = null;
+      this.backend.root.style.cursor = "crosshair";
+    }
+    if (this.focusedPriceLine?.series === series && this.focusedPriceLine.key === key) {
+      this.focusedPriceLine = null;
+    }
+  }
+
   private emitIndicatorError(indicatorId: string, error: WickError): void {
     this.bus.emit("error", { error, source: "indicator", indicatorId });
   }
@@ -1790,6 +1841,10 @@ class Chart implements ChartApi, SeriesHost {
     this.magnetModifierPressed = event.metaKey || event.ctrlKey;
     this.shiftAnglePressed = event.shiftKey;
     this.shiftAnglePressed = event.shiftKey;
+    const priceLinePane = this.paneAtPoint(point) ?? this.priceAxisPaneAtPoint(point);
+    if (priceLinePane && this.tryStartPriceLineDrag(priceLinePane, point, event)) {
+      return;
+    }
     const axisPane = this.priceAxisPaneAtPoint(point);
     if (axisPane) {
       if (!this.options.interaction.axisDrag) {
@@ -1931,6 +1986,11 @@ class Chart implements ChartApi, SeriesHost {
     this.magnetModifierPressed = event.metaKey || event.ctrlKey;
     this.shiftAnglePressed = event.shiftKey;
 
+    if (this.priceLineDrag && event.pointerId === this.priceLineDrag.pointerId) {
+      this.updatePriceLineDrag(point);
+      return;
+    }
+
     if (this.timeAxisDrag && event.pointerId === this.timeAxisDrag.pointerId) {
       this.updateTimeAxisDrag(point);
       return;
@@ -2020,6 +2080,11 @@ class Chart implements ChartApi, SeriesHost {
 
   private readonly onPointerUp = (event: PointerEvent): void => {
     this.activePointers.delete(event.pointerId);
+
+    if (this.priceLineDrag && event.pointerId === this.priceLineDrag.pointerId) {
+      this.finishPriceLineDrag();
+      return;
+    }
 
     if (this.timeAxisDrag && event.pointerId === this.timeAxisDrag.pointerId) {
       const point = this.localPoint(event);
@@ -2121,6 +2186,10 @@ class Chart implements ChartApi, SeriesHost {
 
   private readonly onPointerCancel = (event: PointerEvent): void => {
     this.activePointers.delete(event.pointerId);
+    if (this.priceLineDrag && event.pointerId === this.priceLineDrag.pointerId) {
+      this.cancelPriceLineDrag();
+      return;
+    }
     if (this.activePointers.size < 2) {
       this.pinchDistance = null;
     }
@@ -2215,6 +2284,19 @@ class Chart implements ChartApi, SeriesHost {
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     this.updateMagnetModifier(event.metaKey || event.ctrlKey);
     this.updateShiftAngleModifier(event.shiftKey);
+    if (event.key === "Escape" && this.priceLineDrag?.pointerId === -1) {
+      this.cancelPriceLineDrag();
+      event.preventDefault();
+      return;
+    }
+    if (event.key === "Escape" && this.priceLineDrag) {
+      this.cancelPriceLineDrag();
+      event.preventDefault();
+      return;
+    }
+    if (this.handlePriceLineKey(event)) {
+      return;
+    }
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {
       this.selectAllDrawings();
       event.preventDefault();
@@ -2363,7 +2445,7 @@ class Chart implements ChartApi, SeriesHost {
   }
 
   private readonly onWheel = (event: WheelEvent): void => {
-    if (!this.options.interaction.wheel) {
+    if (this.priceLineDrag || !this.options.interaction.wheel) {
       return;
     }
     const point = this.localPoint(event);
@@ -2635,6 +2717,343 @@ class Chart implements ChartApi, SeriesHost {
       to: range.to,
       paneId: "main",
     });
+  }
+
+  private findPriceLineHandle(pane: Pane, point: Point): PriceLineHandle | null {
+    const plot = pane.plot;
+    if (!plot || point.x < plot.left || point.x > plot.right + this.axisWidth) {
+      return null;
+    }
+    let nearest: { handle: PriceLineHandle; distance: number } | null = null;
+    for (const series of pane.series) {
+      if (!series.isVisible()) {
+        continue;
+      }
+      for (const handle of series.priceLineHandles()) {
+        if (!handle.options.draggable) {
+          continue;
+        }
+        const y = pane.priceScale.priceToY(handle.options.price, plot.top, plot.height);
+        const distance = Math.abs(point.y - y);
+        if (distance > 6) {
+          continue;
+        }
+        if (!nearest || distance < nearest.distance) {
+          nearest = { handle, distance };
+        }
+      }
+    }
+    return nearest?.handle ?? null;
+  }
+
+  private tryStartPriceLineDrag(pane: Pane, point: Point, event: PointerEvent): boolean {
+    const handle = this.findPriceLineHandle(pane, point);
+    if (!handle || !pane.plot) {
+      return false;
+    }
+    this.priceLineDrag = {
+      series: handle.series,
+      key: handle.key,
+      paneId: pane.id,
+      originalPrice: handle.options.price,
+      currentPrice: handle.options.price,
+      pointerId: event.pointerId,
+      pointer: point,
+    };
+    this.focusedPriceLine = {
+      series: handle.series,
+      key: handle.key,
+      originalPrice: handle.options.price,
+      currentPrice: handle.options.price,
+      active: false,
+    };
+    this.emitPriceLineDrag(
+      handle,
+      "start",
+      handle.options.price,
+      handle.options.price,
+      point,
+      "pointer",
+    );
+    this.clearCrosshair();
+    this.backend.root.style.cursor = "ns-resize";
+    try {
+      this.backend.root.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture is best-effort.
+    }
+    return true;
+  }
+
+  private updatePriceLineDrag(point: Point): void {
+    const drag = this.priceLineDrag;
+    if (!drag) {
+      return;
+    }
+    const pane = this.findPane(drag.paneId);
+    const handle = drag.series.priceLineHandle(drag.key);
+    if (!pane?.plot || !handle) {
+      this.cancelPriceLineDrag();
+      return;
+    }
+    const raw = pane.priceScale.yToPrice(point.y, pane.plot.top, pane.plot.height);
+    const price = this.normalizePriceLineDragPrice(pane, handle, raw, point);
+    drag.pointer = point;
+    if (price === drag.currentPrice) {
+      return;
+    }
+    const previous = drag.currentPrice;
+    drag.currentPrice = price;
+    drag.series.setPriceLinePrice(drag.key, price);
+    this.emitPriceLineDrag(handle, "move", price, previous, point, "pointer");
+  }
+
+  private finishPriceLineDrag(): void {
+    const drag = this.priceLineDrag;
+    if (!drag) {
+      return;
+    }
+    const handle = drag.series.priceLineHandle(drag.key);
+    if (handle) {
+      this.emitPriceLineDrag(
+        handle,
+        "end",
+        drag.currentPrice,
+        drag.currentPrice,
+        drag.pointer,
+        "pointer",
+      );
+    }
+    this.releasePriceLineDrag();
+  }
+
+  private cancelPriceLineDrag(): void {
+    const drag = this.priceLineDrag;
+    if (!drag) {
+      return;
+    }
+    const handle = drag.series.priceLineHandle(drag.key);
+    drag.series.setPriceLinePrice(drag.key, drag.originalPrice);
+    if (handle) {
+      this.emitPriceLineDrag(
+        handle,
+        "cancel",
+        drag.originalPrice,
+        drag.currentPrice,
+        drag.pointer,
+        drag.pointerId === -1 ? "keyboard" : "pointer",
+      );
+    }
+    this.releasePriceLineDrag();
+  }
+
+  private releasePriceLineDrag(): void {
+    const drag = this.priceLineDrag;
+    if (drag) {
+      try {
+        this.backend.root.releasePointerCapture(drag.pointerId);
+      } catch {
+        // Pointer capture is best-effort.
+      }
+    }
+    this.priceLineDrag = null;
+    if (this.focusedPriceLine) {
+      this.focusedPriceLine.active = false;
+    }
+    this.backend.root.style.cursor = "crosshair";
+    this.requestRender();
+  }
+
+  private emitPriceLineDrag(
+    handle: PriceLineHandle,
+    phase: PriceLineDragEvent["phase"],
+    price: number,
+    previousPrice: number,
+    pointer: Point,
+    source: PriceLineDragEvent["source"],
+  ): void {
+    const event: PriceLineDragEvent = {
+      id: handle.options.id,
+      phase,
+      price,
+      previousPrice,
+      originalPrice:
+        this.priceLineDrag?.originalPrice ?? this.focusedPriceLine?.originalPrice ?? price,
+      pointer: { ...pointer },
+      source,
+    };
+    if (phase === "start") {
+      handle.options.onDragStart?.(event);
+    } else if (phase === "move") {
+      handle.options.onDragMove?.(event);
+    } else if (phase === "end") {
+      handle.options.onDragEnd?.(event);
+    } else {
+      handle.options.onDragEnd?.(event);
+    }
+  }
+
+  private normalizePriceLineDragPrice(
+    pane: Pane,
+    handle: PriceLineHandle,
+    rawPrice: number,
+    point: Point,
+  ): number {
+    let price = rawPrice;
+    if (handle.options.dragSnap === "magnet") {
+      price = this.magnetPriceForLineDrag(pane, point);
+    } else if (handle.options.dragSnap === "tick") {
+      price = this.roundPriceLine(pane, price);
+    }
+    price = this.roundPriceLine(pane, price);
+    const constraint = handle.options.dragConstraint;
+    const original =
+      this.priceLineDrag?.originalPrice ??
+      this.focusedPriceLine?.originalPrice ??
+      handle.options.price;
+    if (constraint.kind === "above") {
+      price = Math.max(price, constraint.min ?? original);
+    } else if (constraint.kind === "below") {
+      price = Math.min(price, constraint.max ?? original);
+    } else if (constraint.kind === "range") {
+      if (constraint.min !== undefined) {
+        price = Math.max(price, constraint.min);
+      }
+      if (constraint.max !== undefined) {
+        price = Math.min(price, constraint.max);
+      }
+    }
+    return this.roundPriceLine(pane, price);
+  }
+
+  private roundPriceLine(pane: Pane, price: number): number {
+    const format = pane.priceScale.getOptions().priceFormat ?? {};
+    const minMove = format.minMove;
+    if (minMove !== undefined) {
+      return Math.round(price / minMove) * minMove;
+    }
+    const precision = format.precision ?? pane.priceScale.precision();
+    return Number(price.toFixed(precision));
+  }
+
+  private priceLineTickStep(pane: Pane): number {
+    const format = pane.priceScale.getOptions().priceFormat ?? {};
+    return format.minMove ?? 10 ** -(format.precision ?? pane.priceScale.precision());
+  }
+
+  private magnetPriceForLineDrag(pane: Pane, point: Point): number {
+    let strength = this.activeMagnetStrength();
+    if (strength === "off") {
+      strength = "weak";
+    }
+    if (strength === "strong") {
+      const anchor = this.nearestDrawingAnchor(pane, point);
+      if (anchor) {
+        return pane.priceScale.yToPrice(anchor.point.y, pane.plot!.top, pane.plot!.height);
+      }
+    }
+    const ohlc = this.snapToOhlc(pane, point);
+    return ohlc?.price ?? pane.priceScale.yToPrice(point.y, pane.plot!.top, pane.plot!.height);
+  }
+
+  private handlePriceLineKey(event: KeyboardEvent): boolean {
+    const focused = this.focusedPriceLine;
+    if (!focused) {
+      return false;
+    }
+    const handle = focused.series.priceLineHandle(focused.key);
+    if (!handle) {
+      this.focusedPriceLine = null;
+      return false;
+    }
+    const pane = this.findPane(focused.series.paneId);
+    if (!pane?.plot) {
+      return false;
+    }
+    if (event.key === "Escape") {
+      if (focused.active) {
+        focused.series.setPriceLinePrice(focused.key, focused.originalPrice);
+        this.emitPriceLineDrag(
+          handle,
+          "cancel",
+          focused.originalPrice,
+          focused.currentPrice,
+          this.lastPointerPoint ?? { x: pane.plot.right, y: 0 },
+          "keyboard",
+        );
+        focused.active = false;
+        this.releasePriceLineDrag();
+      }
+      event.preventDefault();
+      return true;
+    }
+    if (event.key === "Enter") {
+      if (focused.active) {
+        this.emitPriceLineDrag(
+          handle,
+          "end",
+          focused.currentPrice,
+          focused.currentPrice,
+          this.lastPointerPoint ?? { x: pane.plot.right, y: 0 },
+          "keyboard",
+        );
+        focused.active = false;
+        this.releasePriceLineDrag();
+      }
+      event.preventDefault();
+      return true;
+    }
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+      return false;
+    }
+    if (!focused.active) {
+      focused.originalPrice = handle.options.price;
+      focused.currentPrice = handle.options.price;
+      focused.active = true;
+      this.priceLineDrag = {
+        series: focused.series,
+        key: focused.key,
+        paneId: pane.id,
+        originalPrice: focused.originalPrice,
+        currentPrice: focused.currentPrice,
+        pointerId: -1,
+        pointer: this.lastPointerPoint ?? { x: pane.plot.right, y: 0 },
+      };
+      this.emitPriceLineDrag(
+        handle,
+        "start",
+        focused.currentPrice,
+        focused.currentPrice,
+        this.lastPointerPoint ?? { x: pane.plot.right, y: 0 },
+        "keyboard",
+      );
+    }
+    const step = this.priceLineTickStep(pane) * (event.shiftKey ? 10 : 1);
+    const direction = event.key === "ArrowUp" ? 1 : -1;
+    const next = this.normalizePriceLineDragPrice(
+      pane,
+      handle,
+      focused.currentPrice + step * direction,
+      this.lastPointerPoint ?? {
+        x: pane.plot.right,
+        y: pane.priceScale.priceToY(focused.currentPrice, pane.plot.top, pane.plot.height),
+      },
+    );
+    if (next !== focused.currentPrice) {
+      const previous = focused.currentPrice;
+      focused.currentPrice = next;
+      focused.series.setPriceLinePrice(focused.key, next);
+      this.emitPriceLineDrag(
+        handle,
+        "move",
+        next,
+        previous,
+        this.lastPointerPoint ?? { x: pane.plot.right, y: 0 },
+        "keyboard",
+      );
+    }
+    event.preventDefault();
+    return true;
   }
 
   private updateCrosshair(x: number, y: number): void {
@@ -2950,11 +3369,13 @@ class Chart implements ChartApi, SeriesHost {
   }
 
   private updatePointerCursor(point: Point): void {
-    this.backend.root.style.cursor = this.priceAxisPaneAtPoint(point)
-      ? "ns-resize"
-      : this.timeAxisPaneAtPoint(point)
-        ? "ew-resize"
-        : "crosshair";
+    const linePane = this.paneAtPoint(point) ?? this.priceAxisPaneAtPoint(point);
+    this.backend.root.style.cursor =
+      (linePane && this.findPriceLineHandle(linePane, point)) || this.priceAxisPaneAtPoint(point)
+        ? "ns-resize"
+        : this.timeAxisPaneAtPoint(point)
+          ? "ew-resize"
+          : "crosshair";
   }
 
   private setupObserver(): void {

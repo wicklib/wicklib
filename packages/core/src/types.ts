@@ -382,6 +382,8 @@ export type PriceLineTitlePosition = "axis" | "plot";
  */
 export interface PriceLineOptions {
   price: number;
+  /** Stable host-facing id for drag events. Generated when omitted. */
+  id?: string;
   color?: string;
   lineWidth?: number;
   lineStyle?: PriceLineStyle;
@@ -393,6 +395,42 @@ export interface PriceLineOptions {
   title?: string;
   /** Where the title is rendered. Defaults to `axis`. */
   titlePosition?: PriceLineTitlePosition;
+  /** Enable pointer and keyboard dragging. Defaults to false. */
+  draggable?: boolean;
+  /** Price boundary while dragging. */
+  dragConstraint?: PriceLineDragConstraint;
+  /** Optional price snapping while dragging. */
+  dragSnap?: PriceLineDragSnap;
+  onDragStart?: (event: PriceLineDragEvent) => void;
+  onDragMove?: (event: PriceLineDragEvent) => void;
+  onDragEnd?: (event: PriceLineDragEvent) => void;
+}
+
+/**
+ * Boundary applied while dragging a price line.
+ */
+export interface PriceLineDragConstraint {
+  kind: "none" | "above" | "below" | "range";
+  min?: number;
+  max?: number;
+}
+
+/**
+ * Price snapping mode for draggable price lines.
+ */
+export type PriceLineDragSnap = "none" | "tick" | "magnet";
+
+/**
+ * Event emitted while a price line is interactively dragged.
+ */
+export interface PriceLineDragEvent {
+  id: string;
+  phase: "start" | "move" | "end" | "cancel";
+  price: number;
+  previousPrice: number;
+  originalPrice: number;
+  pointer: { x: number; y: number };
+  source: "pointer" | "keyboard" | "api";
 }
 
 /**
@@ -400,6 +438,11 @@ export interface PriceLineOptions {
  */
 export interface PriceLineApi {
   applyOptions(options: Partial<PriceLineOptions>): void;
+  getPrice(): number;
+  setPrice(price: number, source?: "api" | "user"): void;
+  setDraggable(draggable: boolean): void;
+  setDragConstraint(constraint: PriceLineDragConstraint): void;
+  focus(): void;
   remove(): void;
 }
 

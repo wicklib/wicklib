@@ -14,7 +14,11 @@ import type {
   LineSeriesOptions,
   OhlcData,
   PriceLineApi,
+  PriceLineDragConstraint,
+  PriceLineDragSnap,
   PriceLineOptions,
+  PriceLineStyle,
+  PriceLineTitlePosition,
   PriceScaleApi,
   SeriesData,
   SeriesDatafeedOptions,
@@ -89,8 +93,35 @@ const SERIES_KINDS: ReadonlyMap<string, SeriesKind> = new Map([
   [HistogramSeries.id, "histogram"],
 ]);
 
+/**
+ * Resolved internal price line state.
+ */
+export interface ResolvedPriceLine {
+  price: number;
+  id: string;
+  color: string;
+  lineWidth: number;
+  lineStyle: PriceLineStyle;
+  lineVisible: boolean;
+  axisLabelVisible: boolean;
+  title: string;
+  titlePosition: PriceLineTitlePosition;
+  draggable: boolean;
+  dragConstraint: PriceLineDragConstraint;
+  dragSnap: PriceLineDragSnap;
+  onDragStart?: PriceLineOptions["onDragStart"];
+  onDragMove?: PriceLineOptions["onDragMove"];
+  onDragEnd?: PriceLineOptions["onDragEnd"];
+}
+
+export interface PriceLineHandle {
+  key: string;
+  series: Series;
+  options: ResolvedPriceLine;
+}
+
 interface PriceLineEntry {
-  options: Required<PriceLineOptions>;
+  options: ResolvedPriceLine;
 }
 
 interface ResolvedCommonOptions {
@@ -170,7 +201,10 @@ const HISTOGRAM_DEFAULTS: ResolvedHistogramOptions = {
   base: 0,
 };
 
-const PRICE_LINE_DEFAULTS: Omit<Required<PriceLineOptions>, "price"> = {
+const PRICE_LINE_DEFAULTS: Omit<
+  ResolvedPriceLine,
+  "price" | "id" | "onDragStart" | "onDragMove" | "onDragEnd"
+> = {
   color: "#2962ff",
   lineWidth: 1,
   lineStyle: "solid",
@@ -178,6 +212,9 @@ const PRICE_LINE_DEFAULTS: Omit<Required<PriceLineOptions>, "price"> = {
   axisLabelVisible: true,
   title: "",
   titlePosition: "axis",
+  draggable: false,
+  dragConstraint: { kind: "none" },
+  dragSnap: "none",
 };
 
 const MARKER_POSITIONS = new Set([
@@ -207,6 +244,8 @@ export interface SeriesHost {
   fitContentIfDefault(): void;
   emitDataLoading(seriesId: string, loading: boolean): void;
   emitDatafeedError(seriesId: string, error: WickError): void;
+  focusPriceLine(series: Series, key: string): void;
+  priceLineRemoved(series: Series, key: string): void;
 }
 
 /**
@@ -385,28 +424,94 @@ export class Series {
 
   createPriceLine(options: PriceLineOptions): PriceLineApi {
     this.assertAlive();
-    const resolved = resolvePriceLine(options, PRICE_LINE_DEFAULTS);
     this.priceLineCounter += 1;
-    const id = `price-line-${this.priceLineCounter}`;
-    this.priceLines.set(id, { options: resolved });
+    const key = `price-line-${this.priceLineCounter}`;
+    const resolved = resolvePriceLine(options, PRICE_LINE_DEFAULTS, key);
+    this.priceLines.set(key, { options: resolved });
     this.host.requestRender();
 
     return {
       applyOptions: (patch) => {
         this.assertAlive();
-        const entry = this.priceLines.get(id);
+        const entry = this.priceLines.get(key);
         if (!entry) {
           return;
         }
-        entry.options = resolvePriceLine({ ...entry.options, ...patch }, PRICE_LINE_DEFAULTS);
+        entry.options = resolvePriceLine(
+          { ...entry.options, ...patch } as PriceLineOptions,
+          PRICE_LINE_DEFAULTS,
+          entry.options.id,
+        );
         this.host.requestRender();
       },
+      getPrice: () => this.priceLines.get(key)?.options.price ?? resolved.price,
+      setPrice: (price, _source = "api") => {
+        this.assertAlive();
+        if (!Number.isFinite(price)) {
+          fail("INVALID_ARGUMENT", "Price line price must be finite");
+        }
+        const entry = this.priceLines.get(key);
+        if (!entry) {
+          return;
+        }
+        entry.options = { ...entry.options, price };
+        this.host.requestRender();
+      },
+      setDraggable: (draggable) => {
+        this.assertAlive();
+        const entry = this.priceLines.get(key);
+        if (entry) {
+          entry.options = { ...entry.options, draggable };
+          this.host.requestRender();
+        }
+      },
+      setDragConstraint: (constraint) => {
+        this.assertAlive();
+        const entry = this.priceLines.get(key);
+        if (entry) {
+          entry.options = {
+            ...entry.options,
+            dragConstraint: validateDragConstraint(constraint),
+          };
+          this.host.requestRender();
+        }
+      },
+      focus: () => {
+        this.assertAlive();
+        this.host.focusPriceLine(this, key);
+      },
       remove: () => {
-        if (this.priceLines.delete(id)) {
+        if (this.priceLines.delete(key)) {
+          this.host.priceLineRemoved(this, key);
           this.host.requestRender();
         }
       },
     };
+  }
+
+  priceLineHandles(): PriceLineHandle[] {
+    return Array.from(this.priceLines.entries(), ([key, entry]) => ({
+      key,
+      series: this,
+      options: entry.options,
+    }));
+  }
+
+  priceLineHandle(key: string): PriceLineHandle | null {
+    const entry = this.priceLines.get(key);
+    return entry ? { key, series: this, options: entry.options } : null;
+  }
+
+  setPriceLinePrice(key: string, price: number): void {
+    if (!Number.isFinite(price)) {
+      fail("INVALID_ARGUMENT", "Price line price must be finite");
+    }
+    const entry = this.priceLines.get(key);
+    if (!entry) {
+      return;
+    }
+    entry.options = { ...entry.options, price };
+    this.host.requestRender();
   }
 
   setMarkers(markers: readonly SeriesMarker[]): void {
@@ -660,20 +765,27 @@ function numberOption(input: Record<string, unknown>, key: string, fallback: num
 
 function resolvePriceLine(
   options: PriceLineOptions,
-  defaults: Omit<Required<PriceLineOptions>, "price">,
-): Required<PriceLineOptions> {
+  defaults: Omit<ResolvedPriceLine, "price" | "id" | "onDragStart" | "onDragMove" | "onDragEnd">,
+  fallbackId: string,
+): ResolvedPriceLine {
   if (
     !options ||
     !Number.isFinite(options.price) ||
     !LINE_STYLES.has(options.lineStyle ?? defaults.lineStyle) ||
     !PRICE_LINE_TITLE_POSITIONS.has(options.titlePosition ?? defaults.titlePosition) ||
     !Number.isFinite(options.lineWidth ?? defaults.lineWidth) ||
-    (options.lineWidth ?? defaults.lineWidth) <= 0
+    (options.lineWidth ?? defaults.lineWidth) <= 0 ||
+    (options.id !== undefined && options.id.trim() === "") ||
+    (options.dragSnap !== undefined &&
+      options.dragSnap !== "none" &&
+      options.dragSnap !== "tick" &&
+      options.dragSnap !== "magnet")
   ) {
     fail("INVALID_ARGUMENT", "Invalid price line options");
   }
   return {
     price: options.price,
+    id: options.id ?? fallbackId,
     color: options.color ?? defaults.color,
     lineWidth: options.lineWidth ?? defaults.lineWidth,
     lineStyle: options.lineStyle ?? defaults.lineStyle,
@@ -681,7 +793,31 @@ function resolvePriceLine(
     axisLabelVisible: options.axisLabelVisible ?? defaults.axisLabelVisible,
     title: options.title ?? defaults.title,
     titlePosition: options.titlePosition ?? defaults.titlePosition,
+    draggable: options.draggable ?? defaults.draggable,
+    dragConstraint: validateDragConstraint(options.dragConstraint ?? defaults.dragConstraint),
+    dragSnap: options.dragSnap ?? defaults.dragSnap,
+    ...(options.onDragStart !== undefined ? { onDragStart: options.onDragStart } : {}),
+    ...(options.onDragMove !== undefined ? { onDragMove: options.onDragMove } : {}),
+    ...(options.onDragEnd !== undefined ? { onDragEnd: options.onDragEnd } : {}),
   };
+}
+
+function validateDragConstraint(constraint: PriceLineDragConstraint): PriceLineDragConstraint {
+  if (
+    !constraint ||
+    (constraint.kind !== "none" &&
+      constraint.kind !== "above" &&
+      constraint.kind !== "below" &&
+      constraint.kind !== "range") ||
+    (constraint.min !== undefined && !Number.isFinite(constraint.min)) ||
+    (constraint.max !== undefined && !Number.isFinite(constraint.max)) ||
+    (constraint.min !== undefined &&
+      constraint.max !== undefined &&
+      constraint.min > constraint.max)
+  ) {
+    fail("INVALID_ARGUMENT", "Invalid price line drag constraint");
+  }
+  return { ...constraint };
 }
 
 function validateMarker(marker: SeriesMarker, index: number): SeriesMarker {

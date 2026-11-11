@@ -28,7 +28,10 @@ import type {
   LastValueMode,
   OverlayRenderFrame,
   Point,
-  PriceLineOptions,
+  PriceLineDragConstraint,
+  PriceLineDragSnap,
+  PriceLineStyle,
+  PriceLineTitlePosition,
   SeriesMarker,
 } from "../types";
 import type { CanvasStack } from "./canvas-stack";
@@ -74,7 +77,20 @@ export interface ResolvedCrosshair {
   horzStyle: "solid" | "dotted" | "dashed";
 }
 
-export type PriceLineRenderData = Required<PriceLineOptions>;
+export interface PriceLineRenderData {
+  price: number;
+  id: string;
+  color: string;
+  lineWidth: number;
+  lineStyle: PriceLineStyle;
+  lineVisible: boolean;
+  axisLabelVisible: boolean;
+  title: string;
+  titlePosition: PriceLineTitlePosition;
+  draggable: boolean;
+  dragConstraint: PriceLineDragConstraint;
+  dragSnap: PriceLineDragSnap;
+}
 
 interface SeriesRenderBase {
   store: SeriesDataStore;
