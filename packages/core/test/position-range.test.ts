@@ -154,6 +154,7 @@ describe("position drawings", () => {
     expect(long.getOptions().positionStatsFields).toEqual([
       "loss",
       "lossPercent",
+      "profitPercent",
       "riskAmount",
       "entry",
       "profit",
@@ -162,6 +163,7 @@ describe("position drawings", () => {
     expect(short.getOptions().positionStatsFields).toEqual([
       "loss",
       "lossPercent",
+      "profitPercent",
       "riskAmount",
       "entry",
       "profit",
@@ -219,7 +221,7 @@ describe("position drawings", () => {
     expect(textCalls.some((call) => call.text.startsWith("Loss  "))).toBe(false);
     expect(textCalls.some((call) => call.text.startsWith("Entry  "))).toBe(false);
     expect(textCalls.some((call) => call.text.startsWith("Profit  "))).toBe(false);
-    expect(textCalls.some((call) => call.text === "98.00")).toBe(false);
+    expect(textCalls.some((call) => call.text === "200")).toBe(false);
   });
 
   it("renders position labels, fills, stats, and axis labels", async () => {
@@ -235,7 +237,16 @@ describe("position drawings", () => {
         stopColor: "#ff0000",
         targetColor: "#00ff00",
         labelTextColor: "#abcdef",
-        positionStatsFields: ["loss", "riskAmount", "entry", "profit", "riskReward", "lotSize"],
+        positionStatsFields: [
+          "loss",
+          "lossPercent",
+          "profitPercent",
+          "riskAmount",
+          "entry",
+          "profit",
+          "riskReward",
+          "lotSize",
+        ],
       },
     });
     await settle();
@@ -252,7 +263,10 @@ describe("position drawings", () => {
     ).toBe(true);
     expect(
       textCalls.some(
-        (call) => call.text.includes("Profit  200") && call.text.includes("R/R  2.00"),
+        (call) =>
+          call.text.includes("200") &&
+          call.text.includes("Profit %  4.00%") &&
+          call.text.includes("R/R  2.00"),
       ),
     ).toBe(true);
     expect(textCalls.filter((call) => call.fillStyle === "#abcdef").length).toBeGreaterThanOrEqual(

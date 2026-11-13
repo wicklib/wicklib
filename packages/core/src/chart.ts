@@ -142,6 +142,7 @@ class Chart implements ChartApi, SeriesHost {
   private readonly drawingDefaultOptions = new Map<string, DrawingOptions>();
   private readonly overlays: OverlayEntry[] = [];
   private readonly selectedDrawingIds = new Set<string>();
+  private hoveredDrawingId: string | null = null;
   private activeTool: DrawingToolDefinition | null = null;
   private activeDrawingOptions: DrawingOptions | undefined;
   private activeDrawingPaneId = "main";
@@ -976,6 +977,7 @@ class Chart implements ChartApi, SeriesHost {
       previewPoint: null,
       options: drawing.getOptions(),
       selected: this.selectedDrawingIds.has(drawing.id),
+      hovered: this.hoveredDrawingId === drawing.id,
       preview: false,
     }));
 
@@ -997,6 +999,7 @@ class Chart implements ChartApi, SeriesHost {
               : null,
         options: resolveDrawingOptions(this.activeTool.defaultOptions, this.activeDrawingOptions),
         selected: false,
+        hovered: false,
         preview: true,
       });
     }
@@ -2110,6 +2113,7 @@ class Chart implements ChartApi, SeriesHost {
       return;
     }
 
+    this.updateHoveredDrawing(point);
     this.updatePointerCursor(point);
     this.updateCrosshair(point.x, point.y);
   };
@@ -2247,6 +2251,10 @@ class Chart implements ChartApi, SeriesHost {
     this.lastPointerPoint = null;
     this.magnetModifierPressed = false;
     this.shiftAnglePressed = false;
+    if (this.hoveredDrawingId !== null) {
+      this.hoveredDrawingId = null;
+      this.requestRender();
+    }
     if (this.activeTool) {
       this.previewPoint = null;
       this.requestRender();
@@ -3090,6 +3098,38 @@ class Chart implements ChartApi, SeriesHost {
     }
     event.preventDefault();
     return true;
+  }
+
+  private updateHoveredDrawing(point: Point): void {
+    if (this.activeTool || this.draggingDrawings.length > 0 || this.marquee) {
+      if (this.hoveredDrawingId !== null) {
+        this.hoveredDrawingId = null;
+        this.requestRender();
+      }
+      return;
+    }
+    const pane = this.paneAtPoint(point);
+    let next: string | null = null;
+    if (pane?.plot) {
+      const geometry: DrawingGeometryPane = {
+        plot: pane.plot,
+        priceScale: pane.priceScale,
+      };
+      for (let index = this.drawings.length - 1; index >= 0; index -= 1) {
+        const drawing = this.drawings[index]!;
+        if (drawing.paneId !== pane.id) {
+          continue;
+        }
+        if (hitTestDrawing(this.hitTarget(drawing), point, geometry, this.timeScaleModel)) {
+          next = drawing.id;
+          break;
+        }
+      }
+    }
+    if (next !== this.hoveredDrawingId) {
+      this.hoveredDrawingId = next;
+      this.requestRender();
+    }
   }
 
   private updateCrosshair(x: number, y: number): void {

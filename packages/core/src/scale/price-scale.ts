@@ -190,7 +190,7 @@ export class PriceScale {
   }
 
   ticks(height: number): PriceTick[] {
-    const target = Math.max(2, Math.floor(height / 60));
+    const target = Math.max(2, Math.floor(height / 30));
     return this.mode === "logarithmic"
       ? logarithmicPriceTicks(this.range.min, this.range.max, target)
       : nicePriceTicks(this.range.min, this.range.max, target);

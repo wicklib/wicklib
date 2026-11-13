@@ -384,6 +384,7 @@ const DEFAULT_STATS_FIELDS: readonly DrawingStatsField[] = Object.freeze([
 const DEFAULT_POSITION_STATS_FIELDS: readonly DrawingStatsField[] = Object.freeze([
   "loss",
   "lossPercent",
+  "profitPercent",
   "riskAmount",
   "entry",
   "profit",
@@ -730,6 +731,7 @@ export const LongPosition: DrawingToolDefinition = Object.freeze({
     positionStatsFields: [
       "loss",
       "lossPercent",
+      "profitPercent",
       "riskAmount",
       "entry",
       "profit",
@@ -763,6 +765,7 @@ export const ShortPosition: DrawingToolDefinition = Object.freeze({
     positionStatsFields: [
       "loss",
       "lossPercent",
+      "profitPercent",
       "riskAmount",
       "entry",
       "profit",
@@ -1443,6 +1446,7 @@ function normalizedStatsFields(
       field !== "riskPercent" &&
       field !== "rewardPercent" &&
       field !== "lossPercent" &&
+      field !== "profitPercent" &&
       field !== "accountSize" &&
       field !== "lotSize" &&
       field !== "riskAmount" &&
@@ -1548,6 +1552,7 @@ function normalizedPositionStatsFields(
     "riskPercent",
     "riskAmount",
     "lossPercent",
+    "profitPercent",
     "riskReward",
     "entry",
     "profit",

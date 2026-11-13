@@ -162,4 +162,10 @@ describe("PriceScale", () => {
       /minMove/,
     );
   });
+
+  it("keeps price ticks dense enough for tall panes", () => {
+    const scale = new PriceScale();
+    scale.setVisibleRange({ min: 100, max: 200 });
+    expect(scale.ticks(400).length).toBeGreaterThanOrEqual(8);
+  });
 });

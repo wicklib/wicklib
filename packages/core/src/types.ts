@@ -817,6 +817,7 @@ export type DrawingStatsField =
   | "profit"
   | "loss"
   | "lossPercent"
+  | "profitPercent"
   | "leverage"
   | "margin";
 

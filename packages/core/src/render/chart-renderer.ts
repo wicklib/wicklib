@@ -154,6 +154,7 @@ export interface DrawingRenderData {
   previewPoint: Point | null;
   options: ResolvedDrawingOptions;
   selected: boolean;
+  hovered: boolean;
   preview: boolean;
 }
 
@@ -1223,7 +1224,7 @@ export class ChartRenderer {
       context.globalAlpha = 1;
       context.restore();
 
-      if (drawing.selected && !drawing.preview) {
+      if ((drawing.selected || drawing.hovered) && !drawing.preview) {
         context.save();
         context.beginPath();
         context.rect(pane.plot.left, pane.plot.top, pane.plot.width, pane.plot.height);
@@ -2244,7 +2245,83 @@ export class ChartRenderer {
         context.fillText(text, x + padding, y + padding);
         return;
       }
-      case "measure":
+      case "measure": {
+        if (points.length < 2) {
+          return;
+        }
+        const first = points[0]!;
+        const second = points[1]!;
+        const firstPrice = pane.priceScale.yToPrice(first.y, plot.top, plot.height);
+        const secondPrice = pane.priceScale.yToPrice(second.y, plot.top, plot.height);
+        const priceDelta = secondPrice - firstPrice;
+        const percent = firstPrice === 0 ? 0 : (priceDelta / Math.abs(firstPrice)) * 100;
+        const lineColor = priceDelta >= 0 ? "#26a69a" : "#ef5350";
+        const seconds = Math.abs(drawing.anchors[1]!.time - drawing.anchors[0]!.time) / 1000;
+
+        context.save();
+        context.strokeStyle = lineColor;
+        context.lineWidth = 1;
+        context.beginPath();
+        context.moveTo(first.x, first.y);
+        context.lineTo(second.x, second.y);
+        context.stroke();
+        context.setLineDash([4, 3]);
+        context.globalAlpha = 0.4;
+        context.beginPath();
+        context.moveTo(first.x, second.y);
+        context.lineTo(second.x, second.y);
+        context.moveTo(second.x, first.y);
+        context.lineTo(second.x, second.y);
+        context.stroke();
+        context.restore();
+
+        context.fillStyle = lineColor;
+        context.beginPath();
+        context.arc(first.x, first.y, 3, 0, Math.PI * 2);
+        context.arc(second.x, second.y, 3, 0, Math.PI * 2);
+        context.fill();
+
+        const series = pane.series.find(
+          (candidate) => candidate.visible && candidate.store.length > 0,
+        );
+        const bars =
+          series && drawing.anchors[1]
+            ? Math.abs(
+                series.store.nearestIndex(drawing.anchors[1].time) -
+                  series.store.nearestIndex(drawing.anchors[0]!.time),
+              ) + 1
+            : null;
+        const lines = [
+          `${priceDelta >= 0 ? "+" : ""}${pane.priceScale.formatValue(priceDelta, model.locale)} (${percent.toFixed(2)}%)`,
+          `${bars === null ? "" : `${bars} bars · `}${formatDuration(seconds)}`,
+        ];
+        const surface = chartContrastSurface(model.layout);
+        const fontSize = model.layout.fontSize;
+        const padding = 8;
+        const lineHeight = fontSize + 4;
+        context.font = this.font(model, fontSize);
+        const width =
+          Math.max(...lines.map((line) => context.measureText(line).width)) + padding * 2;
+        const height = lines.length * lineHeight + padding * 2;
+        const x = Math.max(
+          plot.left,
+          Math.min(plot.right - width, (first.x + second.x) / 2 - width / 2),
+        );
+        let y = Math.min(first.y, second.y) - height - 10;
+        if (y < plot.top) {
+          y = Math.max(first.y, second.y) + 10;
+        }
+        y = Math.max(plot.top, Math.min(plot.bottom - height, y));
+        context.fillStyle = surface.background;
+        fillRoundedRect(context, x, y, width, height, 4);
+        context.fillStyle = surface.text;
+        context.textAlign = "left";
+        context.textBaseline = "top";
+        for (let index = 0; index < lines.length; index += 1) {
+          context.fillText(lines[index]!, x + padding, y + padding + index * lineHeight);
+        }
+        return;
+      }
       case "stats-line": {
         if (points.length < 2) {
           return;
@@ -2254,12 +2331,7 @@ export class ChartRenderer {
         const priceDelta =
           pane.priceScale.yToPrice(second.y, plot.top, plot.height) -
           pane.priceScale.yToPrice(first.y, plot.top, plot.height);
-        const lineColor =
-          drawing.toolId === "measure"
-            ? priceDelta >= 0
-              ? "#26a69a"
-              : "#ef5350"
-            : drawing.options.color;
+        const lineColor = drawing.options.color;
         context.strokeStyle = lineColor;
         context.beginPath();
         context.moveTo(first.x, first.y);
@@ -2279,7 +2351,6 @@ export class ChartRenderer {
             (first.x + second.x) / 2 + 8,
             (first.y + second.y) / 2 - 8,
             drawing.options,
-            drawing.toolId === "measure" ? lineColor : undefined,
           );
         }
         return;
@@ -2422,16 +2493,23 @@ export class ChartRenderer {
     const profit = rewardPrice * lotSize * options.contractSize;
     const loss = riskAmount;
     const riskReward = riskPrice > 0 ? rewardPrice / riskPrice : 0;
+    const lossPercent = entryPrice === 0 ? 0 : (riskPrice / Math.abs(entryPrice)) * 100;
+    const profitPercent = entryPrice === 0 ? 0 : (rewardPrice / Math.abs(entryPrice)) * 100;
     const margin =
       options.leverage > 0 ? (entryPrice * lotSize * options.contractSize) / options.leverage : 0;
     const money = (value: number): string =>
       new Intl.NumberFormat(model.locale, { maximumFractionDigits: 2 }).format(value);
     const quantity = (value: number): string =>
       new Intl.NumberFormat(model.locale, { maximumFractionDigits: 6 }).format(value);
-    const boxes: Array<{ y: number; color: string; lines: string[] }> = [
-      { y: stop.y, color: options.stopColor, lines: [] },
-      { y: entry.y, color: options.targetColor, lines: [] },
-      { y: target.y, color: options.targetColor, lines: [] },
+    const boxes: Array<{
+      kind: "stop" | "entry" | "target";
+      y: number;
+      color: string;
+      lines: string[];
+    }> = [
+      { kind: "stop" as const, y: stop.y, color: options.stopColor, lines: [] },
+      { kind: "entry" as const, y: entry.y, color: options.targetColor, lines: [] },
+      { kind: "target" as const, y: target.y, color: options.targetColor, lines: [] },
     ];
     for (const field of options.positionStatsFields) {
       if (field === "accountSize") {
@@ -2447,11 +2525,13 @@ export class ChartRenderer {
       } else if (field === "entry") {
         boxes[1]!.lines.push(`Entry  ${pane.priceScale.formatValue(entryPrice, model.locale)}`);
       } else if (field === "profit") {
-        boxes[2]!.lines.push(`Profit  ${money(profit)}`);
+        boxes[2]!.lines.push(money(profit));
       } else if (field === "loss") {
         boxes[0]!.lines.push(`Loss  ${money(loss)}`);
       } else if (field === "lossPercent") {
-        boxes[0]!.lines.push(`Loss %  ${options.riskPercent.toFixed(2)}%`);
+        boxes[0]!.lines.push(`Loss %  ${lossPercent.toFixed(2)}%`);
+      } else if (field === "profitPercent") {
+        boxes[2]!.lines.push(`Profit %  ${profitPercent.toFixed(2)}%`);
       } else if (field === "leverage") {
         boxes[1]!.lines.push(`Leverage  ${quantity(options.leverage)}x`);
       } else if (field === "margin") {
@@ -2465,13 +2545,27 @@ export class ChartRenderer {
     context.textBaseline = "middle";
     const ranked = boxes
       .filter((box) => box.lines.length > 0)
-      .sort((first, second) => first.y - second.y);
+      .map((box) => {
+        const height = fontSize + padding * 2;
+        const top =
+          box.kind === "entry"
+            ? entry.y - height / 2
+            : box.kind === "target"
+              ? target.y < entry.y
+                ? target.y - height - 8
+                : target.y + 8
+              : stop.y > entry.y
+                ? stop.y + 8
+                : stop.y - height - 8;
+        return { box, height, top };
+      })
+      .sort((first, second) => first.top - second.top);
     let lastBottom = Number.NEGATIVE_INFINITY;
-    for (const box of ranked) {
+    for (const item of ranked) {
+      const { box, height } = item;
       const text = box.lines.join("   ·   ");
       const width = context.measureText(text).width + padding * 2;
-      const height = fontSize + padding * 2;
-      let top = box.y - height / 2;
+      let top = item.top;
       if (top < lastBottom + 2) {
         top = lastBottom + 2;
       }
