@@ -81,6 +81,7 @@ export interface ResolvedDrawingOptions {
   fontSize: number;
   locked: boolean;
   visible: boolean;
+  visibleIntervals: readonly string[];
 }
 
 export interface DrawingGeometryPane {
@@ -435,6 +436,7 @@ const DEFAULTS: DrawingOptions = {
   fontSize: 13,
   locked: false,
   visible: true,
+  visibleIntervals: Object.freeze([]),
 };
 
 export const TrendLine: DrawingToolDefinition = Object.freeze({
@@ -1135,7 +1137,8 @@ export function drawingToolSettings(toolId: string): readonly DrawingSetting[] {
   if (!DRAWING_TOOLS.has(toolId)) {
     throw new Error(`Unknown drawing tool: ${toolId}`);
   }
-  return TOOL_SETTINGS[toolId] ?? STROKE_SETTINGS;
+  const settings = TOOL_SETTINGS[toolId] ?? STROKE_SETTINGS;
+  return toolId === "measure" ? settings : [...settings, "visibleIntervals"];
 }
 
 export function resolveDrawingOptions(
@@ -1227,6 +1230,7 @@ export function resolveDrawingOptions(
     fontSize: merged.fontSize ?? 13,
     locked: merged.locked ?? false,
     visible: merged.visible ?? true,
+    visibleIntervals: normalizedVisibleIntervals(merged.visibleIntervals),
   };
   if (labelTextColor !== undefined) {
     resolved.labelTextColor = labelTextColor;
@@ -1312,6 +1316,10 @@ export function mergeDrawingOptions(
     fontSize: patch.fontSize ?? base.fontSize,
     locked: patch.locked ?? base.locked,
     visible: patch.visible ?? base.visible,
+    visibleIntervals:
+      patch.visibleIntervals !== undefined
+        ? normalizedVisibleIntervals(patch.visibleIntervals)
+        : base.visibleIntervals,
   };
   if (patch.backgroundColor !== undefined) {
     const backgroundColor = normalizeOptionalDrawingColor(patch.backgroundColor, merged.textColor);
@@ -1401,6 +1409,23 @@ function normalizedPriceLabels(value: DrawingPriceLabelsMode | undefined): Drawi
     return value ?? "never";
   }
   fail("INVALID_ARGUMENT", "priceLabels must be never, selected, or always");
+}
+
+function normalizedVisibleIntervals(value: readonly string[] | undefined): readonly string[] {
+  if (value === undefined || !Array.isArray(value)) {
+    return Object.freeze([]);
+  }
+  const intervals: string[] = [];
+  for (const interval of value) {
+    if (typeof interval !== "string" || interval.trim() === "") {
+      fail("INVALID_ARGUMENT", "visibleIntervals must contain non-empty strings");
+    }
+    const normalized = interval.trim();
+    if (!intervals.includes(normalized)) {
+      intervals.push(normalized);
+    }
+  }
+  return Object.freeze(intervals);
 }
 
 function normalizedLineOpacity(value: number | undefined): number {

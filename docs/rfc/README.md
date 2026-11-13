@@ -37,6 +37,7 @@ changing its decisions requires a new RFC or an ADR.
 | 0035 | Drawing consistency fixes              | Accepted |
 | 0036 | Axis density, hover, position, measure | Accepted |
 | 0037 | Visible-only Select All               | Accepted |
+| 0038 | Drawing timeframe visibility          | Accepted |
 
 Rules:
 

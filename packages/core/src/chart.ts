@@ -85,6 +85,7 @@ interface ResolvedOptions {
   height: number;
   locale: string;
   timezone: string;
+  interval?: string;
   layout: ResolvedLayout;
   grid: ResolvedGrid;
   crosshair: ResolvedCrosshair;
@@ -504,6 +505,31 @@ class Chart implements ChartApi, SeriesHost {
     return { plot: pane.plot, priceScale: pane.priceScale };
   }
 
+  private isDrawingVisibleOnCurrentInterval(drawing: Drawing): boolean {
+    const intervals = drawing.getOptions().visibleIntervals;
+    if (intervals.length === 0) {
+      return true;
+    }
+    const interval = this.currentInterval();
+    return interval === null || intervals.includes(interval);
+  }
+
+  private currentInterval(): string | null {
+    if (this.options.interval !== undefined) {
+      return this.options.interval;
+    }
+    const datafeedInterval = this.primarySeries()?.getDatafeedOptions()?.interval;
+    if (datafeedInterval) {
+      return datafeedInterval;
+    }
+    const store = this.primaryStore();
+    if (!store || store.length < 2) {
+      return null;
+    }
+    const step = inferStoreInterval(store);
+    return step === null ? null : inferIntervalLabel(step);
+  }
+
   selectDrawing(id: string | null, options?: SelectDrawingOptions): void {
     this.assertAlive();
     if (id === null) {
@@ -513,6 +539,9 @@ class Chart implements ChartApi, SeriesHost {
     const drawing = this.findDrawing(id);
     if (!drawing) {
       fail("INVALID_ARGUMENT", `Unknown drawing: ${id}`);
+    }
+    if (!this.isDrawingVisibleOnCurrentInterval(drawing)) {
+      return;
     }
     const mode = options?.mode ?? "replace";
     if (mode === "replace") {
@@ -526,23 +555,29 @@ class Chart implements ChartApi, SeriesHost {
 
   selectNextDrawing(options?: SelectDrawingOptions): void {
     this.assertAlive();
-    if (this.drawings.length === 0) {
+    const eligible = this.drawings.filter((drawing) =>
+      this.isDrawingVisibleOnCurrentInterval(drawing),
+    );
+    if (eligible.length === 0) {
       return;
     }
     const current = this.selectedInternal();
-    const index = current ? this.drawings.indexOf(current) : -1;
-    const next = this.drawings[(index + 1) % this.drawings.length]!;
+    const index = current ? eligible.indexOf(current) : -1;
+    const next = eligible[(index + 1) % eligible.length]!;
     this.selectDrawing(next.id, options);
   }
 
   selectPreviousDrawing(options?: SelectDrawingOptions): void {
     this.assertAlive();
-    if (this.drawings.length === 0) {
+    const eligible = this.drawings.filter((drawing) =>
+      this.isDrawingVisibleOnCurrentInterval(drawing),
+    );
+    if (eligible.length === 0) {
       return;
     }
     const current = this.selectedInternal();
-    const index = current ? this.drawings.indexOf(current) : 0;
-    const previous = this.drawings[(index - 1 + this.drawings.length) % this.drawings.length]!;
+    const index = current ? eligible.indexOf(current) : 0;
+    const previous = eligible[(index - 1 + eligible.length) % eligible.length]!;
     this.selectDrawing(previous.id, options);
   }
 
@@ -550,7 +585,10 @@ class Chart implements ChartApi, SeriesHost {
     this.assertAlive();
     const visibleOnly = options?.visibleOnly ?? true;
     const drawings = visibleOnly
-      ? this.drawings.filter((drawing) => drawing.getOptions().visible)
+      ? this.drawings.filter(
+          (drawing) =>
+            drawing.getOptions().visible && this.isDrawingVisibleOnCurrentInterval(drawing),
+        )
       : this.drawings;
     if (this.setSelection(drawings)) {
       this.emitSelection();
@@ -972,18 +1010,20 @@ class Chart implements ChartApi, SeriesHost {
   }
 
   private buildDrawingRenderData(): DrawingRenderData[] {
-    const result: DrawingRenderData[] = this.drawings.map((drawing) => ({
-      id: drawing.id,
-      toolId: drawing.toolId,
-      paneId: drawing.paneId,
-      anchors: drawing.getAnchorsInternal(),
-      anchorCount: drawing.definition.anchors,
-      previewPoint: null,
-      options: drawing.getOptions(),
-      selected: this.selectedDrawingIds.has(drawing.id),
-      hovered: this.hoveredDrawingId === drawing.id,
-      preview: false,
-    }));
+    const result: DrawingRenderData[] = this.drawings
+      .filter((drawing) => this.isDrawingVisibleOnCurrentInterval(drawing))
+      .map((drawing) => ({
+        id: drawing.id,
+        toolId: drawing.toolId,
+        paneId: drawing.paneId,
+        anchors: drawing.getAnchorsInternal(),
+        anchorCount: drawing.definition.anchors,
+        previewPoint: null,
+        options: drawing.getOptions(),
+        selected: this.selectedDrawingIds.has(drawing.id),
+        hovered: this.hoveredDrawingId === drawing.id,
+        preview: false,
+      }));
 
     if (this.activeTool && this.pendingAnchors.length > 0) {
       result.push({
@@ -1173,7 +1213,10 @@ class Chart implements ChartApi, SeriesHost {
       if (drawing.paneId !== pane.id) {
         continue;
       }
-      if (!hitTestDrawing(this.hitTarget(drawing), point, geometry, this.timeScaleModel)) {
+      if (
+        !this.isDrawingVisibleOnCurrentInterval(drawing) ||
+        !hitTestDrawing(this.hitTarget(drawing), point, geometry, this.timeScaleModel)
+      ) {
         continue;
       }
 
@@ -2306,7 +2349,10 @@ class Chart implements ChartApi, SeriesHost {
         if (drawing.paneId !== drawingPane.id) {
           continue;
         }
-        if (!hitTestDrawing(this.hitTarget(drawing), point, geometry, this.timeScaleModel)) {
+        if (
+          !this.isDrawingVisibleOnCurrentInterval(drawing) ||
+          !hitTestDrawing(this.hitTarget(drawing), point, geometry, this.timeScaleModel)
+        ) {
           continue;
         }
         this.selectOnly(drawing);
@@ -2524,6 +2570,7 @@ class Chart implements ChartApi, SeriesHost {
     if (this.disposed) {
       return;
     }
+    this.pruneTimeframeHiddenSelection();
 
     for (const pane of this.panes) {
       for (const indicator of pane.indicators) {
@@ -2556,6 +2603,23 @@ class Chart implements ChartApi, SeriesHost {
     if (!this.readyEmitted) {
       this.readyEmitted = true;
       this.bus.emit("ready", undefined);
+    }
+  }
+
+  private pruneTimeframeHiddenSelection(): void {
+    if (this.selectedDrawingIds.size === 0) {
+      return;
+    }
+    let changed = false;
+    for (const id of [...this.selectedDrawingIds]) {
+      const drawing = this.findDrawing(id);
+      if (drawing && !this.isDrawingVisibleOnCurrentInterval(drawing)) {
+        this.selectedDrawingIds.delete(id);
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.emitSelection();
     }
   }
 
@@ -3124,7 +3188,10 @@ class Chart implements ChartApi, SeriesHost {
         if (drawing.paneId !== pane.id) {
           continue;
         }
-        if (hitTestDrawing(this.hitTarget(drawing), point, geometry, this.timeScaleModel)) {
+        if (
+          this.isDrawingVisibleOnCurrentInterval(drawing) &&
+          hitTestDrawing(this.hitTarget(drawing), point, geometry, this.timeScaleModel)
+        ) {
           next = drawing.id;
           break;
         }
@@ -3602,6 +3669,44 @@ export function constrainPointAngle(reference: Point, point: Point): Point {
   };
 }
 
+function inferStoreInterval(store: {
+  length: number;
+  timeAt(index: number): number;
+}): number | null {
+  const start = Math.max(0, store.length - 21);
+  const steps: number[] = [];
+  for (let index = start + 1; index < store.length; index += 1) {
+    const step = store.timeAt(index) - store.timeAt(index - 1);
+    if (Number.isFinite(step) && step > 0) {
+      steps.push(step);
+    }
+  }
+  if (steps.length === 0) {
+    return null;
+  }
+  steps.sort((first, second) => first - second);
+  return steps[Math.floor(steps.length / 2)]!;
+}
+
+function inferIntervalLabel(step: number): string {
+  if (step >= 28 * 86_400_000) {
+    return "1M";
+  }
+  if (step >= 7 * 86_400_000) {
+    return "1w";
+  }
+  if (step >= 86_400_000) {
+    return `${Math.round(step / 86_400_000)}d`;
+  }
+  if (step >= 3_600_000) {
+    return `${Math.round(step / 3_600_000)}h`;
+  }
+  if (step >= 60_000) {
+    return `${Math.round(step / 60_000)}m`;
+  }
+  return `${Math.max(1, Math.round(step / 1000))}s`;
+}
+
 function computePaneHeights(panes: readonly Pane[], available: number): number[] {
   if (panes.length === 0) {
     return [];
@@ -3683,6 +3788,7 @@ function resolveOptions(options: ChartOptions): ResolvedOptions {
     height,
     locale,
     timezone,
+    ...(options.interval !== undefined ? { interval: options.interval } : {}),
     layout: {
       background: options.layout?.background ?? "#ffffff",
       textColor,

@@ -188,6 +188,7 @@ export interface ChartOptions {
     height?: number;
     // (undocumented)
     interaction?: InteractionOptions;
+    interval?: Interval;
     // (undocumented)
     layout?: LayoutOptions;
     locale?: string;
@@ -493,6 +494,7 @@ export interface DrawingOptions {
     topLineWidth?: number;
     // (undocumented)
     visible?: boolean;
+    visibleIntervals?: readonly string[];
 }
 
 // @public
@@ -502,7 +504,7 @@ export type DrawingPriceLabelsMode = "never" | "selected" | "always";
 export type DrawingSelectionMode = "replace" | "add" | "toggle";
 
 // @public
-export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "lineOpacity" | "fillColor" | "fillOpacity" | "fillVisible" | "showLabels" | "labelPlacement" | "labelFontSize" | "labelBackgroundVisible" | "showLine" | "extendLeft" | "extendRight" | "showMidpoint" | "priceLabels" | "timeLabels" | "stopColor" | "targetColor" | "extend" | "extendTop" | "extendBottom" | "labelTextColor" | "topLineColor" | "topLineWidth" | "topLineStyle" | "middleLineColor" | "middleLineWidth" | "middleLineStyle" | "middleLineVisible" | "bottomLineColor" | "bottomLineWidth" | "bottomLineStyle" | "channelBackgroundVisible" | "fontFamily" | "backgroundColor" | "backgroundOpacity" | "borderColor" | "borderWidth" | "borderRadius" | "padding" | "fibLevels" | "fibBackgroundVisible" | "accountSize" | "riskPercent" | "leverage" | "contractSize" | "positionStatsFields" | "stats" | "statsFields" | "statsPosition" | "text" | "textColor" | "textStyle" | "textAlign" | "textVerticalAlign" | "fontSize" | "locked" | "visible";
+export type DrawingSetting = "color" | "lineWidth" | "lineStyle" | "lineOpacity" | "fillColor" | "fillOpacity" | "fillVisible" | "showLabels" | "labelPlacement" | "labelFontSize" | "labelBackgroundVisible" | "showLine" | "extendLeft" | "extendRight" | "showMidpoint" | "priceLabels" | "timeLabels" | "stopColor" | "targetColor" | "extend" | "extendTop" | "extendBottom" | "labelTextColor" | "topLineColor" | "topLineWidth" | "topLineStyle" | "middleLineColor" | "middleLineWidth" | "middleLineStyle" | "middleLineVisible" | "bottomLineColor" | "bottomLineWidth" | "bottomLineStyle" | "channelBackgroundVisible" | "fontFamily" | "backgroundColor" | "backgroundOpacity" | "borderColor" | "borderWidth" | "borderRadius" | "padding" | "fibLevels" | "fibBackgroundVisible" | "accountSize" | "riskPercent" | "leverage" | "contractSize" | "positionStatsFields" | "stats" | "statsFields" | "statsPosition" | "text" | "textColor" | "textStyle" | "textAlign" | "textVerticalAlign" | "fontSize" | "locked" | "visible" | "visibleIntervals";
 
 // @public
 export type DrawingStatsField = "range" | "change" | "bars" | "date" | "timeRange" | "duration" | "volume" | "angle" | "risk" | "reward" | "riskReward" | "riskPercent" | "rewardPercent" | "accountSize" | "lotSize" | "riskAmount" | "entry" | "profit" | "loss" | "lossPercent" | "profitPercent" | "leverage" | "margin";
@@ -1380,8 +1382,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:1182:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:1197:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1186:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1201:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -353,6 +353,12 @@ describe("line drawing hit testing", () => {
 
   it("resolves unified drawing defaults and channel handles", () => {
     expect(resolveDrawingOptions(undefined, {}).color).toBe("#787b86");
+    expect(resolveDrawingOptions(undefined, {}).visibleIntervals).toEqual([]);
+    expect(
+      resolveDrawingOptions(undefined, {
+        visibleIntervals: ["1h", "1h", "5m"],
+      }).visibleIntervals,
+    ).toEqual(["1h", "5m"]);
     const rectangle = DRAWING_TOOL_CATALOG.find((entry) => entry.definition.id === "rectangle")
       ?.definition.defaultOptions;
     expect(rectangle?.middleLineVisible).toBe(false);

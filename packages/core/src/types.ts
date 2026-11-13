@@ -353,6 +353,8 @@ export interface ChartOptions {
   locale?: string;
   /** IANA time zone used for time labels. Defaults to `UTC`. */
   timezone?: string;
+  /** Current chart interval used for drawing timeframe visibility. */
+  interval?: Interval;
   layout?: LayoutOptions;
   grid?: GridOptions;
   crosshair?: CrosshairOptions;
@@ -756,7 +758,8 @@ export type DrawingSetting =
   | "textVerticalAlign"
   | "fontSize"
   | "locked"
-  | "visible";
+  | "visible"
+  | "visibleIntervals";
 
 /**
  * A drawing colour. `theme` resolves to the chart's layout text colour.
@@ -951,6 +954,8 @@ export interface DrawingOptions {
   fontSize?: number;
   locked?: boolean;
   visible?: boolean;
+  /** Intervals where this drawing is visible. Empty or omitted means all intervals. */
+  visibleIntervals?: readonly string[];
 }
 
 /**

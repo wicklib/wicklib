@@ -1077,6 +1077,77 @@ describe("createChart", () => {
     expect(chart.selectedDrawings().some((drawing) => drawing.id === hidden.id)).toBe(true);
   });
 
+  it("filters Select All by timeframe visibility", () => {
+    const chart = track(createChart(mount(), { interval: "1h" }));
+    const all = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 0, price: 100 }],
+    });
+    const hourly = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 10 * MINUTE, price: 110 }],
+      options: { visibleIntervals: ["1h"] },
+    });
+    const multi = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 20 * MINUTE, price: 120 }],
+      options: { visibleIntervals: ["5m", "1h"] },
+    });
+    chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 30 * MINUTE, price: 130 }],
+      options: { visibleIntervals: ["5m"] },
+    });
+
+    chart.selectAllDrawings();
+    expect(chart.selectedDrawings().map((drawing) => drawing.id)).toEqual([
+      all.id,
+      hourly.id,
+      multi.id,
+    ]);
+    chart.selectAllDrawings({ visibleOnly: false });
+    expect(chart.selectedDrawings()).toHaveLength(4);
+  });
+
+  it("skips timeframe-hidden drawings in hit testing and updates live", () => {
+    const element = mount();
+    const chart = track(createChart(element, { interval: "5m" }));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+    chart.timeScale().fitContent();
+    const root = element.firstElementChild as HTMLElement;
+
+    chart.startDrawing(HorizontalLine);
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 200, 150));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 200, 150));
+    const drawing = chart.selectedDrawing()!;
+    drawing.setOptions({ visibleIntervals: ["1h"] });
+    chart.selectDrawing(null);
+
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 200, 150));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 200, 150));
+    expect(chart.selectedDrawing()).toBeNull();
+
+    chart.setOptions({ interval: "1h" });
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 200, 150));
+    root.dispatchEvent(pointerEvent("pointerup", 1, 200, 150));
+    expect(chart.selectedDrawing()?.id).toBe(drawing.id);
+  });
+
+  it("persists timeframe visibility through serialization and runtime updates", () => {
+    const chart = track(createChart(mount(), { interval: "5m" }));
+    const drawing = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 0, price: 100 }],
+      options: { visibleIntervals: ["5m", "1h"] },
+    });
+
+    let document = chart.serializeDrawings();
+    expect(document.drawings[0]?.options.visibleIntervals).toEqual(["5m", "1h"]);
+
+    drawing.setOptions({ visibleIntervals: ["4h"] });
+    document = chart.serializeDrawings();
+    expect(document.drawings[0]?.options.visibleIntervals).toEqual(["4h"]);
+
+    const restored = track(createChart(mount(), { interval: "4h" }));
+    restored.loadDrawings(document);
+    expect(restored.serializeDrawings().drawings[0]?.options.visibleIntervals).toEqual(["4h"]);
+  });
+
   it("navigates drawing selection with the keyboard and announces it", () => {
     const element = mount();
     const chart = track(createChart(element));
