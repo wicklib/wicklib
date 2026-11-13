@@ -970,6 +970,23 @@ describe("createChart", () => {
     expect(unsnapped?.price).not.toBeCloseTo(anchor.price, 8);
   });
 
+  it("renders the Measure preview after only one committed anchor", async () => {
+    const element = mount();
+    const chart = track(createChart(element));
+    chart.addSeries(CandlestickSeries).setData(bars(100));
+    chart.timeScale().fitContent();
+    const root = element.firstElementChild as HTMLElement;
+
+    chart.startDrawing(Measure);
+    root.dispatchEvent(pointerEvent("pointerdown", 1, 100, 100));
+    expect(() => {
+      root.dispatchEvent(
+        new MouseEvent("pointermove", { clientX: 220, clientY: 150, bubbles: true }),
+      );
+    }).not.toThrow();
+    await settle();
+  });
+
   it("places drawing anchors at the pointer even with crosshair magnet enabled", () => {
     const element = mount();
     const chart = track(createChart(element, { crosshair: { mode: "magnet" } }));

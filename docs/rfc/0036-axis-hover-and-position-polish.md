@@ -13,7 +13,8 @@
 - Position `lossPercent` and new `profitPercent` use price distance from entry, not account risk.
 - Profit amount renders without a "Profit" prefix.
 - Measure uses a TradingView-style overlay with endpoint dots, projection guides, a contrast
-  surface, price/percent change, bar count, and duration.
+  surface, price/percent change, bar count, and duration. Preview rendering derives the second
+  time from the preview x-position until a second anchor is committed.
 - Legacy Long/Short Position remains hidden from the new-tool catalog.
 
 ## 2. Acceptance criteria

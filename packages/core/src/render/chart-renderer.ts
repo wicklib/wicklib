@@ -2256,7 +2256,10 @@ export class ChartRenderer {
         const priceDelta = secondPrice - firstPrice;
         const percent = firstPrice === 0 ? 0 : (priceDelta / Math.abs(firstPrice)) * 100;
         const lineColor = priceDelta >= 0 ? "#26a69a" : "#ef5350";
-        const seconds = Math.abs(drawing.anchors[1]!.time - drawing.anchors[0]!.time) / 1000;
+        const firstTime = drawing.anchors[0]?.time ?? this.timeScale.timeAtX(first.x);
+        const secondTime = drawing.anchors[1]?.time ?? this.timeScale.timeAtX(second.x);
+        const seconds =
+          firstTime !== null && secondTime !== null ? Math.abs(secondTime - firstTime) / 1000 : 0;
 
         context.save();
         context.strokeStyle = lineColor;
@@ -2285,10 +2288,9 @@ export class ChartRenderer {
           (candidate) => candidate.visible && candidate.store.length > 0,
         );
         const bars =
-          series && drawing.anchors[1]
+          series && firstTime !== null && secondTime !== null
             ? Math.abs(
-                series.store.nearestIndex(drawing.anchors[1].time) -
-                  series.store.nearestIndex(drawing.anchors[0]!.time),
+                series.store.nearestIndex(secondTime) - series.store.nearestIndex(firstTime),
               ) + 1
             : null;
         const lines = [
