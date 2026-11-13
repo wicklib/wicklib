@@ -1,5 +1,14 @@
 # wicklib
 
+## 0.32.0
+
+### Patch Changes
+
+- Updated dependencies [228410e]
+  - @wicklib/core@0.32.0
+  - @wicklib/indicators@0.32.0
+  - @wicklib/layouts@0.32.0
+
 ## 0.31.0
 
 ### Patch Changes

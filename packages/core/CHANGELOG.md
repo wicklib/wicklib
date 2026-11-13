@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.32.0
+
+### Minor Changes
+
+- 228410e: Add denser price ticks, drawing hover handles, correct position percentages and stats placement, and a TradingView-style measure overlay.
+
 ## 0.31.0
 
 ### Minor Changes
