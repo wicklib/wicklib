@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.34.0
+
+### Minor Changes
+
+- 80572eb: Add optional per-drawing timeframe visibility with rendering, hit-testing, selection, and serialization support.
+
 ## 0.33.1
 
 ### Patch Changes
