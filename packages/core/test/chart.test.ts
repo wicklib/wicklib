@@ -1037,6 +1037,29 @@ describe("createChart", () => {
     expect(created).toEqual(["horizontal-line"]);
   });
 
+  it("selects only visible drawings by default", () => {
+    const chart = track(createChart(mount()));
+    chart.addSeries(CandlestickSeries).setData(bars(50));
+    const visible = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 0, price: 100 }],
+    });
+    const hidden = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 10 * MINUTE, price: 110 }],
+      options: { visible: false },
+    });
+    const locked = chart.addDrawing(HorizontalLine, {
+      anchors: [{ time: 20 * MINUTE, price: 120 }],
+      options: { locked: true },
+    });
+
+    chart.selectAllDrawings();
+    expect(chart.selectedDrawings().map((drawing) => drawing.id)).toEqual([visible.id, locked.id]);
+
+    chart.selectAllDrawings({ visibleOnly: false });
+    expect(chart.selectedDrawings()).toHaveLength(3);
+    expect(chart.selectedDrawings().some((drawing) => drawing.id === hidden.id)).toBe(true);
+  });
+
   it("navigates drawing selection with the keyboard and announces it", () => {
     const element = mount();
     const chart = track(createChart(element));

@@ -150,6 +150,7 @@ export type {
   SeriesValueInfo,
   SerializedDrawing,
   SeriesType,
+  SelectAllDrawingsOptions,
   SelectDrawingOptions,
   SessionGapMode,
   SessionWindow,

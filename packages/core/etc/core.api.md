@@ -83,7 +83,7 @@ export interface ChartApi {
     // (undocumented)
     resize(): void;
     // (undocumented)
-    selectAllDrawings(): void;
+    selectAllDrawings(options?: SelectAllDrawingsOptions): void;
     // (undocumented)
     selectDrawing(id: string | null, options?: SelectDrawingOptions): void;
     // (undocumented)
@@ -1126,6 +1126,11 @@ export const RegressionTrend: DrawingToolDefinition;
 export const SchiffPitchfork: DrawingToolDefinition;
 
 // @public
+export interface SelectAllDrawingsOptions {
+    visibleOnly?: boolean;
+}
+
+// @public
 export interface SelectDrawingOptions {
     mode?: DrawingSelectionMode;
 }
@@ -1375,8 +1380,8 @@ export interface WickExtension {
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:1175:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:1190:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1182:9 - (ae-forgotten-export) The symbol "LightweightBackground" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:1197:9 - (ae-forgotten-export) The symbol "LightweightLineOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -546,9 +546,13 @@ class Chart implements ChartApi, SeriesHost {
     this.selectDrawing(previous.id, options);
   }
 
-  selectAllDrawings(): void {
+  selectAllDrawings(options?: { visibleOnly?: boolean }): void {
     this.assertAlive();
-    if (this.setSelection(this.drawings)) {
+    const visibleOnly = options?.visibleOnly ?? true;
+    const drawings = visibleOnly
+      ? this.drawings.filter((drawing) => drawing.getOptions().visible)
+      : this.drawings;
+    if (this.setSelection(drawings)) {
       this.emitSelection();
     }
   }

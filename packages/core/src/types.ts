@@ -992,6 +992,14 @@ export interface SelectDrawingOptions {
 }
 
 /**
+ * Options for selecting every drawing.
+ */
+export interface SelectAllDrawingsOptions {
+  /** Exclude drawings whose visible option is false. Defaults to true. */
+  visibleOnly?: boolean;
+}
+
+/**
  * A live drawing annotation.
  */
 export interface DrawingApi {
@@ -1281,7 +1289,7 @@ export interface ChartApi {
   selectDrawing(id: string | null, options?: SelectDrawingOptions): void;
   selectNextDrawing(options?: SelectDrawingOptions): void;
   selectPreviousDrawing(options?: SelectDrawingOptions): void;
-  selectAllDrawings(): void;
+  selectAllDrawings(options?: SelectAllDrawingsOptions): void;
   /** Applies a partial style update to every selected drawing. */
   updateSelectedDrawings(options: Partial<DrawingOptions>): void;
   /** Sets per-chart defaults applied to newly created drawings of a tool. */
