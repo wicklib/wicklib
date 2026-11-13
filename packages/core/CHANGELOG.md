@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.33.0
+
+### Minor Changes
+
+- db00902: Add visible-only selection to selectAllDrawings, defaulting to excluding hidden drawings.
+
 ## 0.32.0
 
 ### Minor Changes
