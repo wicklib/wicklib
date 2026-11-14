@@ -18,6 +18,7 @@ representation:
 - Every candle keeps its own wick and body.
 - Body width scales below one CSS pixel instead of being forced to a 1px slab.
 - Wicks use a fractional line width in dense mode to avoid solid pixel columns.
+- Wicks and bodies share one raw subpixel center; the wick is never independently pixel-snapped.
 - Body minimum height is reduced in dense mode while preserving direction and high/low.
 - Borders are skipped when the body is narrower than one pixel.
 - Fractional spacing and high-DPI rendering use CSS-pixel coordinates.

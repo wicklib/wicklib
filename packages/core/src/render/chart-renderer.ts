@@ -565,8 +565,7 @@ export class ChartRenderer {
         if ((direction === "up") !== isUp) {
           continue;
         }
-        const rawX = this.timeScale.indexToX(index);
-        const x = dense ? rawX : crisp(rawX);
+        const x = this.timeScale.indexToX(index);
         context.moveTo(x, yOf(series.store.highAt(index)));
         context.lineTo(x, yOf(series.store.lowAt(index)));
       }
