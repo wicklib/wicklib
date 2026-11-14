@@ -1,5 +1,11 @@
 # @wicklib/core
 
+## 0.34.1
+
+### Patch Changes
+
+- c4024fa: Align candle wicks and bodies to the same subpixel center so wicks stay centered at all zoom levels.
+
 ## 0.34.0
 
 ### Minor Changes

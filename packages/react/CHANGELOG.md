@@ -1,5 +1,12 @@
 # @wicklib/react
 
+## 0.34.1
+
+### Patch Changes
+
+- Updated dependencies [c4024fa]
+  - @wicklib/core@0.34.1
+
 ## 0.34.0
 
 ### Patch Changes
